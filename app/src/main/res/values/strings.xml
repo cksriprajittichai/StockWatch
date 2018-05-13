@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">StockWatch</string>
+
+    <string-array name="statsBeingUsed">
+        <item>Price</item>
+        <item>Daily Price Change</item>
+        <item>Market Cap (intraday)</item>
+        <item>Trailing P/E</item>
+        <item>52-Week Change</item>
+        <item>50-Day Moving Average</item>
+        <item>Avg Vol (3 month)</item>
+    </string-array>
+</resources>
