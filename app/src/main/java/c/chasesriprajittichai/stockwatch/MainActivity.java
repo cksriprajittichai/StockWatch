@@ -7,8 +7,11 @@ import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -23,21 +26,16 @@ public class MainActivity extends AppCompatActivity {
          */
         @Override
         protected ArrayList<Stock> doInBackground(String... tickers) {
+            try {
+                if (tickers[0].startsWith("D")) {
+                    Thread.sleep(10000);
+                }
+            } catch (Exception e) {
 
-            // Sort tickers alphabetically by ticker
-            ArrayList<String> tempTickers = new ArrayList<>(tickers.length);
+            }
+
             for (String ticker : tickers) {
-                tempTickers.add(ticker);
-            }
-            Collections.sort(tempTickers);
-            for (int i = 0; i < tempTickers.size(); i++) {
-                tickers[i] = tempTickers.get(i);
-            }
-
-            Looper.prepare(); // Vital
-
-            for (String s : tickers) {
-                stockList.add(new Stock(getApplicationContext(), s));
+                stockList.add(new Stock(getApplicationContext(), ticker));
             }
 
             return stockList;
@@ -51,22 +49,21 @@ public class MainActivity extends AppCompatActivity {
             }));
             recyclerView.setLayoutManager(new LinearLayoutManager(getApplicationContext()));
             recyclerView.addItemDecoration(new RecyclerViewDivider(getApplicationContext()));
-
-            for (Stock stock : stockList) {
-                StringBuilder sb = new StringBuilder();
-
-                sb.append("STOCK >>> " + stock.getTicker() + "\n");
-                for (StockStat stockStat : stock.getStockStats()) {
-                    sb.append(stockStat.toString() + '\n');
-                }
-                Log.i("Chase", sb.toString());
-            }
         }
     }
 
 
     private RecyclerView recyclerView;
     private ArrayList<Stock> stockList = new ArrayList<>();
+    private DownloadStockStatsTask[] asyncTasks = new DownloadStockStatsTask[5];
+    private HashMap<Integer, Boolean> openTasksMap = new HashMap<Integer, Boolean>() {
+        {
+            /* All five DownloadStockStatsTasks are open (not being used) */
+            for (int taskNdx = 0; taskNdx < asyncTasks.length; taskNdx++) {
+                put(taskNdx, true);
+            }
+        }
+    };
 
 
     @Override
@@ -78,7 +75,17 @@ public class MainActivity extends AppCompatActivity {
 //        new DownloadStockStatsTask().execute("BAC", "BA", "FB", "GE", "GOOGL", "GM", "GS", "HD",
 //                "IBM", "JPM", "JNJ", "MSFT", "MRK", "AAPL", "INTC", "FSLR", "CAT", "RTN", "DKS",
 //                "AAL", "DWDP", "DAL", "CVX", "DRYS", "AMD");
-        new DownloadStockStatsTask().execute("BAC", "BA", "FB", "GE", "GOOGL");
+//        new DownloadStockStatsTask().execute("BAC", "BA", "FB", "GE", "GOOGL");
+        asyncTasks[0] = new DownloadStockStatsTask();
+        asyncTasks[0].execute("MRK", "GE", "GM", "DWDP");
+        asyncTasks[1] = new DownloadStockStatsTask();
+        asyncTasks[1].execute("BA");
+        asyncTasks[2] = new DownloadStockStatsTask();
+        asyncTasks[2].execute("DPZ");
+        asyncTasks[3] = new DownloadStockStatsTask();
+        asyncTasks[3].execute("RTN");
+        asyncTasks[4] = new DownloadStockStatsTask();
+        asyncTasks[4].execute("AAL");
     }
 
 }
