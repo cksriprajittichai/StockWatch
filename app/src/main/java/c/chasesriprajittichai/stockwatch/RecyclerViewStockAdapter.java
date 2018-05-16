@@ -12,31 +12,35 @@ import android.widget.TextView;
 import java.util.ArrayList;
 
 
-public class StockAdapter extends RecyclerView.Adapter<StockAdapter.ViewHolder> {
+public class RecyclerViewStockAdapter extends RecyclerView.Adapter<RecyclerViewStockAdapter.ViewHolder> {
 
 
     public interface onItemClickListener {
-        void onItemClick(Stock stock);
+        void onItemClick(HalfStock halfStock);
     }
 
 
     public class ViewHolder extends RecyclerView.ViewHolder {
 
         private TextView tickerTextView;
+        private TextView priceTextView;
         private TextView dailyPriceChangeTextView;
 
         public ViewHolder(View v) {
             super(v);
 
             tickerTextView = v.findViewById(R.id.tickerTextView);
+            priceTextView = v.findViewById(R.id.priceTextView);
             dailyPriceChangeTextView = v.findViewById(R.id.dailyPriceChangeTextView);
         }
 
 
-        public void bind(final Stock stock, final onItemClickListener listener) {
+        public void bind(final HalfStock stock, final onItemClickListener listener) {
             tickerTextView.setText(stock.getTicker());
+            priceTextView.setText(stock.getStockStat("Price").getValue());
             dailyPriceChangeTextView.setText(stock.getStockStat("Daily Price Change").getValue());
 
+            // Assign green or red color to daily price change text
             if (stock.getStockStat("Daily Price Change").getValue().contains("-")) {
                 dailyPriceChangeTextView.setTextColor(Color.RED);
             } else {
@@ -45,15 +49,14 @@ public class StockAdapter extends RecyclerView.Adapter<StockAdapter.ViewHolder> 
 
             itemView.setOnClickListener(l -> listener.onItemClick(stock));
         }
-
     }
 
 
-    private ArrayList<Stock> stockList;
+    private ArrayList<HalfStock> stockList;
     private onItemClickListener listener;
 
 
-    public StockAdapter(ArrayList<Stock> stockList, onItemClickListener listener) {
+    public RecyclerViewStockAdapter(ArrayList<HalfStock> stockList, onItemClickListener listener) {
         this.stockList = stockList;
         this.listener = listener;
     }
@@ -61,7 +64,7 @@ public class StockAdapter extends RecyclerView.Adapter<StockAdapter.ViewHolder> 
 
     @NonNull
     @Override
-    public StockAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public RecyclerViewStockAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         Context context = parent.getContext();
 
         LayoutInflater inflater = LayoutInflater.from(context);

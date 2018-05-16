@@ -4,9 +4,17 @@
     <string-array name="statsBeingUsed">
         <item>Price</item>
         <item>Daily Price Change</item>
+
         <item>Market Cap (intraday)</item>
+        <item>Enterprise Value</item>
         <item>Trailing P/E</item>
+        <item>Price/Sales (ttm)</item>
+        <item>Price/Book (mrq)</item>
+        <item>Profit Margin</item>
+        <item>EBITDA</item>
         <item>52-Week Change</item>
+        <item>52 Week High</item>
+        <item>52 Week Low</item>
         <item>50-Day Moving Average</item>
         <item>Avg Vol (3 month)</item>
     </string-array>

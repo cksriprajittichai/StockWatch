@@ -3,6 +3,7 @@ package c.chasesriprajittichai.stockwatch;
 import android.content.Context;
 import android.util.Log;
 
+import org.apache.commons.lang3.StringUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -13,7 +14,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 
-public class Stock {
+public class FullStock {
 
     private static int NUM_STATS;
 
@@ -21,11 +22,12 @@ public class Stock {
     private String urlStr = "https://finance.yahoo.com/quote/<STOCK_TICKER>/key-statistics?p=<STOCK_TICKER>";
 
     private String ticker;
+    private String companyName;
     private ArrayList<String> statNames;
     private ArrayList<StockStat> stockStats;
 
 
-    public Stock(Context context, String ticker) {
+    public FullStock(Context context, String ticker) {
         this.ticker = ticker;
         urlStr = urlStr.replace("<STOCK_TICKER>", ticker);
 
@@ -45,6 +47,10 @@ public class Stock {
     private void initStats() {
         try {
             Document doc = Jsoup.connect(getURL().toString()).get();
+
+            // Init company name field
+            String companyNameAndTicker = doc.selectFirst("h1[class=D(ib) Fz(18px)]").text();
+            companyName = StringUtils.substringBefore(companyNameAndTicker, "(");
 
             // Add price stat
             Element price = doc.selectFirst("span[class=Trsdu(0.3s) Fw(b) Fz(36px) Mb(-4px) D(ib)]");
@@ -101,20 +107,23 @@ public class Stock {
     }
 
 
+    public String getCompanyName() {
+        return companyName;
+    }
+
+
     public ArrayList<StockStat> getStockStats() {
         return stockStats;
     }
 
 
     /**
-     *
      * @param statName
      * @return Null if a stock with statName is not found in stats.
      */
     public StockStat getStockStat(String statName) {
         for (StockStat ss : stockStats) {
-
-            if (ss.getName().equals(statName)) {
+            if (ss.getName().equalsIgnoreCase(statName)) {
                 return ss;
             }
         }
