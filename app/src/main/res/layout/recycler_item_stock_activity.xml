@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#353535"
+    android:paddingBottom="0dp"
+    android:paddingEnd="0dp"
+    android:paddingStart="0dp"
+    android:paddingTop="0dp">
+
+    <TextView
+        android:id="@+id/statTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="@android:color/white"
+        android:textSize="24sp"
+        android:typeface="monospace" />
+
+</android.support.constraint.ConstraintLayout>

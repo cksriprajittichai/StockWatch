@@ -1,26 +1,25 @@
 package c.chasesriprajittichai.stockwatch;
 
+import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.AsyncTask;
-import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.widget.SearchView;
 import android.view.Menu;
 import android.view.MenuItem;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashSet;
-import java.util.Iterator;
+import java.util.Comparator;
 
 import static org.apache.commons.lang3.StringUtils.substringBetween;
 
 
-public class MainActivity extends AppCompatActivity implements TaskFinishedListener {
+public class HomeActivity extends AppCompatActivity implements TaskFinishedListener {
 
 
     private class DownloadHalfStockTask extends AsyncTask<String, Integer, ArrayList<HalfStock>> {
@@ -50,19 +49,15 @@ public class MainActivity extends AppCompatActivity implements TaskFinishedListe
 
 
         protected void onPostExecute(ArrayList<HalfStock> stockList) {
-            recyclerView = findViewById(R.id.recycler_view);
-
-            if (stockList.size() == 1) { // Only create RecyclerViewStockAdapter once
-                recyclerView.setAdapter(new RecyclerViewStockAdapter(stockList, halfStock -> {
-                    Intent intent = new Intent(context, FullStockActivity.class);
+            if (stockList.size() == 1) { // Only create RecyclerHomeAdapter once
+                recyclerView.setAdapter(new RecyclerHomeAdapter(stockList, halfStock -> {
+                    Intent intent = new Intent(context, StockActivity.class);
                     intent.putExtra("Ticker", halfStock.getTicker());
                     startActivity(intent);
                 }));
             } else {
                 recyclerView.getAdapter().notifyItemInserted(stockList.size() - 1);
             }
-            recyclerView.setLayoutManager(new LinearLayoutManager(context));
-            recyclerView.addItemDecoration(new RecyclerViewDivider(context));
 
             taskFinishedListener.onTaskFinished(stockList.size());
         }
@@ -70,39 +65,32 @@ public class MainActivity extends AppCompatActivity implements TaskFinishedListe
 
 
     private RecyclerView recyclerView;
-    //    private String[] tickers = {"BAC", "DIS", "BA", "FB", "GE", "GOOGL", "GM", "GS", "HD",
+    //        private String[] tickers = {"BAC", "DIS", "BA", "FB", "GE", "GOOGL", "GM", "GS", "HD",
 //            "IBM", "JPM", "JNJ", "CSCO", "CTXS", "ADBE", "AXP", "ANTM", "MSFT", "MRK", "CI", "AAPL", "INTC", "FSLR", "CAT", "RTN", "DKS",
 //            "AAL", "DWDP", "DAL", "CVX", "DRYS", "AMD", "AMZN", "NVDA", "T", "TRV", "UTX", "BRK-A", "BRK-B"};
     private String[] tickers = {"RTN", "BA", "FB", "GE", "GOOGL", "GM", "GS", "HD",
             "IBM", "JPM", "JNJ", "BAC", "MSFT", "MRK", "AAPL"};
+    //    private String[] tickers = {"RTN", "BA", "FB", "GE"};
     private ArrayList<HalfStock> halfStocks = new ArrayList<>();
     private DownloadHalfStockTask asyncTask;
-
-    private SharedPreferences preferences;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_home);
         setTitle("Stock Watch");
+
+        // Init recycler view. It is empty now, will be filled in onPostExecute().
+        recyclerView = findViewById(R.id.recycler_view_home);
+        recyclerView.setAdapter(new RecyclerHomeAdapter(new ArrayList<>(), null)); // Set to empty adapter
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.addItemDecoration(new RecyclerDivider(this));
     }
 
 
     @Override
     protected void onResume() {
-        preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        HashSet<String> tickerSet = new HashSet<>();
-        tickerSet = new HashSet<>(preferences.getStringSet("Tickers", tickerSet));
-
-        Iterator<String> tickerSetIt = tickerSet.iterator();
-        while (tickerSetIt.hasNext()) {
-            String tempTicker = tickerSetIt.next();
-            /**
-             * DO SOMETHING WITH TEMPTICKER
-             */
-        }
-
         if (halfStocks.isEmpty() && tickers.length > 0) { // Only check when needed, and bound check
             asyncTask = new DownloadHalfStockTask(this, this);
             asyncTask.execute(tickers[0]); // Observer pattern will call tasks on the remaining tickers
@@ -114,9 +102,7 @@ public class MainActivity extends AppCompatActivity implements TaskFinishedListe
 
     @Override
     protected void onPause() {
-        SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(this).edit();
-        editor.putStringSet("Tickers", new HashSet<>(getTickersInHalfStocks()));
-        editor.apply();
+        /* PREFERENCES GO HERE */
 
         super.onPause();
     }
@@ -124,7 +110,8 @@ public class MainActivity extends AppCompatActivity implements TaskFinishedListe
 
     @Override
     public void onTaskFinished(int stockListSize) {
-        if (stockListSize < tickers.length) { // If there are still more tasks to run (more items to add to recycler view)
+        // Create new tasks while there are still more tasks to run (more items to add to recycler view)
+        if (stockListSize < tickers.length) {
             asyncTask = new DownloadHalfStockTask(this, this);
             asyncTask.execute(tickers[stockListSize]);
         }
@@ -133,7 +120,15 @@ public class MainActivity extends AppCompatActivity implements TaskFinishedListe
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_activity_main, menu);
+        getMenuInflater().inflate(R.menu.menu_activity_home, menu);
+
+        SearchManager searchManager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
+        MenuItem searchMenuItem = menu.findItem(R.id.searchMenuItem);
+        SearchView searchView = (SearchView) searchMenuItem.getActionView();
+
+        searchView.setSearchableInfo(searchManager.getSearchableInfo(getComponentName()));
+        searchView.setSubmitButtonEnabled(true);
+
         return true;
     }
 
@@ -143,7 +138,9 @@ public class MainActivity extends AppCompatActivity implements TaskFinishedListe
         switch (item.getItemId()) {
             case R.id.sortAlphabeticallyMenuItem:
                 /* Sort halfStocks */
-                halfStocks.sort((HalfStock a, HalfStock b) -> a.getTicker().compareTo(b.getTicker()));
+                Comparator<HalfStock> tickerComparator = Comparator.comparing(HalfStock::getTicker);
+                halfStocks.sort(tickerComparator);
+
                 recyclerView.getAdapter().notifyItemRangeChanged(0, recyclerView.getAdapter().getItemCount() - 1);
                 return true;
 

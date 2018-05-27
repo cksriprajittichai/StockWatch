@@ -12,7 +12,7 @@ import android.widget.TextView;
 import java.util.ArrayList;
 
 
-public class RecyclerViewStockAdapter extends RecyclerView.Adapter<RecyclerViewStockAdapter.ViewHolder> {
+public class RecyclerHomeAdapter extends RecyclerView.Adapter<RecyclerHomeAdapter.ViewHolder> {
 
 
     public interface onItemClickListener {
@@ -56,7 +56,7 @@ public class RecyclerViewStockAdapter extends RecyclerView.Adapter<RecyclerViewS
     private onItemClickListener listener;
 
 
-    public RecyclerViewStockAdapter(ArrayList<HalfStock> stockList, onItemClickListener listener) {
+    public RecyclerHomeAdapter(ArrayList<HalfStock> stockList, onItemClickListener listener) {
         this.stockList = stockList;
         this.listener = listener;
     }
@@ -64,12 +64,12 @@ public class RecyclerViewStockAdapter extends RecyclerView.Adapter<RecyclerViewS
 
     @NonNull
     @Override
-    public RecyclerViewStockAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public RecyclerHomeAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         Context context = parent.getContext();
 
         LayoutInflater inflater = LayoutInflater.from(context);
 
-        View stockView = inflater.inflate(R.layout.recycler_view_item, parent, false);
+        View stockView = inflater.inflate(R.layout.recycler_item_home_activity, parent, false);
 
         ViewHolder viewHolder = new ViewHolder(stockView);
 
