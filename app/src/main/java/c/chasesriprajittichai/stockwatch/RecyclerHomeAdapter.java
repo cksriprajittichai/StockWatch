@@ -10,12 +10,13 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.Locale;
 
 
 public class RecyclerHomeAdapter extends RecyclerView.Adapter<RecyclerHomeAdapter.ViewHolder> {
 
 
-    public interface onItemClickListener {
+    public interface OnItemClickListener {
         void onItemClick(HalfStock halfStock);
     }
 
@@ -24,41 +25,43 @@ public class RecyclerHomeAdapter extends RecyclerView.Adapter<RecyclerHomeAdapte
 
         private TextView tickerTextView;
         private TextView priceTextView;
-        private TextView dailyPriceChangeTextView;
+        private TextView priceChangePercentTextView;
+
 
         public ViewHolder(View v) {
             super(v);
 
             tickerTextView = v.findViewById(R.id.tickerTextView);
             priceTextView = v.findViewById(R.id.priceTextView);
-            dailyPriceChangeTextView = v.findViewById(R.id.dailyPriceChangeTextView);
+            priceChangePercentTextView = v.findViewById(R.id.priceChangePercentTextView);
         }
 
 
-        public void bind(final HalfStock stock, final onItemClickListener listener) {
-            tickerTextView.setText(stock.getTicker());
-            priceTextView.setText(stock.getStockStat("Price").getValue());
-            dailyPriceChangeTextView.setText(stock.getStockStat("Daily Price Change").getValue());
+        public void bind(final HalfStock halfStock, final OnItemClickListener listener) {
+            tickerTextView.setText(halfStock.getTicker());
+            priceTextView.setText(String.format(Locale.US, "%.2f", halfStock.getPrice()));
+            // Append '%' onto end of price change percent. First '%' is escape char for '%'.
+            priceChangePercentTextView.setText(String.format(Locale.US, "%.2f%%", halfStock.getPriceChangePercent()));
 
-            // Assign green or red color to daily price change text
-            if (stock.getStockStat("Daily Price Change").getValue().contains("-")) {
-                dailyPriceChangeTextView.setTextColor(Color.RED);
+            // Assign green or red color to price change percent text
+            if (halfStock.getPriceChangePercent() < 0) {
+                priceChangePercentTextView.setTextColor(Color.RED);
             } else {
-                dailyPriceChangeTextView.setTextColor(Color.GREEN);
+                priceChangePercentTextView.setTextColor(Color.GREEN);
             }
 
-            itemView.setOnClickListener(l -> listener.onItemClick(stock));
+            itemView.setOnClickListener(l -> listener.onItemClick(halfStock));
         }
     }
 
 
-    private ArrayList<HalfStock> stockList;
-    private onItemClickListener listener;
+    private ArrayList<HalfStock> halfStocks;
+    private OnItemClickListener onItemClickListener;
 
 
-    public RecyclerHomeAdapter(ArrayList<HalfStock> stockList, onItemClickListener listener) {
-        this.stockList = stockList;
-        this.listener = listener;
+    public RecyclerHomeAdapter(ArrayList<HalfStock> halfStocks, OnItemClickListener listener) {
+        this.halfStocks = halfStocks;
+        this.onItemClickListener = listener;
     }
 
 
@@ -71,21 +74,19 @@ public class RecyclerHomeAdapter extends RecyclerView.Adapter<RecyclerHomeAdapte
 
         View stockView = inflater.inflate(R.layout.recycler_item_home_activity, parent, false);
 
-        ViewHolder viewHolder = new ViewHolder(stockView);
-
-        return viewHolder;
+        return new ViewHolder(stockView);
     }
 
-
+    @NonNull
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.bind(stockList.get(position), listener);
+        holder.bind(halfStocks.get(position), onItemClickListener);
     }
 
 
     @Override
     public int getItemCount() {
-        return stockList.size();
+        return halfStocks.size();
     }
 
 }

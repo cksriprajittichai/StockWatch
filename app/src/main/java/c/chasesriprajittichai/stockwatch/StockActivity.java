@@ -1,50 +1,58 @@
 package c.chasesriprajittichai.stockwatch;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.StateListDrawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v4.content.ContextCompat;
+import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 
 
 public class StockActivity extends AppCompatActivity {
 
-    private FullStock fullStock;
 
-    private class DownloadStockStatsTask extends AsyncTask<String, Integer, FullStock> {
+    private static class DownloadFullStockTask extends AsyncTask<String, Integer, Integer> {
 
-        private Context context;
+        private WeakReference<Context> context;
+        private WeakReference<Activity> parentActivity;
+        private WeakReference<RecyclerView> recyclerView;
+        private WeakReference<FullStock> fullStock;
 
-        private DownloadStockStatsTask(Context context) {
-            this.context = context;
+
+        private DownloadFullStockTask(Context context, Activity parentActivity, RecyclerView recyclerView) {
+            this.context = new WeakReference<>(context);
+            this.parentActivity = new WeakReference<>(parentActivity);
+            this.recyclerView = new WeakReference<>(recyclerView);
         }
 
 
-        /**
-         * Takes tickers as parameters, updates stockList to contain the stocks with tickers.
-         *
-         * @param tickers Tickers of the stocks to put into stockList. There should only be one
-         *                ticker in tickers.
-         * @return stockList, updated with stocks with designated tickers.
-         */
         @Override
-        protected FullStock doInBackground(String... tickers) {
-            fullStock = new FullStock(getApplicationContext(), tickers[0]);
-            return fullStock;
+        protected Integer doInBackground(String... tickers) {
+            fullStock = new WeakReference<>(new FullStock(context.get(), tickers[0]));
+            return 0;
         }
 
-
-        protected void onPostExecute(FullStock fullStock) {
-            setTitle(fullStock.getCompanyName());
-
-            recyclerView.setAdapter(new RecyclerStockAdapter(fullStock.getStockStats()));
+        @Override
+        protected void onPostExecute(Integer status) {
+            parentActivity.get().setTitle(fullStock.get().getCompanyName());
+            recyclerView.get().setAdapter(new RecyclerStockAdapter(fullStock.get().getStockStats()));
         }
     }
 
-
+    private String ticker;
+    private boolean isInFavorites;
     private RecyclerView recyclerView;
 
 
@@ -53,6 +61,8 @@ public class StockActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setTitle(""); // Show empty title now, company name will be shown (in onPostExecute())
         setContentView(R.layout.activity_stock);
+        ticker = getIntent().getStringExtra("Ticker");
+        isInFavorites = getIntent().getBooleanExtra("Is in favorites", false);
 
         // Init recycler view. It is empty now, will be filled in onPostExecute().
         recyclerView = findViewById(R.id.recycler_view_stock);
@@ -60,7 +70,49 @@ public class StockActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.addItemDecoration(new RecyclerDivider(this));
 
-        new DownloadStockStatsTask(this).execute(getIntent().getStringExtra("Ticker"));
+        DownloadFullStockTask task = new DownloadFullStockTask(this, this, recyclerView);
+        task.execute(ticker);
     }
 
+
+    /* Back button is the only way to get back to HomeActivity. */
+    @Override
+    public void onBackPressed() {
+        Intent returnIntent = new Intent();
+        returnIntent.putExtra("Ticker", ticker);
+        returnIntent.putExtra("Is in favorites", isInFavorites);
+        setResult(Activity.RESULT_OK, returnIntent);
+        finish();
+    }
+
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_stock_activity, menu);
+
+        if (isInFavorites) {
+            menu.findItem(R.id.starMenuItem).setIcon(R.drawable.star_on);
+        } else {
+            menu.findItem(R.id.starMenuItem).setIcon(R.drawable.star_off);
+        }
+
+        return true;
+    }
+
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.starMenuItem:
+                isInFavorites = !isInFavorites; // Toggle
+                if (isInFavorites) {
+                    item.setIcon(R.drawable.star_on);
+                } else {
+                    item.setIcon(R.drawable.star_off);
+                }
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
 }

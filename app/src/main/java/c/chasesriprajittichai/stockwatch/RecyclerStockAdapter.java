@@ -17,6 +17,7 @@ public class RecyclerStockAdapter extends RecyclerView.Adapter<RecyclerStockAdap
 
         private TextView statTextView;
 
+
         public ViewHolder(View v) {
             super(v);
             statTextView = v.findViewById(R.id.statTextView);
@@ -30,6 +31,7 @@ public class RecyclerStockAdapter extends RecyclerView.Adapter<RecyclerStockAdap
 
 
     private ArrayList<StockStat> stockStats;
+
 
     public RecyclerStockAdapter(ArrayList<StockStat> stockStats) {
         this.stockStats = stockStats;
@@ -50,7 +52,7 @@ public class RecyclerStockAdapter extends RecyclerView.Adapter<RecyclerStockAdap
         return viewHolder;
     }
 
-
+    @NonNull
     @Override
     public void onBindViewHolder(@NonNull RecyclerStockAdapter.ViewHolder holder, int position) {
         holder.bind(stockStats.get(position));

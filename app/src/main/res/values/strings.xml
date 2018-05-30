@@ -1,6 +1,16 @@
 <resources>
     <string name="app_name">Stock Watch</string>
 
+    <!--HomeActivity menu item titles-->
+    <string name="searchMenuItem">"Search"</string>
+    <string name="sortAlphabeticallyMenuItem">"Sort Alphabetically"</string>
+    <string name="sortByPriceMenuItem">"Sort By Price"</string>
+    <string name="sortByPercentMenuItem">"Sort By % Change"</string>
+    <string name="shuffleMenuItem">"Shuffle"</string>
+
+    <!--StockActivity menu item titles-->
+    <string name="starMenuItem">"Star"</string>
+
     <string-array name="statsBeingUsed">
         <item>Price</item>
         <item>Daily Price Change</item>
@@ -18,4 +28,5 @@
         <item>50-Day Moving Average</item>
         <item>Avg Vol (3 month)</item>
     </string-array>
+
 </resources>

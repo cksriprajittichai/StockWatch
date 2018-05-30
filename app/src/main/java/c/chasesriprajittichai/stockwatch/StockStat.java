@@ -5,6 +5,7 @@ public class StockStat {
     private String name;
     private String value;
 
+
     public StockStat(String name, String value) {
         this.name = name;
         this.value = value;
@@ -17,8 +18,12 @@ public class StockStat {
     }
 
 
-    public String getName() { return name; }
+    public String getName() {
+        return name;
+    }
 
 
-    public String getValue() { return value; }
+    public String getValue() {
+        return value;
+    }
 }

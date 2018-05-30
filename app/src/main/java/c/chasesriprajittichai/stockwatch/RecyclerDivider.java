@@ -11,9 +11,11 @@ public class RecyclerDivider extends RecyclerView.ItemDecoration {
 
     private Drawable divider;
 
+
     public RecyclerDivider(Context context) {
         divider = ContextCompat.getDrawable(context, R.drawable.recycler_view_divider);
     }
+
 
     @Override
     public void onDrawOver(Canvas c, RecyclerView parent, RecyclerView.State state) {
