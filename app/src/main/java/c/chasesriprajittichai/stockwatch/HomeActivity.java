@@ -23,8 +23,10 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 
 public class HomeActivity extends AppCompatActivity implements FindStockTaskListener {
 
@@ -46,19 +48,21 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
 
 
         @Override
-        protected synchronized Integer doInBackground(String... tickersArr) {
-            ArrayList<String> sortedTickers = new ArrayList<>(tickersArr.length);
-            Collections.addAll(sortedTickers, tickersArr);
-            Collections.sort(sortedTickers); // Screener table lists alphabetically
+        protected Integer doInBackground(String... tickers) {
+            final int numStocksTotal = tickers.length;
 
-            int numStocksTotal = sortedTickers.size();
+            // Store a map from each ticker to its corresponding HalfStock object that will be created.
+            HashMap<String, HalfStock> tickerToHalfStockMap = new HashMap<>(tickers.length);
+
+            String[] sortedTickers = tickers.clone();
+            Arrays.sort(sortedTickers); // Screener lists stocks alphabetically
+
             int numStocksFinished = 0; // Finished loading and added to halfStocks
             halfStocks.get().clear(); // Remove old HalfStocks
             halfStocks.get().ensureCapacity(numStocksTotal);
 
             // URL form: <base URL><ticker 1>,<ticker 2>,<ticker 3>,<ticker n>&r=<count at the top of the shown table>
             final String baseUrl = "https://finviz.com/screener.ashx?v=111&t=";
-
             StringBuilder url = new StringBuilder(numStocksTotal * 5); // Approximate size
             url.append(baseUrl);
             url.append(String.join(",", sortedTickers)); // Append all tickers, separated by commas
@@ -96,7 +100,7 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
                     // Iterate through stocks that we're finishing this iteration
                     for (int i = numStocksFinished; i < numStocksFinished + numStocksToFinishThisIteration; i++) {
                         // Create selector string for current stock
-                        curSelectorStr = baseSelectorStr.replace("<TICKER>", sortedTickers.get(i));
+                        curSelectorStr = baseSelectorStr.replace("<TICKER>", sortedTickers[i]);
 
                         curVals = doc.select(curSelectorStr);
                         /* curVals could contain three items: P/E, price, price change percent
@@ -109,7 +113,8 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
                             percentNdx = 1;
                         } else {
                             /* Handle exception better. */
-                            halfStocks.get().add(new HalfStock(sortedTickers.get(i), -1, -1));
+                            tickerToHalfStockMap.put(sortedTickers[i],
+                                    new HalfStock(sortedTickers[i], -1, -1));
                             continue;
                         }
 
@@ -118,11 +123,21 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
                         // Remove '%' at the end of the percent string. Upper bound is exclusive.
                         curPerentStr = curPerentStr.substring(0, curPerentStr.length() - 1);
                         curPercent = Double.parseDouble(curPerentStr);
-                        halfStocks.get().add(new HalfStock(sortedTickers.get(i), curPrice, curPercent));
+
+                        // Store mapping from each ticker to completed HalfStock object
+                        tickerToHalfStockMap.put(sortedTickers[i],
+                                new HalfStock(sortedTickers[i], curPrice, curPercent));
                     }
                 } catch (IOException ioe) {
                     EXIT_STATUS = STATUS_IOEXCEPTION;
                     Log.e("IOException", ioe.getLocalizedMessage());
+                }
+
+                /* Use tickerToHalfStockMap to fill halfStocks with HalfStock objects. Preserve
+                 * the stock order that was passed into the function (order of tickers). */
+                halfStocks.get().clear();
+                for (String ticker : tickers) {
+                    halfStocks.get().add(tickerToHalfStockMap.get(ticker));
                 }
 
                 numStocksFinished += numStocksToFinishThisIteration;
@@ -161,7 +176,7 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
 
 
         @Override
-        protected synchronized Boolean doInBackground(String... tickers) {
+        protected Boolean doInBackground(String... tickers) {
             ticker = tickers[0];
 
             // Create URL
@@ -199,10 +214,9 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
     //    private String[] start_tickersArr = {"BAC", "DIS", "BA", "FB", "GE", "GOOGL", "GM", "GS", "HD",
 //            "IBM", "JPM", "JNJ", "CSCO", "CTXS", "ADBE", "AXP", "ANTM", "MSFT", "MRK", "CI", "AAPL", "INTC", "FSLR", "CAT", "RTN", "DKS",
 //            "AAL", "DWDP", "DAL", "CVX", "DRYS", "AMD", "AMZN", "NVDA", "T", "TRV", "UTX", "BRK-A", "BRK-B"};
-    //    private String[] start_tickersArr = {"RTN", "BA", "FB", "GE", "GOOGL", "GM", "GS", "HD", "IBM", "JPM", "JNJ", "BAC", "MSFT", "MRK", "AAPL"};
-    private String[] start_tickersArr = {"RTN", "BA", "FB", "GE"};
+//    private String[] start_tickersArr = {"RTN", "BA", "FB", "GE", "GOOGL", "GM", "GS", "HD", "IBM", "JPM", "JNJ", "BAC", "MSFT", "MRK", "AAPL"};
+//    private String[] start_tickersArr = {"RTN", "BA", "FB", "GE"};
     private ArrayList<HalfStock> halfStocks = new ArrayList<>();
-    private ArrayList<String> halfStockTickers = new ArrayList<>();
     private RecyclerView recyclerView;
     private SearchView searchView;
     private SharedPreferences preferences;
@@ -214,16 +228,10 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         if (stockExists) {
             boolean isInFavorites = false;
 
-            // Determine whether ticker isInFavorites
-            int compareFlag;
-            for (int i = 0; i < halfStockTickers.size(); i++) {
-                compareFlag = halfStockTickers.get(i).compareToIgnoreCase(ticker);
-                if (compareFlag > 0) {
-                    /* HalfStockTickers[i] is the first stock that is > ticker. Ticker hasn't
-                     * been found yet, so ticker must not be in halfStockTickers. Use property
-                     * that halfStockTickers is sorted. */
-                    break;
-                } else if (compareFlag == 0) {
+            // Determine whether ticker isInFavorites already
+            String[] tickers = preferences.getString("Tickers CSV", "").split(",");
+            for (String t : tickers) {
+                if (t.equalsIgnoreCase(ticker)) {
                     isInFavorites = true;
                     break;
                 }
@@ -235,12 +243,9 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
             intent.putExtra("Is in favorites", isInFavorites);
             HomeActivity.this.startActivityForResult(intent, 1);
         } else {
+            searchView.setQuery("", false);
             Toast.makeText(HomeActivity.this, ticker + " couldn't be found", Toast.LENGTH_SHORT).show();
         }
-
-        /* Enable submit button on SearchView. Submit button was disabled when clicked, to prevent
-         * button spamming. */
-        searchView.setSubmitButtonEnabled(true);
     }
 
 
@@ -257,10 +262,6 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         recyclerView.setAdapter(new RecyclerHomeAdapter(new ArrayList<>(), null)); // Set to empty adapter
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.addItemDecoration(new RecyclerDivider(this));
-
-        // Starter kit
-        Collections.addAll(halfStockTickers, start_tickersArr);
-        Collections.sort(halfStockTickers);
     }
 
 
@@ -271,43 +272,40 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
             String ticker = intent.getStringExtra("Ticker");
             boolean stockIsStarred = intent.getBooleanExtra("Is in favorites", false);
 
+            // Check if ticker is already in favorites
+            boolean stockIsInFavorites = false;
+            String[] tickers = preferences.getString("Tickers CSV", "").split(",");
+            for (String tempTicker : tickers) {
+                if (tempTicker.equalsIgnoreCase(ticker)) {
+                    stockIsInFavorites = true;
+                    break;
+                }
+            }
+
             if (stockIsStarred) {
-                if (halfStockTickers.isEmpty()) {
-                    halfStockTickers.add(ticker);
-                } else if (halfStockTickers.get(halfStockTickers.size() - 1).compareToIgnoreCase(ticker) < 0) {
-                    /* Using the property that halfStockTickers is sorted, if the last element in
-                     * halfStockTickers is < ticker, then halfStockTickers doesn't contain ticker
-                     * and ticker should be inserted at the end of halfStockTickers. */
-                    halfStockTickers.add(ticker);
-                } else {
-                    // Insert ticker into halfStockTickers, preserving alphabetical order
-                    int compareFlag;
-                    for (int i = 0; i < halfStockTickers.size(); i++) {
-                        compareFlag = halfStockTickers.get(i).compareToIgnoreCase(ticker);
-                        if (compareFlag > 0) {
-                            /* HalfStockTickers[i] is the first stock that is > ticker. Ticker hasn't
-                             * been found yet, so ticker must not be in halfStockTickers. Use property
-                             * that halfStockTickers is sorted. */
-                            halfStockTickers.add(i, ticker);
-                            break;
-                        } else if (compareFlag == 0) {
-                            // Ticker is already in favorites. Do nothing.
-                            break;
-                        }
-                    }
+                if (!stockIsInFavorites) {
+                    // Add ticker to favorites. Add as the first stock in favorites.
+                    StringBuilder tickersCSV = new StringBuilder(halfStocks.size() * 5);
+                    tickersCSV.append(ticker);
+                    tickersCSV.append(',');
+                    tickersCSV.append(getHalfStockTickersAsCSV());
+
+                    preferences.edit().putString("Tickers CSV", tickersCSV.toString()).apply();
                 }
             } else {
-                // Check if stock is already in favorites. If it is, remove it.
-                int compareFlag;
-                for (int i = 0; i < halfStockTickers.size(); i++) {
-                    compareFlag = halfStockTickers.get(i).compareToIgnoreCase(ticker);
-                    if (compareFlag > 0) {
-                        // Stock is not in favorites. Use sorted property.
-                        break;
-                    } else if (compareFlag == 0) {
-                        halfStockTickers.remove(i);
-                        break;
+                if (stockIsInFavorites) {
+                    // Remove ticker from favorites.
+                    StringBuilder tickersCSV = new StringBuilder(halfStocks.size() * 5);
+                    for (String tempTicker : tickers) {
+                        if (!tempTicker.equalsIgnoreCase(ticker)) {
+                            tickersCSV.append(tempTicker);
+                            tickersCSV.append(',');
+                        }
                     }
+                    // Do not put extra comma appended at the end
+                    preferences.edit().putString("Tickers CSV",
+                            tickersCSV.substring(0, tickersCSV.toString().length() - 1)).apply();
+
                 }
             }
         }
@@ -318,22 +316,17 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
     protected void onResume() {
         super.onResume();
 
-        /* Changes to favorites list can happen one stock at a time. HalfStockTickers is changed
-         * when a stock is starred, but a new DownloadHalfStocksTask() must execute in order for
-         * halfStocks to be updated to reflect halfStockTickers. */
-        if (halfStocks.size() != halfStockTickers.size()) {
-            Log.d("Chase", "test 2");
-            DownloadHalfStocksTask task = new DownloadHalfStocksTask(this, halfStocks, findViewById(R.id.recycler_view_home));
-            String[] halfStockTickersArr = new String[halfStockTickers.size()];
-            halfStockTickers.toArray(halfStockTickersArr);
-            task.execute(halfStockTickersArr);
-        }
+        String[] tickers = preferences.getString("Tickers CSV", "").split(",");
+        DownloadHalfStocksTask task = new DownloadHalfStocksTask(this, halfStocks, findViewById(R.id.recycler_view_home));
+        task.execute(tickers);
     }
 
 
     @Override
     protected void onPause() {
         super.onPause();
+
+        preferences.edit().putString("Tickers CSV", getHalfStockTickersAsCSV()).apply();
     }
 
 
@@ -369,20 +362,22 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
                 }
 
                 if (isValidTicker) {
+                    /* The thread executing the FindStockTask will call onFindStockTaskCompleted()
+                     * when completed. */
                     FindStockTask task = new FindStockTask(HomeActivity.this);
                     task.execute(ticker);
+
                     /* Prevent spamming of submit button. This also prevents multiple FindStockTasks
-                     * from being executed at the same time. Submit button is enabled again in
-                     * onFindStockTaskCompleted(). */
-                    searchView.setSubmitButtonEnabled(false);
-                    /* This leads to FindStockTask which calls onFindStockTaskCompleted()
-                     * when completed. */
+                     * from being executed at the same time. Similar effect as disabling the
+                     * SearchView submit button. */
+                    searchView.clearFocus();
                 } else {
                     Toast.makeText(HomeActivity.this, ticker + " is an invalid symbol", Toast.LENGTH_SHORT).show();
                 }
 
                 return true;
             }
+
 
             @Override
             public boolean onQueryTextChange(String newText) {
@@ -401,11 +396,9 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
                 Comparator<HalfStock> tickerComparator = Comparator.comparing(HalfStock::getTicker);
                 halfStocks.sort(tickerComparator);
 
-                for (int i = 0; i < halfStocks.size(); i++) {
-                    halfStockTickers.set(i, halfStocks.get(i).getTicker());
-                }
+                preferences.edit().putString("Tickers CSV", getHalfStockTickersAsCSV()).apply();
 
-                recyclerView.getAdapter().notifyItemRangeChanged(0, recyclerView.getAdapter().getItemCount() - 1);
+                recyclerView.getAdapter().notifyItemRangeChanged(0, recyclerView.getAdapter().getItemCount());
                 return true;
 
             case R.id.sortByPriceMenuItem:
@@ -414,11 +407,9 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
                 Comparator<HalfStock> descendingPriceComparator = ascendingPriceComparator.reversed();
                 halfStocks.sort(descendingPriceComparator);
 
-                for (int i = 0; i < halfStocks.size(); i++) {
-                    halfStockTickers.set(i, halfStocks.get(i).getTicker());
-                }
+                preferences.edit().putString("Tickers CSV", getHalfStockTickersAsCSV()).apply();
 
-                recyclerView.getAdapter().notifyItemRangeChanged(0, recyclerView.getAdapter().getItemCount() - 1);
+                recyclerView.getAdapter().notifyItemRangeChanged(0, recyclerView.getAdapter().getItemCount());
                 return true;
 
             case R.id.sortByPercentChangeMenuItem:
@@ -431,9 +422,7 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
                     return Double.compare(aMagnitude, bMagnitude) * -1; // Flip to get descending
                 });
 
-                for (int i = 0; i < halfStocks.size(); i++) {
-                    halfStockTickers.set(i, halfStocks.get(i).getTicker());
-                }
+                preferences.edit().putString("Tickers CSV", getHalfStockTickersAsCSV()).apply();
 
                 recyclerView.getAdapter().notifyItemRangeChanged(0, recyclerView.getAdapter().getItemCount());
                 return true;
@@ -441,9 +430,8 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
             case R.id.shuffleMenuItem:
                 Collections.shuffle(halfStocks);
 
-                for (int i = 0; i < halfStocks.size(); i++) {
-                    halfStockTickers.set(i, halfStocks.get(i).getTicker());
-                }
+                preferences.getString("Tickers CSV", "");
+                preferences.edit().putString("Tickers CSV", getHalfStockTickersAsCSV()).apply();
 
                 recyclerView.getAdapter().notifyItemRangeChanged(0, recyclerView.getAdapter().getItemCount());
                 return true;
@@ -451,6 +439,20 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
             default:
                 return super.onOptionsItemSelected(item);
         }
+    }
+
+
+    private ArrayList<String> getHalfStockTickers() {
+        ArrayList<String> tickers = new ArrayList<>(halfStocks.size());
+        for (HalfStock halfStock : halfStocks) {
+            tickers.add(halfStock.getTicker());
+        }
+        return tickers;
+    }
+
+
+    private String getHalfStockTickersAsCSV() {
+        return String.join(",", getHalfStockTickers());
     }
 
 }
