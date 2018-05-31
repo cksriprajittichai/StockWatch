@@ -11,6 +11,10 @@
     <!--StockActivity menu item titles-->
     <string name="starMenuItem">"Star"</string>
 
+    <string name="scrub_notPressed">Price: %1$s</string>
+    <string name="scrub_pressed">Price: %1$s</string>
+
+
     <string-array name="statsBeingUsed">
         <item>Price</item>
         <item>Daily Price Change</item>

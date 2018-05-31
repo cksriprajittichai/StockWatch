@@ -7,13 +7,13 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 
-public class RecyclerDivider extends RecyclerView.ItemDecoration {
+public class RecyclerStockDivider extends RecyclerView.ItemDecoration {
 
     private Drawable divider;
 
 
-    public RecyclerDivider(Context context) {
-        divider = ContextCompat.getDrawable(context, R.drawable.recycler_view_divider);
+    public RecyclerStockDivider(Context context) {
+        divider = ContextCompat.getDrawable(context, R.drawable.recycler_view_divider_stock);
     }
 
 

@@ -82,9 +82,10 @@ public class FullStock {
                 }
             }
         } catch (MalformedURLException murle) {
-            Log.e("CHASE ERROR", murle.getMessage());
+            Log.e("MalformedURLException", murle.getMessage());
         } catch (IOException ioe) {
-            Log.e("CHASE ERROR", ioe.getMessage());
+            /* Show "No internet connection", or something. */
+            Log.e("IOException", ioe.getMessage());
         }
 
     }

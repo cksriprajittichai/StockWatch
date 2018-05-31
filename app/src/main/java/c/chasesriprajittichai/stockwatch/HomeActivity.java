@@ -258,10 +258,10 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
 
         // Init recycler view. Set to empty now, will be filled after DownloadHalfStocksTask completes.
-        recyclerView = findViewById(R.id.recycler_view_home);
+        recyclerView = findViewById(R.id.recyclerView_home);
         recyclerView.setAdapter(new RecyclerHomeAdapter(new ArrayList<>(), null)); // Set to empty adapter
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        recyclerView.addItemDecoration(new RecyclerDivider(this));
+        recyclerView.addItemDecoration(new RecyclerHomeDivider(this));
     }
 
 
@@ -296,16 +296,21 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
                 if (stockIsInFavorites) {
                     // Remove ticker from favorites.
                     StringBuilder tickersCSV = new StringBuilder(halfStocks.size() * 5);
-                    for (String tempTicker : tickers) {
-                        if (!tempTicker.equalsIgnoreCase(ticker)) {
-                            tickersCSV.append(tempTicker);
+                    for (String t : tickers) {
+                        if (!t.equalsIgnoreCase(ticker)) {
+                            tickersCSV.append(t);
                             tickersCSV.append(',');
                         }
                     }
-                    // Do not put extra comma appended at the end
-                    preferences.edit().putString("Tickers CSV",
-                            tickersCSV.substring(0, tickersCSV.toString().length() - 1)).apply();
 
+                    if (!tickersCSV.toString().isEmpty()) {
+                        // Do not put extra comma appended at the end
+                        preferences.edit().putString("Tickers CSV",
+                                tickersCSV.substring(0, tickersCSV.toString().length() - 1)).apply();
+                    } else {
+                        // The only ticker in favorites has been removed
+                        preferences.edit().putString("Tickers CSV", "").apply();
+                    }
                 }
             }
         }
@@ -316,9 +321,19 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
     protected void onResume() {
         super.onResume();
 
-        String[] tickers = preferences.getString("Tickers CSV", "").split(",");
-        DownloadHalfStocksTask task = new DownloadHalfStocksTask(this, halfStocks, findViewById(R.id.recycler_view_home));
-        task.execute(tickers);
+        String tickersCSV = preferences.getString("Tickers CSV", "");
+        String[] tickers = tickersCSV.split(","); // "".split(",") returns {""}
+        // If there are stocks in favorites update halfStocks and recyclerView.
+        if (!tickers[0].equals("")) {
+            DownloadHalfStocksTask task = new DownloadHalfStocksTask(this, halfStocks, findViewById(R.id.recyclerView_home));
+            task.execute(tickers);
+        } else if (!halfStocks.isEmpty()) {
+            /* Tickers CSV preference is an empty string, meaning that there should be no stocks in
+             * favorites. Stocks can only be removed one at a time, so there must have only been
+             * one stock remaining in favorites. Remove it. */
+            halfStocks.clear(); // Same effect as halfStocks.remove(0)
+            recyclerView.getAdapter().notifyItemRemoved(0);
+        }
     }
 
 

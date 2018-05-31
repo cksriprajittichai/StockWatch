@@ -31,9 +31,9 @@ public class RecyclerHomeAdapter extends RecyclerView.Adapter<RecyclerHomeAdapte
         public ViewHolder(View v) {
             super(v);
 
-            tickerTextView = v.findViewById(R.id.tickerTextView);
-            priceTextView = v.findViewById(R.id.priceTextView);
-            priceChangePercentTextView = v.findViewById(R.id.priceChangePercentTextView);
+            tickerTextView = v.findViewById(R.id.textView_ticker_homeRecyclerItem);
+            priceTextView = v.findViewById(R.id.textView_price_homeRecyclerItem);
+            priceChangePercentTextView = v.findViewById(R.id.textView_priceChangePercent_homeRecyclerItem);
         }
 
 

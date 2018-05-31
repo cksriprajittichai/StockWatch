@@ -3,18 +3,17 @@ package c.chasesriprajittichai.stockwatch;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.drawable.Drawable;
-import android.graphics.drawable.StateListDrawable;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.content.res.ResourcesCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.TextView;
+
+import com.robinhood.spark.SparkView;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -51,9 +50,11 @@ public class StockActivity extends AppCompatActivity {
         }
     }
 
+
     private String ticker;
     private boolean isInFavorites;
     private RecyclerView recyclerView;
+    private TextView scrubInfoTextView;
 
 
     @Override
@@ -65,13 +66,36 @@ public class StockActivity extends AppCompatActivity {
         isInFavorites = getIntent().getBooleanExtra("Is in favorites", false);
 
         // Init recycler view. It is empty now, will be filled in onPostExecute().
-        recyclerView = findViewById(R.id.recycler_view_stock);
+        recyclerView = findViewById(R.id.recyclerView_stock);
         recyclerView.setAdapter(new RecyclerStockAdapter(new ArrayList<>())); // Set to empty adapter
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        recyclerView.addItemDecoration(new RecyclerDivider(this));
+        recyclerView.addItemDecoration(new RecyclerStockDivider(this));
 
         DownloadFullStockTask task = new DownloadFullStockTask(this, this, recyclerView);
         task.execute(ticker);
+
+        scrubInfoTextView = findViewById(R.id.textView_scrub);
+
+        SparkView sparkView = findViewById(R.id.sparkView);
+        sparkView.setAdapter(new SparkViewAdapter()); /** Pass data to SparkView here. */
+        sparkView.setScrubListener(value -> {
+            if (value == null) {
+                scrubInfoTextView.setText(getString(R.string.scrub_notPressed, "cur price"));
+                int deactivated = getResources().getColor(R.color.colorAccentTransparent, getTheme());
+                scrubInfoTextView.setTextColor(deactivated);
+            } else {
+                scrubInfoTextView.setText(getString(R.string.scrub_pressed, value));
+                int activated = getResources().getColor(R.color.colorAccent, getTheme());
+                scrubInfoTextView.setTextColor(activated);
+            }
+        });
+    }
+
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        /** Saving ticker in preferences depending on star status should go here. */
     }
 
 

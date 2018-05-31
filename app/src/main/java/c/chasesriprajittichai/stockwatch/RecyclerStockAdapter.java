@@ -20,7 +20,7 @@ public class RecyclerStockAdapter extends RecyclerView.Adapter<RecyclerStockAdap
 
         public ViewHolder(View v) {
             super(v);
-            statTextView = v.findViewById(R.id.statTextView);
+            statTextView = v.findViewById(R.id.textView_stockStat_stockRecyclerItem);
         }
 
 
