@@ -12,6 +12,8 @@ import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.ProgressBar;
 import android.widget.SearchView;
 import android.widget.Toast;
 
@@ -23,27 +25,28 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 
-public class HomeActivity extends AppCompatActivity implements FindStockTaskListener {
+import static java.lang.Double.parseDouble;
+
+public class HomeActivity extends AppCompatActivity implements FindStockTaskListener, DownloadHalfStocksTaskListener {
 
 
     private static class DownloadHalfStocksTask extends AsyncTask<String, Integer, Integer> {
 
         private final int STATUS_GOOD = 0;
         private final int STATUS_IOEXCEPTION = 1;
-        private WeakReference<Activity> parentActivity;
         private WeakReference<ArrayList<HalfStock>> halfStocks;
         private WeakReference<RecyclerView> recyclerView;
+        private WeakReference<DownloadHalfStocksTaskListener> completionListener;
 
 
-        private DownloadHalfStocksTask(Activity parentActivity, ArrayList<HalfStock> halfStocks, RecyclerView recyclerView) {
-            this.parentActivity = new WeakReference<>(parentActivity);
+        private DownloadHalfStocksTask(ArrayList<HalfStock> halfStocks, RecyclerView recyclerView,
+                                       DownloadHalfStocksTaskListener completionListener) {
             this.halfStocks = new WeakReference<>(halfStocks);
             this.recyclerView = new WeakReference<>(recyclerView);
+            this.completionListener = new WeakReference<>(completionListener);
         }
 
 
@@ -51,96 +54,64 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         protected Integer doInBackground(String... tickers) {
             final int numStocksTotal = tickers.length;
 
-            // Store a map from each ticker to its corresponding HalfStock object that will be created.
-            HashMap<String, HalfStock> tickerToHalfStockMap = new HashMap<>(tickers.length);
-
-            String[] sortedTickers = tickers.clone();
-            Arrays.sort(sortedTickers); // Screener lists stocks alphabetically
-
             int numStocksFinished = 0; // Finished loading and added to halfStocks
             halfStocks.get().clear(); // Remove old HalfStocks
             halfStocks.get().ensureCapacity(numStocksTotal);
 
-            // URL form: <base URL><ticker 1>,<ticker 2>,<ticker 3>,<ticker n>&r=<count at the top of the shown table>
-            final String baseUrl = "https://finviz.com/screener.ashx?v=111&t=";
-            StringBuilder url = new StringBuilder(numStocksTotal * 5); // Approximate size
-            url.append(baseUrl);
-            url.append(String.join(",", sortedTickers)); // Append all tickers, separated by commas
+            // URL form: <base URL><ticker 1>,<ticker 2>,<ticker 3>,<ticker n>
+            final String baseUrl = "https://www.marketwatch.com/investing/multi?tickers=";
+
+            /* Up to 10 stocks are shown in the MarketWatch view multiple stocks website. The first
+             * 10 tickers listed in the URL are shown. Appending more than 10 tickers onto the URL
+             * has no effect on the website. */
+            StringBuilder url = new StringBuilder(50); // Approximate size
 
             int EXIT_STATUS = STATUS_GOOD;
 
-            int numStocksToFinishThisIteration;
+            int numStocksToFinishThisIteration, i, websiteNdx;
+            double curPrice, curChange, curPercent;
+            Elements quoteRoots, prices, priceChangeRoots, priceChanges, priceChangePercents;
             while (numStocksFinished < numStocksTotal) {
-                // If we've completed 60 / 67 stocks, finish only 7 on the last iteration
-                if (numStocksTotal - numStocksFinished >= 20) {
-                    numStocksToFinishThisIteration = 20;
+                // If we've completed 30 / 37 stocks, finish only 7 on the last iteration
+                if (numStocksTotal - numStocksFinished >= 10) {
+                    numStocksToFinishThisIteration = 10;
                 } else {
                     numStocksToFinishThisIteration = numStocksTotal - numStocksFinished;
                 }
 
-                if (numStocksFinished >= 20) {
-                    // URL only needs number at the end if table starts at the 21st stock or higher.
-                    /* Need to show the number at the top of the table.
-                     * If we've finished 20 / 45 stocks, in the second iteration, the stock at the
-                     * top of the table is the 21st stock. */
-                    url.append("&r=");
-                    url.append(numStocksFinished + 1);
+                url.append(baseUrl);
+                for (i = numStocksFinished; i < numStocksFinished + numStocksToFinishThisIteration; i++) {
+                    // Append tickers for stocks that will be created in this iteration
+                    url.append(tickers[i]);
+                    url.append(',');
                 }
+                url.deleteCharAt(url.length() - 1); // Delete extra comma
 
                 // URL is now finished. Go to URL and parse and fill halfStocks.
                 try {
                     Document doc = Jsoup.connect(url.toString()).get();
 
-                    final String baseSelectorStr = "a[href=\"quote.ashx?t=<TICKER>&ty=c&p=d&b=1\"] span";
-                    String curSelectorStr;
-                    Elements curVals;
-                    int priceNdx, percentNdx;
-                    double curPrice, curPercent;
-                    String curPerentStr;
+                    quoteRoots = doc.select("div[class~=section activeQuote bgQuote (down|up)?]");
+                    prices = quoteRoots.select("div[class=lastprice] > div[class=pricewrap] > p[class=data bgLast]");
+                    priceChangeRoots = quoteRoots.select("div[class=lastpricedetails] > p[class=lastcolumn data]");
+                    priceChanges = priceChangeRoots.select("span[class=bgChange]");
+                    priceChangePercents = priceChangeRoots.select("span[class=bgPercentChange]");
+
                     // Iterate through stocks that we're finishing this iteration
-                    for (int i = numStocksFinished; i < numStocksFinished + numStocksToFinishThisIteration; i++) {
-                        // Create selector string for current stock
-                        curSelectorStr = baseSelectorStr.replace("<TICKER>", sortedTickers[i]);
-
-                        curVals = doc.select(curSelectorStr);
-                        /* curVals could contain three items: P/E, price, price change percent
-                         * or curVals could contain two items: price, price change percent */
-                        if (curVals.size() == 3) {
-                            priceNdx = 1;
-                            percentNdx = 2;
-                        } else if (curVals.size() == 2) {
-                            priceNdx = 0;
-                            percentNdx = 1;
-                        } else {
-                            /* Handle exception better. */
-                            tickerToHalfStockMap.put(sortedTickers[i],
-                                    new HalfStock(sortedTickers[i], -1, -1));
-                            continue;
-                        }
-
-                        curPrice = Double.parseDouble(curVals.get(priceNdx).text());
-                        curPerentStr = curVals.get(percentNdx).text();
-                        // Remove '%' at the end of the percent string. Upper bound is exclusive.
-                        curPerentStr = curPerentStr.substring(0, curPerentStr.length() - 1);
-                        curPercent = Double.parseDouble(curPerentStr);
-
-                        // Store mapping from each ticker to completed HalfStock object
-                        tickerToHalfStockMap.put(sortedTickers[i],
-                                new HalfStock(sortedTickers[i], curPrice, curPercent));
+                    for (i = numStocksFinished, websiteNdx = 0; i < numStocksFinished + numStocksToFinishThisIteration; i++, websiteNdx++) {
+                        // Remove ',' or '%' that could be in strings
+                        curPrice = parseDouble(prices.get(websiteNdx).text().replaceAll("[^0-9|.]", ""));
+                        curChange = parseDouble(priceChanges.get(websiteNdx).text().replaceAll("[^0-9|.|\\-]", ""));
+                        curPercent = parseDouble(priceChangePercents.get(websiteNdx).text().replaceAll("[^0-9|.|\\-]", ""));
+                        halfStocks.get().add(new HalfStock(tickers[i], curPrice, curChange, curPercent));
                     }
                 } catch (IOException ioe) {
                     EXIT_STATUS = STATUS_IOEXCEPTION;
                     Log.e("IOException", ioe.getLocalizedMessage());
                 }
 
-                /* Use tickerToHalfStockMap to fill halfStocks with HalfStock objects. Preserve
-                 * the stock order that was passed into the function (order of tickers). */
-                halfStocks.get().clear();
-                for (String ticker : tickers) {
-                    halfStocks.get().add(tickerToHalfStockMap.get(ticker));
-                }
-
                 numStocksFinished += numStocksToFinishThisIteration;
+                url.setLength(0); // Clear URL
             }
 
             return EXIT_STATUS;
@@ -150,13 +121,7 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         @Override
         protected void onPostExecute(Integer status) {
             if (status == STATUS_GOOD) {
-                /* halfStocks is filled in doInBackground() */
-                recyclerView.get().setAdapter(new RecyclerHomeAdapter(halfStocks.get(), halfStock -> {
-                    Intent intent = new Intent(parentActivity.get(), StockActivity.class);
-                    intent.putExtra("Ticker", halfStock.getTicker());
-                    intent.putExtra("Is in favorites", true);
-                    parentActivity.get().startActivityForResult(intent, 1);
-                }));
+                completionListener.get().onDownloadHalfStocksTaskCompleted();
             } else if (status == STATUS_IOEXCEPTION) {
                 /* Show "No internet connection", or something. */
             }
@@ -179,22 +144,17 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         protected Boolean doInBackground(String... tickers) {
             ticker = tickers[0];
 
-            // Create URL
-            final String baseUrl = "https://finance.yahoo.com/quote/<TICKER>?p=<TICKER>";
-            String url = baseUrl.replace("<TICKER>", ticker);
+            final String baseUrl = "https://www.marketwatch.com/tools/quotes/lookup.asp?lookup=";
+            String url = baseUrl + ticker;
 
-            /* Try to go to the Yahoo Finance stock page of ticker. If ticker exists in Yahoo
-             * Finance, this URL leads to the same page that StockActivity gets its data from.
-             * Otherwise, this URL leads to a Yahoo Finance stock search page, which shows no
-             * results. */
             boolean stockExists = false;
             try {
                 Document doc = Jsoup.connect(url).get();
 
-                // Finds an element within a span tag that contains "No results for".
-                Element flagElement = doc.selectFirst("span:contains(No results for \'" + ticker + "\')");
+                // This element exists if the stock's individual page is found on MarketWatch
+                Element flagElement = doc.selectFirst("html > body[role=document][class=page--quote symbol--Stock page--Index]");
 
-                stockExists = (flagElement == null);
+                stockExists = (flagElement != null);
             } catch (IOException ioe) {
                 /* Show "No internet connection", or something. */
                 Log.e("IOException", ioe.getLocalizedMessage());
@@ -208,18 +168,27 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         protected void onPostExecute(Boolean stockExists) {
             completionListener.get().onFindStockTaskCompleted(ticker, stockExists);
         }
+
     }
 
 
     //    private String[] start_tickersArr = {"BAC", "DIS", "BA", "FB", "GE", "GOOGL", "GM", "GS", "HD",
 //            "IBM", "JPM", "JNJ", "CSCO", "CTXS", "ADBE", "AXP", "ANTM", "MSFT", "MRK", "CI", "AAPL", "INTC", "FSLR", "CAT", "RTN", "DKS",
 //            "AAL", "DWDP", "DAL", "CVX", "DRYS", "AMD", "AMZN", "NVDA", "T", "TRV", "UTX", "BRK-A", "BRK-B"};
-//    private String[] start_tickersArr = {"RTN", "BA", "FB", "GE", "GOOGL", "GM", "GS", "HD", "IBM", "JPM", "JNJ", "BAC", "MSFT", "MRK", "AAPL"};
-//    private String[] start_tickersArr = {"RTN", "BA", "FB", "GE"};
     private ArrayList<HalfStock> halfStocks = new ArrayList<>();
     private RecyclerView recyclerView;
     private SearchView searchView;
+    private ProgressBar progressBar;
     private SharedPreferences preferences;
+
+
+    /* Called from DownloadHalfStocksTask.onPostExecute(). */
+    @Override
+    public void onDownloadHalfStocksTaskCompleted() {
+        recyclerView.getAdapter().notifyDataSetChanged();
+        recyclerView.setVisibility(View.VISIBLE);
+        progressBar.setVisibility(View.GONE);
+    }
 
 
     /* Called from FindStockTask.onPostExecute(). */
@@ -257,9 +226,16 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
 
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
 
+        progressBar = findViewById(R.id.progressBar_loadHalfStocks);
+
         // Init recycler view. Set to empty now, will be filled after DownloadHalfStocksTask completes.
         recyclerView = findViewById(R.id.recyclerView_home);
-        recyclerView.setAdapter(new RecyclerHomeAdapter(new ArrayList<>(), null)); // Set to empty adapter
+        recyclerView.setAdapter(new RecyclerHomeAdapter(halfStocks, halfStock -> { // HalfStocks is empty at first
+            Intent intent = new Intent(this, StockActivity.class);
+            intent.putExtra("Ticker", halfStock.getTicker());
+            intent.putExtra("Is in favorites", true);
+            startActivityForResult(intent, 1);
+        }));
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.addItemDecoration(new RecyclerHomeDivider(this));
     }
@@ -321,12 +297,20 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
     protected void onResume() {
         super.onResume();
 
+        /** Starter kit */
+//        preferences.edit().putString("Tickers CSV", "").apply();
+//        preferences.edit().putString("Tickers CSV", "BRK.A,BRK.B,AAL,AAPL,ADBE,AMD,AMZN,ANTM,AXP,BA,BAC,CAT,CI,CSCO,CTXS,CVX,DAL,DIS,DKS,DRYS,DWDP,FB,FSLR,GE,GM,GOOGL,GS,HD,IBM,INTC,JNJ,JPM,MRK,MSFT,NVDA,RTN,T,TRV,UTX").apply();
+//        preferences.edit().putString("Tickers CSV", "GOOGL,UTX,RTN,AAL,AAPL,ADBE").apply();
+        /** */
+
         String tickersCSV = preferences.getString("Tickers CSV", "");
         String[] tickers = tickersCSV.split(","); // "".split(",") returns {""}
         // If there are stocks in favorites update halfStocks and recyclerView.
         if (!tickers[0].equals("")) {
-            DownloadHalfStocksTask task = new DownloadHalfStocksTask(this, halfStocks, findViewById(R.id.recyclerView_home));
+            DownloadHalfStocksTask task = new DownloadHalfStocksTask(halfStocks, findViewById(R.id.recyclerView_home), this);
             task.execute(tickers);
+            progressBar.setVisibility(View.VISIBLE);
+            recyclerView.setVisibility(View.GONE); // Make visible when task is completed
         } else if (!halfStocks.isEmpty()) {
             /* Tickers CSV preference is an empty string, meaning that there should be no stocks in
              * favorites. Stocks can only be removed one at a time, so there must have only been

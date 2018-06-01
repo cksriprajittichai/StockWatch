@@ -1,6 +1,7 @@
 package c.chasesriprajittichai.stockwatch;
 
 import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
@@ -68,14 +69,13 @@ public class RecyclerHomeAdapter extends RecyclerView.Adapter<RecyclerHomeAdapte
     @NonNull
     @Override
     public RecyclerHomeAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        Context context = parent.getContext();
-
-        LayoutInflater inflater = LayoutInflater.from(context);
+        LayoutInflater inflater = LayoutInflater.from(parent.getContext());
 
         View stockView = inflater.inflate(R.layout.recycler_item_home_activity, parent, false);
 
         return new ViewHolder(stockView);
     }
+
 
     @NonNull
     @Override
