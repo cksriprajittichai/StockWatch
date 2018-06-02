@@ -8,29 +8,13 @@
     <string name="sortByPercentMenuItem">"Sort By % Change"</string>
     <string name="shuffleMenuItem">"Shuffle"</string>
 
-    <!--StockActivity menu item titles-->
+    <!--IndividualStockActivity menu item titles-->
     <string name="starMenuItem">"Star"</string>
 
     <string name="scrub_notPressed">Price: %1$s</string>
     <string name="scrub_pressed">Price: %1$s</string>
 
-
-    <string-array name="statsBeingUsed">
-        <item>Price</item>
-        <item>Daily Price Change</item>
-
-        <item>Market Cap (intraday)</item>
-        <item>Enterprise Value</item>
-        <item>Trailing P/E</item>
-        <item>Price/Sales (ttm)</item>
-        <item>Price/Book (mrq)</item>
-        <item>Profit Margin</item>
-        <item>EBITDA</item>
-        <item>52-Week Change</item>
-        <item>52 Week High</item>
-        <item>52 Week Low</item>
-        <item>50-Day Moving Average</item>
-        <item>Avg Vol (3 month)</item>
-    </string-array>
+    <string name="string_colon_double">%1$s: %2$.2f</string>
+    <string name="string_colon_double_percent">%1$s: %2$.2f%%</string>
 
 </resources>

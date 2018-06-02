@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/black">
+    android:background="@android:color/black"
+    android:orientation="vertical"
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp">
 
     <com.robinhood.spark.SparkView
         android:id="@+id/sparkView"
@@ -11,8 +14,6 @@
         android:layout_height="200dp"
         android:layout_marginBottom="2dp"
         android:layout_marginTop="4dp"
-        app:layout_constraintBottom_toTopOf="@+id/textView_scrub"
-        app:layout_constraintTop_toTopOf="parent"
         app:spark_lineColor="@color/colorAccent"
         app:spark_scrubEnabled="true" />
 
@@ -23,25 +24,67 @@
         android:layout_marginBottom="0dp"
         android:gravity="start"
         android:textAppearance="?android:textAppearanceLarge"
-        android:textColor="@color/colorAccent"
-        app:layout_constraintBottom_toTopOf="@+id/view_sparkAndRecyclerViewDivider"
-        app:layout_constraintTop_toBottomOf="@+id/sparkView" />
+        android:textColor="@color/colorAccent" />
 
     <View
         android:id="@+id/view_sparkAndRecyclerViewDivider"
         android:layout_width="match_parent"
         android:layout_height="2dp"
         android:layout_marginBottom="8dp"
-        android:background="@android:color/white"
-        app:layout_constraintBottom_toTopOf="@id/recyclerView_stock"
-        app:layout_constraintTop_toBottomOf="@id/textView_scrub" />
+        android:background="@android:color/white" />
 
-    <android.support.v7.widget.RecyclerView
-        android:id="@+id/recyclerView_stock"
+    <TextView
+        android:id="@+id/test_price"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:scrollbars="vertical"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/view_sparkAndRecyclerViewDivider" />
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:gravity="start"
+        android:textAppearance="?android:textAppearanceMedium"
+        android:textColor="@android:color/white" />
 
-</android.support.constraint.ConstraintLayout>
+    <TextView
+        android:id="@+id/test_changePoint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:gravity="start"
+        android:textAppearance="?android:textAppearanceMedium"
+        android:textColor="@android:color/white" />
+
+    <TextView
+        android:id="@+id/test_changePercent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:gravity="start"
+        android:textAppearance="?android:textAppearanceMedium"
+        android:textColor="@android:color/white" />
+
+    <TextView
+        android:id="@+id/test_close_price"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:gravity="start"
+        android:textAppearance="?android:textAppearanceMedium"
+        android:textColor="@android:color/white" />
+
+    <TextView
+        android:id="@+id/test_close_changePoint"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:gravity="start"
+        android:textAppearance="?android:textAppearanceMedium"
+        android:textColor="@android:color/white" />
+
+    <TextView
+        android:id="@+id/test_close_changePercent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:gravity="start"
+        android:textAppearance="?android:textAppearanceMedium"
+        android:textColor="@android:color/white" />
+
+</LinearLayout>

@@ -1,7 +1,5 @@
 package c.chasesriprajittichai.stockwatch;
 
-import android.content.Context;
-import android.content.Intent;
 import android.graphics.Color;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.RecyclerView;
@@ -18,7 +16,7 @@ public class RecyclerHomeAdapter extends RecyclerView.Adapter<RecyclerHomeAdapte
 
 
     public interface OnItemClickListener {
-        void onItemClick(HalfStock halfStock);
+        void onItemClick(BasicStock basicStock);
     }
 
 
@@ -38,30 +36,30 @@ public class RecyclerHomeAdapter extends RecyclerView.Adapter<RecyclerHomeAdapte
         }
 
 
-        public void bind(final HalfStock halfStock, final OnItemClickListener listener) {
-            tickerTextView.setText(halfStock.getTicker());
-            priceTextView.setText(String.format(Locale.US, "%.2f", halfStock.getPrice()));
+        public void bind(final BasicStock basicStock, final OnItemClickListener listener) {
+            tickerTextView.setText(basicStock.getTicker());
+            priceTextView.setText(String.format(Locale.US, "%.2f", basicStock.getPrice()));
             // Append '%' onto end of price change percent. First '%' is escape char for '%'.
-            priceChangePercentTextView.setText(String.format(Locale.US, "%.2f%%", halfStock.getPriceChangePercent()));
+            priceChangePercentTextView.setText(String.format(Locale.US, "%.2f%%", basicStock.getChangePercent()));
 
             // Assign green or red color to price change percent text
-            if (halfStock.getPriceChangePercent() < 0) {
+            if (basicStock.getChangePercent() < 0) {
                 priceChangePercentTextView.setTextColor(Color.RED);
             } else {
                 priceChangePercentTextView.setTextColor(Color.GREEN);
             }
 
-            itemView.setOnClickListener(l -> listener.onItemClick(halfStock));
+            itemView.setOnClickListener(l -> listener.onItemClick(basicStock));
         }
     }
 
 
-    private ArrayList<HalfStock> halfStocks;
+    private ArrayList<BasicStock> basicStocks;
     private OnItemClickListener onItemClickListener;
 
 
-    public RecyclerHomeAdapter(ArrayList<HalfStock> halfStocks, OnItemClickListener listener) {
-        this.halfStocks = halfStocks;
+    public RecyclerHomeAdapter(ArrayList<BasicStock> basicStocks, OnItemClickListener listener) {
+        this.basicStocks = basicStocks;
         this.onItemClickListener = listener;
     }
 
@@ -80,13 +78,13 @@ public class RecyclerHomeAdapter extends RecyclerView.Adapter<RecyclerHomeAdapte
     @NonNull
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.bind(halfStocks.get(position), onItemClickListener);
+        holder.bind(basicStocks.get(position), onItemClickListener);
     }
 
 
     @Override
     public int getItemCount() {
-        return halfStocks.size();
+        return basicStocks.size();
     }
 
 }
