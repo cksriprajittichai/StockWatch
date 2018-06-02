@@ -100,9 +100,9 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
                     // Iterate through stocks that we're finishing this iteration
                     for (i = numStocksFinished, websiteNdx = 0; i < numStocksFinished + numStocksToFinishThisIteration; i++, websiteNdx++) {
                         // Remove ',' or '%' that could be in strings
-                        curPrice = parseDouble(prices.get(websiteNdx).text().replaceAll("[^0-9|.]", ""));
-                        curChange = parseDouble(priceChanges.get(websiteNdx).text().replaceAll("[^0-9|.|\\-]", ""));
-                        curPercent = parseDouble(priceChangePercents.get(websiteNdx).text().replaceAll("[^0-9|.|\\-]", ""));
+                        curPrice = parseDouble(prices.get(websiteNdx).text().replaceAll("[^0-9.]+", ""));
+                        curChange = parseDouble(priceChanges.get(websiteNdx).text().replaceAll("[^0-9.\\-]+", ""));
+                        curPercent = parseDouble(priceChangePercents.get(websiteNdx).text().replaceAll("[^0-9.\\-]+", ""));
                         halfStocks.get().add(new HalfStock(tickers[i], curPrice, curChange, curPercent));
                     }
                 } catch (IOException ioe) {
@@ -225,6 +225,10 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         setTitle("Stock Watch");
 
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        /** Starter kit */
+//        preferences.edit().putString("Tickers CSV", "").apply();
+//        preferences.edit().putString("Tickers CSV", "BRK.A,BRK.B,AAL,AAPL,ADBE,AMD,AMZN,ANTM,AXP,BA,BAC,CAT,CI,CSCO,CTXS,CVX,DAL,DIS,DKS,DRYS,DWDP,FB,FSLR,GE,GM,GOOGL,GS,HD,IBM,INTC,JNJ,JPM,MRK,MSFT,NVDA,RTN,T,TRV,UTX").apply();
+//        preferences.edit().putString("Tickers CSV", "GOOGL,UTX,RTN,AAL,AAPL,ADBE").apply();
 
         progressBar = findViewById(R.id.progressBar_loadHalfStocks);
 
@@ -297,12 +301,6 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
     protected void onResume() {
         super.onResume();
 
-        /** Starter kit */
-//        preferences.edit().putString("Tickers CSV", "").apply();
-//        preferences.edit().putString("Tickers CSV", "BRK.A,BRK.B,AAL,AAPL,ADBE,AMD,AMZN,ANTM,AXP,BA,BAC,CAT,CI,CSCO,CTXS,CVX,DAL,DIS,DKS,DRYS,DWDP,FB,FSLR,GE,GM,GOOGL,GS,HD,IBM,INTC,JNJ,JPM,MRK,MSFT,NVDA,RTN,T,TRV,UTX").apply();
-//        preferences.edit().putString("Tickers CSV", "GOOGL,UTX,RTN,AAL,AAPL,ADBE").apply();
-        /** */
-
         String tickersCSV = preferences.getString("Tickers CSV", "");
         String[] tickers = tickersCSV.split(","); // "".split(",") returns {""}
         // If there are stocks in favorites update halfStocks and recyclerView.
@@ -354,7 +352,7 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
                     isValidTicker = false;
                 }
                 for (char c : ticker.toCharArray()) {
-                    if (!Character.isLetterOrDigit(c) && c != '.' && c != '-') {
+                    if (!Character.isLetterOrDigit(c) && c != '.') {
                         isValidTicker = false;
                         break;
                     }
@@ -399,7 +397,6 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
 
                 recyclerView.getAdapter().notifyItemRangeChanged(0, recyclerView.getAdapter().getItemCount());
                 return true;
-
             case R.id.sortByPriceMenuItem:
                 // Sort by decreasing price
                 Comparator<HalfStock> ascendingPriceComparator = Comparator.comparingDouble(HalfStock::getPrice);
@@ -410,7 +407,6 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
 
                 recyclerView.getAdapter().notifyItemRangeChanged(0, recyclerView.getAdapter().getItemCount());
                 return true;
-
             case R.id.sortByPercentChangeMenuItem:
                 // Sort by decreasing magnitude of daily price change percent
                 halfStocks.sort((HalfStock a, HalfStock b) -> {
@@ -425,7 +421,6 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
 
                 recyclerView.getAdapter().notifyItemRangeChanged(0, recyclerView.getAdapter().getItemCount());
                 return true;
-
             case R.id.shuffleMenuItem:
                 Collections.shuffle(halfStocks);
 
@@ -434,7 +429,6 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
 
                 recyclerView.getAdapter().notifyItemRangeChanged(0, recyclerView.getAdapter().getItemCount());
                 return true;
-
             default:
                 return super.onOptionsItemSelected(item);
         }

@@ -21,8 +21,18 @@ public class HalfStock {
     }
 
 
+    public void setTicker(String ticker) {
+        this.ticker = ticker;
+    }
+
+
     public double getPrice() {
         return price;
+    }
+
+
+    public void setPrice(double price) {
+        this.price = price;
     }
 
 
@@ -31,8 +41,18 @@ public class HalfStock {
     }
 
 
+    public void setPriceChange(double priceChange) {
+        this.priceChange = priceChange;
+    }
+
+
     public double getPriceChangePercent() {
         return priceChangePercent;
+    }
+    
+
+    public void setPriceChangePercent(double priceChangePercent) {
+        this.priceChangePercent = priceChangePercent;
     }
 
 }
