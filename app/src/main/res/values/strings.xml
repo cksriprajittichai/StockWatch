@@ -11,10 +11,12 @@
     <!--IndividualStockActivity menu item titles-->
     <string name="starMenuItem">"Star"</string>
 
-    <string name="scrub_notPressed">Price: %1$s</string>
-    <string name="scrub_pressed">Price: %1$s</string>
+    <!--<string name="scrub_notPressed">%1$.2f</string>-->
+    <!--<string name="scrub_pressed">%1$.2f</string>-->
 
-    <string name="string_colon_double">%1$s: %2$.2f</string>
-    <string name="string_colon_double_percent">%1$s: %2$.2f%%</string>
+    <string name="double2dec">%1$.2f</string>
+    <string name="string_colon_double2dec">%1$s: %2$.2f</string>
+    <!--'%' escapes itself-->
+    <string name="string_colon_double2dec_percent">%1$s: %2$.2f%%</string>
 
 </resources>

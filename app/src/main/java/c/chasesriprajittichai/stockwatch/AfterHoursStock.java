@@ -1,6 +1,8 @@
 package c.chasesriprajittichai.stockwatch;
 
-public class AfterHoursStock extends BasicStock {
+import java.util.ArrayList;
+
+public class AfterHoursStock extends AdvancedStock {
 
     protected double close_price;
     protected double close_changePoint;
@@ -8,8 +10,8 @@ public class AfterHoursStock extends BasicStock {
 
     public AfterHoursStock(State state, String ticker, String name, double price, double changePoint,
                            double changePercent, double close_price, double close_changePoint,
-                           double close_changePercent) {
-        super(state, ticker, name, price, changePoint, changePercent);
+                           double close_changePercent, ArrayList<Double> yData) {
+        super(state, ticker, name, price, changePoint, changePercent, yData);
         this.close_price = close_price;
         this.close_changePoint = close_changePoint;
         this.close_changePercent = close_changePercent;

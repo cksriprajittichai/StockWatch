@@ -6,6 +6,7 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import java.util.ArrayList;
@@ -14,18 +15,15 @@ import java.util.Locale;
 
 public class RecyclerHomeAdapter extends RecyclerView.Adapter<RecyclerHomeAdapter.ViewHolder> {
 
-
     public interface OnItemClickListener {
         void onItemClick(BasicStock basicStock);
     }
-
 
     public class ViewHolder extends RecyclerView.ViewHolder {
 
         private TextView tickerTextView;
         private TextView priceTextView;
         private TextView priceChangePercentTextView;
-
 
         public ViewHolder(View v) {
             super(v);
@@ -34,7 +32,6 @@ public class RecyclerHomeAdapter extends RecyclerView.Adapter<RecyclerHomeAdapte
             priceTextView = v.findViewById(R.id.textView_price_homeRecyclerItem);
             priceChangePercentTextView = v.findViewById(R.id.textView_priceChangePercent_homeRecyclerItem);
         }
-
 
         public void bind(final BasicStock basicStock, final OnItemClickListener listener) {
             tickerTextView.setText(basicStock.getTicker());
@@ -53,16 +50,13 @@ public class RecyclerHomeAdapter extends RecyclerView.Adapter<RecyclerHomeAdapte
         }
     }
 
-
-    private ArrayList<BasicStock> basicStocks;
+    private ArrayList<BasicStock> stocks;
     private OnItemClickListener onItemClickListener;
 
-
-    public RecyclerHomeAdapter(ArrayList<BasicStock> basicStocks, OnItemClickListener listener) {
-        this.basicStocks = basicStocks;
+    public RecyclerHomeAdapter(ArrayList<BasicStock> stocks, OnItemClickListener listener) {
+        this.stocks = stocks;
         this.onItemClickListener = listener;
     }
-
 
     @NonNull
     @Override
@@ -74,17 +68,15 @@ public class RecyclerHomeAdapter extends RecyclerView.Adapter<RecyclerHomeAdapte
         return new ViewHolder(stockView);
     }
 
-
     @NonNull
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.bind(basicStocks.get(position), onItemClickListener);
+        holder.bind(stocks.get(position), onItemClickListener);
     }
-
 
     @Override
     public int getItemCount() {
-        return basicStocks.size();
+        return stocks.size();
     }
 
 }

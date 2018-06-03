@@ -15,7 +15,8 @@
         android:layout_marginBottom="2dp"
         android:layout_marginTop="4dp"
         app:spark_lineColor="@color/colorAccent"
-        app:spark_scrubEnabled="true" />
+        app:spark_scrubEnabled="true"
+        app:spark_scrubLineWidth="1dp" />
 
     <TextView
         android:id="@+id/textView_scrub"
@@ -24,7 +25,7 @@
         android:layout_marginBottom="0dp"
         android:gravity="start"
         android:textAppearance="?android:textAppearanceLarge"
-        android:textColor="@color/colorAccent" />
+        android:textColor="@color/colorAccentTransparent" />
 
     <View
         android:id="@+id/view_sparkAndRecyclerViewDivider"

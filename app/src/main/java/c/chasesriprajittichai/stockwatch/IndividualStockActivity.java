@@ -7,6 +7,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
@@ -20,6 +21,7 @@ import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Locale;
 
 import c.chasesriprajittichai.stockwatch.AsyncTaskListeners.DownloadIndividualStockTask;
@@ -28,39 +30,71 @@ import static c.chasesriprajittichai.stockwatch.BasicStock.State.AFTER_HOURS;
 import static c.chasesriprajittichai.stockwatch.BasicStock.State.CLOSED;
 import static c.chasesriprajittichai.stockwatch.BasicStock.State.OPEN;
 import static java.lang.Double.parseDouble;
+import static org.apache.commons.lang3.StringUtils.substringBetween;
 
 
 public class IndividualStockActivity extends AppCompatActivity implements DownloadIndividualStockTask {
 
-
     private static class DownloadStockDataTask extends AsyncTask<Void, Integer, Integer> {
 
-
         private String ticker;
-        private WeakReference<BasicStock> stock;
+        private WeakReference<AdvancedStock> stock;
         private WeakReference<DownloadIndividualStockTask> completionListener;
 
-
-        private DownloadStockDataTask(String ticker, BasicStock stock, DownloadIndividualStockTask completionListener) {
-            this.ticker = ticker;
+        private DownloadStockDataTask(String ticker, AdvancedStock stock, DownloadIndividualStockTask completionListener) {
+            this.ticker = ticker.toUpperCase(Locale.US);
             this.stock = new WeakReference<>(stock);
             this.completionListener = new WeakReference<>(completionListener);
         }
 
-
         @Override
         protected Integer doInBackground(Void... params) {
             try {
-                Document doc = Jsoup.connect("https://www.marketwatch.com/investing/stock/" + ticker).get();
+                /* Get graph data. */
+                Document multiDoc = Jsoup.connect("https://www.marketwatch.com/investing/multi?tickers=" + ticker).get();
+                Element quoteRoot = multiDoc.selectFirst("div[class~=section activeQuote bgQuote (down|up)?]");
+                Element intradayChart = quoteRoot.selectFirst("script[type=text/javascript]");
+                String jsStr = substringBetween(intradayChart.toString(), "Trades\":[", "]");
+                // jsStr is in CSV format. Values in jsStr could be "null". Values do not contain ','.
+                // If null values are found, replace them with the last non-null value.
+                String[] chart_priceStrs = jsStr.split(",");
+                ArrayList<Double> chart_prices = new ArrayList<>();
 
-                Element nameElmnt = doc.selectFirst("body div[data-symbol=" + ticker.toUpperCase(Locale.US) + "] " +
-                        "div[class=row] > h1[class=company__name]");
+                // Init previous price as first non-null value
+                double chart_prevPrice = -1;
+                boolean chart_priceFound = false;
+                for (String s : chart_priceStrs) {
+                    if (!s.equals("null")) {
+                        chart_prevPrice = parseDouble(s);
+                        chart_priceFound = true;
+                        break;
+                    }
+                }
+
+                if (chart_priceFound) {
+                    chart_prices.ensureCapacity(chart_priceStrs.length);
+                    for (int i = 0; i < chart_priceStrs.length; i++) {
+                        if (!chart_priceStrs[i].equals("null")) {
+                            chart_prices.add(i, parseDouble(chart_priceStrs[i]));
+                            chart_prevPrice = chart_prices.get(i); // Update prevPrice
+                        } else {
+                            chart_prices.add(i, chart_prevPrice);
+                        }
+                    }
+                }
+
+
+                /* Get all other data. */
+                Document singleDoc = Jsoup.connect("https://www.marketwatch.com/investing/stock/" + ticker).get();
+
+                Element nameElmnt = singleDoc.selectFirst("body div[data-symbol=" + ticker + "] div[class=row] > h1[class=company__name]");
                 String name = nameElmnt.text();
 
-                Element intraday = doc.selectFirst("body div[class=element element--intraday]");
+                Element intraday = singleDoc.selectFirst("body div[class=element element--intraday]");
                 Element intradayData = intraday.selectFirst("div[class=intraday__data]");
 
-                Element icon = intraday.selectFirst("small[class~=intraday__status status--(open|after|closed)] > i[class^=icon]");
+                Element icon = intraday.selectFirst(
+                        "small[class~=intraday__status status--(open|after|closed)] > i[class^=icon]");
                 String stateStr = icon.nextSibling().toString();
                 BasicStock.State state;
                 switch (stateStr.toLowerCase(Locale.US)) {
@@ -75,7 +109,7 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
                         state = CLOSED;
                         break;
                     default:
-                        state = OPEN; /** Create error case. */
+                        state = OPEN; /** Create error case (error state). */
                         break;
                 }
 
@@ -96,7 +130,8 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
                         changePercent = parseDouble(changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
 
                         stock = new WeakReference<>(
-                                new BasicStock(state, ticker, name, price, changePoint, changePercent));
+                                new AdvancedStock(state, ticker, name, price, changePoint,
+                                        changePercent, chart_prices));
                         break;
                     }
                     case AFTER_HOURS: {
@@ -105,7 +140,8 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
                         changePercentElmnt = intradayData.selectFirst("span[class=change--percent--q] > bg-quote[field=percentchange]");
 
                         close_intradayDataElmnt = intraday.selectFirst("div[class=intraday__close]");
-                        tableCells = close_intradayDataElmnt.select("tr[class=table__row] > td[class^=table__cell]");
+                        tableCells = close_intradayDataElmnt.select("tr[class=table__row] > " +
+                                "td[class^=table__cell]");
                         close_priceElmnt = tableCells.get(0);
                         close_changePointElmnt = tableCells.get(1);
                         close_changePercentElmnt = tableCells.get(2);
@@ -119,8 +155,8 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
                         close_changePercent = parseDouble(close_changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
 
                         stock = new WeakReference<>(
-                                new AfterHoursStock(state, ticker, name, price, changePoint, changePercent
-                                        , close_price, close_changePoint, close_changePercent));
+                                new AfterHoursStock(state, ticker, name, price, changePoint, changePercent,
+                                        close_price, close_changePoint, close_changePercent, chart_prices));
                         break;
                     }
                     case CLOSED: {
@@ -134,7 +170,8 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
                         changePercent = parseDouble(changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
 
                         stock = new WeakReference<>(
-                                new BasicStock(state, ticker, name, price, changePoint, changePercent));
+                                new AdvancedStock(state, ticker, name, price, changePoint,
+                                        changePercent, chart_prices));
                         break;
                     }
                 }
@@ -145,16 +182,14 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
             return 0;
         }
 
-
         @Override
         protected void onPostExecute(Integer status) {
             completionListener.get().onDownloadIndividualStockTaskCompleted(stock.get());
         }
     }
 
-
     private String ticker; // Needed to create stock
-    private BasicStock stock;
+    private AdvancedStock stock;
     private boolean wasInFavoritesInitially;
     private boolean isInFavorites;
     private TextView scrubInfoTextView;
@@ -164,28 +199,45 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
     private TextView close_priceTextView;
     private TextView close_changePointTextView;
     private TextView close_changePercentTextView;
+    private SparkView sparkView;
+    private SparkViewAdapter sparkViewAdapter;
     private SharedPreferences preferences;
 
-
     @Override
-    public void onDownloadIndividualStockTaskCompleted(BasicStock stock) {
+    public void onDownloadIndividualStockTaskCompleted(AdvancedStock stock) {
         this.stock = stock;
 
         if (getTitle().equals("")) {
             setTitle(stock.getName());
         }
 
-        priceTextView.setText(getString(R.string.string_colon_double, "Price", stock.getPrice()));
-        changePointTextView.setText(getString(R.string.string_colon_double, "Point Change", stock.getChangePoint()));
-        changePercentTextView.setText(getString(R.string.string_colon_double_percent, "Percent Change", stock.getChangePercent()));
+        sparkViewAdapter.setyData(stock.getyData());
+        sparkViewAdapter.notifyDataSetChanged();
+
+        scrubInfoTextView.setText(getString(R.string.double2dec, stock.getPrice())); // Init text view
+
+        sparkView.setScrubListener((Object valueObj) -> {
+            if (valueObj == null) {
+                scrubInfoTextView.setText(getString(R.string.double2dec, stock.getPrice()));
+                int color_deactivated = getResources().getColor(R.color.colorAccentTransparent, getTheme());
+                scrubInfoTextView.setTextColor(color_deactivated);
+            } else {
+                scrubInfoTextView.setText(getString(R.string.double2dec, (double) valueObj));
+                int color_activated = getResources().getColor(R.color.colorAccent, getTheme());
+                scrubInfoTextView.setTextColor(color_activated);
+            }
+        });
+
+        priceTextView.setText(getString(R.string.string_colon_double2dec, "Price", stock.getPrice()));
+        changePointTextView.setText(getString(R.string.string_colon_double2dec, "Point Change", stock.getChangePoint()));
+        changePercentTextView.setText(getString(R.string.string_colon_double2dec_percent, "Percent Change", stock.getChangePercent()));
         if (stock instanceof AfterHoursStock) {
             AfterHoursStock ahStock = (AfterHoursStock) stock;
-            close_priceTextView.setText(getString(R.string.string_colon_double, "Price at Close", ahStock.getClose_price()));
-            close_changePointTextView.setText(getString(R.string.string_colon_double, "Point Change at Close", ahStock.getClose_changePoint()));
-            close_changePercentTextView.setText(getString(R.string.string_colon_double_percent, "Percent Change at Close", ahStock.getClose_changePercent()));
+            close_priceTextView.setText(getString(R.string.string_colon_double2dec, "Price at Close", ahStock.getClose_price()));
+            close_changePointTextView.setText(getString(R.string.string_colon_double2dec, "Point Change at Close", ahStock.getClose_changePoint()));
+            close_changePercentTextView.setText(getString(R.string.string_colon_double2dec_percent, "Percent Change at Close", ahStock.getClose_changePercent()));
         }
     }
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -208,21 +260,10 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
         close_changePointTextView = findViewById(R.id.test_close_changePoint);
         close_changePercentTextView = findViewById(R.id.test_close_changePercent);
 
-        SparkView sparkView = findViewById(R.id.sparkView);
-        sparkView.setAdapter(new SparkViewAdapter()); /** Pass data to SparkView here. */
-        sparkView.setScrubListener(value -> {
-            if (value == null) {
-                scrubInfoTextView.setText(getString(R.string.scrub_notPressed, "cur price"));
-                int deactivated = getResources().getColor(R.color.colorAccentTransparent, getTheme());
-                scrubInfoTextView.setTextColor(deactivated);
-            } else {
-                scrubInfoTextView.setText(getString(R.string.scrub_pressed, value));
-                int activated = getResources().getColor(R.color.colorAccent, getTheme());
-                scrubInfoTextView.setTextColor(activated);
-            }
-        });
+        sparkViewAdapter = new SparkViewAdapter(new ArrayList<>()); // Init as empty
+        sparkView = findViewById(R.id.sparkView);
+        sparkView.setAdapter(sparkViewAdapter);
     }
-
 
     @Override
     protected void onPause() {
@@ -232,47 +273,61 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
             if (wasInFavoritesInitially) {
                 // Remove fullStock's ticker from Tickers CSV preference
                 String[] tickers = preferences.getString("Tickers CSV", "").split(",");
+                String[] data = preferences.getString("Data CSV", "").split(",");
                 StringBuilder tickersCSV = new StringBuilder(tickers.length * 5); // Approximate
-                for (String t : tickers) {
-                    if (!t.equalsIgnoreCase(ticker)) {
-                        tickersCSV.append(t);
+                StringBuilder dataCSV = new StringBuilder(data.length * 5); // Approximate
+                for (int tickerNdx = 0, dataNdx = 0; tickerNdx < tickers.length; tickerNdx++, dataNdx += 4) {
+                    if (!tickers[tickerNdx].equalsIgnoreCase(ticker)) {
+                        tickersCSV.append(tickers[tickerNdx]);
                         tickersCSV.append(',');
+
+                        dataCSV.append(data[dataNdx] + ',' + data[dataNdx + 1] + ',' +
+                                data[dataNdx + 2] + ',' + data[dataNdx + 3] + ',');
                     }
                 }
-                tickersCSV.deleteCharAt(tickersCSV.length() - 1); // Delete extra comma
 
                 if (!tickersCSV.toString().isEmpty()) {
-                    // Do not put extra comma appended at the end
+                    tickersCSV.deleteCharAt(tickersCSV.length() - 1); // Delete extra comma
+                    dataCSV.deleteCharAt(dataCSV.length() - 1); // Delete extra comma
                     preferences.edit().putString("Tickers CSV", tickersCSV.toString()).apply();
+                    preferences.edit().putString("Data CSV", dataCSV.toString()).apply();
                 } else {
                     // The only ticker in favorites has been removed
                     preferences.edit().putString("Tickers CSV", "").apply();
+                    preferences.edit().putString("Data CSV", "").apply();
                 }
             } else {
-                // Add fullStock's ticker to Tickers CSV preference.
-                // Insert ticker at the front of the string (top of the list).
-                String tickersCSVstr = preferences.getString("Tickers CSV", "");
-                if (tickersCSVstr.isEmpty()) {
+                // Add stock's ticker to Tickers CSV preference.
+                // Add stock's data to Data CSV preference.
+                // Insert stock at the front of the string (top of the list).
+                String tickersCSV = preferences.getString("Tickers CSV", "");
+                String dataCSV = preferences.getString("Data CSV", "");
+                if (tickersCSV.isEmpty()) {
                     preferences.edit().putString("Tickers CSV", stock.getTicker()).apply();
+                    preferences.edit().putString("Data CSV", stock.getState().toString() + ',' +
+                            stock.getPrice() + ',' + stock.getChangePoint() + ',' +
+                            stock.getChangePercent()).apply();
                 } else {
-                    preferences.edit().putString("Tickers CSV", stock.getTicker() + ',' + tickersCSVstr).apply();
+                    preferences.edit().putString("Tickers CSV", stock.getTicker() + ',' + tickersCSV).apply();
+                    preferences.edit().putString("Data CSV", stock.getState().toString() + ',' +
+                            stock.getPrice() + ',' + stock.getChangePoint() + ',' +
+                            stock.getChangePercent() + ',' + dataCSV).apply();
                 }
-
             }
+
+            /* The activity has paused. Update the favorites status.
+             * This is vital because the condition to be able to edit Tickers CSV and Data CSV are
+             * whether or not the favorites status has changed. */
+            wasInFavoritesInitially = isInFavorites;
         }
     }
-
 
     /* Back button is the only way to get back to HomeActivity. */
     @Override
     public void onBackPressed() {
-        Intent returnIntent = new Intent();
-        returnIntent.putExtra("Ticker", ticker);
-        returnIntent.putExtra("Is in favorites", isInFavorites);
-        setResult(Activity.RESULT_OK, returnIntent);
-        finish();
+        Intent intent = new Intent(this, HomeActivity.class);
+        startActivity(intent);
     }
-
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -286,7 +341,6 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
 
         return true;
     }
-
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
@@ -303,4 +357,5 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
                 return super.onOptionsItemSelected(item);
         }
     }
+
 }

@@ -2,30 +2,47 @@ package c.chasesriprajittichai.stockwatch;
 
 import com.robinhood.spark.SparkAdapter;
 
+import java.util.ArrayList;
+
 public class SparkViewAdapter extends SparkAdapter {
 
-    private float[] yData = {68, 22, 31, 57, 35, 79, 86, 47, 34, 55, 80, 72, 99, 66, 47, 42, 56, 64, 66, 80, 97, 10, 43, 12, 25, 71, 47, 73, 49, 36};
+    private ArrayList<Double> yData;
 
-
-//    public SparkViewAdapter(float[] yData) {
-//        this.yData = yData;
-//    }
-
+    public SparkViewAdapter(ArrayList<Double> yData) {
+        this.yData = yData;
+    }
 
     @Override
     public int getCount() {
-        return yData.length;
+        return yData.size();
     }
-
 
     @Override
     public Object getItem(int index) {
-        return yData[index];
+        return yData.get(index);
     }
-
 
     @Override
     public float getY(int index) {
-        return yData[index];
+        return (float) yData.get(index).doubleValue();
     }
+
+    public double getyData(int index) {
+        return yData.get(index);
+    }
+
+    public ArrayList<Double> getyData() {
+        return yData;
+    }
+
+    /* Does not call notifyDataSetChanged(). */
+    public void setyData(int index, double data) {
+        yData.set(index, data);
+    }
+
+    /* Does not call notifyDataSetChanged(). */
+    public void setyData(ArrayList<Double> yData) {
+        this.yData = yData;
+    }
+
 }

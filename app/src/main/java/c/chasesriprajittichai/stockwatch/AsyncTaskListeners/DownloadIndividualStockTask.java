@@ -1,7 +1,7 @@
 package c.chasesriprajittichai.stockwatch.AsyncTaskListeners;
 
-import c.chasesriprajittichai.stockwatch.BasicStock;
+import c.chasesriprajittichai.stockwatch.AdvancedStock;
 
 public interface DownloadIndividualStockTask {
-    void onDownloadIndividualStockTaskCompleted(BasicStock stock);
+    void onDownloadIndividualStockTaskCompleted(AdvancedStock stock);
 }
