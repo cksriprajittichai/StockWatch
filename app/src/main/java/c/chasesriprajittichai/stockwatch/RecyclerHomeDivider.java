@@ -9,10 +9,10 @@ import android.view.View;
 
 public class RecyclerHomeDivider extends RecyclerView.ItemDecoration {
 
-    private Drawable divider;
+    private Drawable mdivider;
 
     public RecyclerHomeDivider(Context context) {
-        divider = ContextCompat.getDrawable(context, R.drawable.recycler_view_divider_home);
+        mdivider = ContextCompat.getDrawable(context, R.drawable.recycler_view_divider_home);
     }
     
     @Override
@@ -27,10 +27,10 @@ public class RecyclerHomeDivider extends RecyclerView.ItemDecoration {
             RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) child.getLayoutParams();
 
             int top = child.getBottom() + params.bottomMargin;
-            int bottom = top + divider.getIntrinsicHeight();
+            int bottom = top + mdivider.getIntrinsicHeight();
 
-            divider.setBounds(left, top, right, bottom);
-            divider.draw(c);
+            mdivider.setBounds(left, top, right, bottom);
+            mdivider.draw(c);
         }
     }
 }

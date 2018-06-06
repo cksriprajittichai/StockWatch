@@ -1,13 +1,11 @@
 package c.chasesriprajittichai.stockwatch;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
@@ -22,36 +20,42 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Locale;
 
 import c.chasesriprajittichai.stockwatch.AsyncTaskListeners.DownloadIndividualStockTask;
+import c.chasesriprajittichai.stockwatch.Stocks.AdvancedStock;
+import c.chasesriprajittichai.stockwatch.Stocks.AfterHoursStock;
+import c.chasesriprajittichai.stockwatch.Stocks.BasicStock;
+import c.chasesriprajittichai.stockwatch.Stocks.PremarketStock;
 
-import static c.chasesriprajittichai.stockwatch.BasicStock.State.AFTER_HOURS;
-import static c.chasesriprajittichai.stockwatch.BasicStock.State.CLOSED;
-import static c.chasesriprajittichai.stockwatch.BasicStock.State.OPEN;
+import static c.chasesriprajittichai.stockwatch.Stocks.BasicStock.State.AFTER_HOURS;
+import static c.chasesriprajittichai.stockwatch.Stocks.BasicStock.State.CLOSED;
+import static c.chasesriprajittichai.stockwatch.Stocks.BasicStock.State.OPEN;
+import static c.chasesriprajittichai.stockwatch.Stocks.BasicStock.State.PREMARKET;
 import static java.lang.Double.parseDouble;
 import static org.apache.commons.lang3.StringUtils.substringBetween;
 
 
 public class IndividualStockActivity extends AppCompatActivity implements DownloadIndividualStockTask {
 
-    private static class DownloadStockDataTask extends AsyncTask<Void, Integer, Integer> {
+    private static class DownloadStockDataTask extends AsyncTask<Void, Integer, AdvancedStock> {
 
-        private String ticker;
-        private WeakReference<AdvancedStock> stock;
-        private WeakReference<DownloadIndividualStockTask> completionListener;
+        private String mticker;
+        private WeakReference<DownloadIndividualStockTask> mcompletionListener;
 
-        private DownloadStockDataTask(String ticker, AdvancedStock stock, DownloadIndividualStockTask completionListener) {
-            this.ticker = ticker.toUpperCase(Locale.US);
-            this.stock = new WeakReference<>(stock);
-            this.completionListener = new WeakReference<>(completionListener);
+        private DownloadStockDataTask(String ticker, DownloadIndividualStockTask completionListener) {
+            mticker = ticker.toUpperCase(Locale.US);
+            mcompletionListener = new WeakReference<>(completionListener);
         }
 
         @Override
-        protected Integer doInBackground(Void... params) {
+        protected AdvancedStock doInBackground(Void... params) {
+            AdvancedStock ret = null;
+
             try {
                 /* Get graph data. */
-                Document multiDoc = Jsoup.connect("https://www.marketwatch.com/investing/multi?tickers=" + ticker).get();
+                Document multiDoc = Jsoup.connect("https://www.marketwatch.com/investing/multi?tickers=" + mticker).get();
                 Element quoteRoot = multiDoc.selectFirst("div[class~=section activeQuote bgQuote (down|up)?]");
                 Element intradayChart = quoteRoot.selectFirst("script[type=text/javascript]");
                 String jsStr = substringBetween(intradayChart.toString(), "Trades\":[", "]");
@@ -85,19 +89,23 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
 
 
                 /* Get all other data. */
-                Document singleDoc = Jsoup.connect("https://www.marketwatch.com/investing/stock/" + ticker).get();
+                Document singleDoc = Jsoup.connect("https://www.marketwatch.com/investing/stock/" + mticker).get();
 
-                Element nameElmnt = singleDoc.selectFirst("body div[data-symbol=" + ticker + "] div[class=row] > h1[class=company__name]");
+                Element nameElmnt = singleDoc.selectFirst("body div[data-symbol=" + mticker + "] div[class=row] > h1[class=company__name]");
                 String name = nameElmnt.text();
 
                 Element intraday = singleDoc.selectFirst("body div[class=element element--intraday]");
                 Element intradayData = intraday.selectFirst("div[class=intraday__data]");
 
                 Element icon = intraday.selectFirst(
-                        "small[class~=intraday__status status--(open|after|closed)] > i[class^=icon]");
+                        "small[class~=intraday__status status--(before|open|after|closed)] > i[class^=icon]");
                 String stateStr = icon.nextSibling().toString();
                 BasicStock.State state;
                 switch (stateStr.toLowerCase(Locale.US)) {
+                    case "before the bell": // Multiple stock page uses this
+                    case "premarket": // Individual stock page uses this
+                        state = PREMARKET;
+                        break;
                     case "open":
                         state = OPEN;
                         break;
@@ -117,31 +125,15 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
                         close_priceElmnt, close_changePointElmnt, close_changePercentElmnt;
                 Elements tableCells;
                 double price, changePoint, changePercent, close_price, close_changePoint, close_changePercent;
-                /* Do something different for each state. */
+                /* Do something different for each mstate. */
                 switch (state) {
-                    case OPEN: {
-                        priceElmnt = intradayData.selectFirst("h3[class=intraday__price] > bg-quote[class^=value]");
-                        changePointElmnt = intradayData.selectFirst("bg-quote[class^=intraday__change] > span[class=change--point--q] > bg-quote[field=change]");
-                        changePercentElmnt = intradayData.selectFirst("bg-quote[class^=intraday__change] > span[class=change--percent--q] > bg-quote[field=percentchange]");
-
-                        // Remove ',' or '%' that could be in strings
-                        price = parseDouble(priceElmnt.text().replaceAll("[^0-9.]+", ""));
-                        changePoint = parseDouble(changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
-                        changePercent = parseDouble(changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
-
-                        stock = new WeakReference<>(
-                                new AdvancedStock(state, ticker, name, price, changePoint,
-                                        changePercent, chart_prices));
-                        break;
-                    }
-                    case AFTER_HOURS: {
+                    case PREMARKET: {
                         priceElmnt = intradayData.selectFirst("h3[class=intraday__price] > bg-quote[class^=value]");
                         changePointElmnt = intradayData.selectFirst("span[class=change--point--q] > bg-quote[field=change]");
                         changePercentElmnt = intradayData.selectFirst("span[class=change--percent--q] > bg-quote[field=percentchange]");
 
                         close_intradayDataElmnt = intraday.selectFirst("div[class=intraday__close]");
-                        tableCells = close_intradayDataElmnt.select("tr[class=table__row] > " +
-                                "td[class^=table__cell]");
+                        tableCells = close_intradayDataElmnt.select("tr[class=table__row] > td[class^=table__cell]");
                         close_priceElmnt = tableCells.get(0);
                         close_changePointElmnt = tableCells.get(1);
                         close_changePercentElmnt = tableCells.get(2);
@@ -154,9 +146,44 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
                         close_changePoint = parseDouble(close_changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
                         close_changePercent = parseDouble(close_changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
 
-                        stock = new WeakReference<>(
-                                new AfterHoursStock(state, ticker, name, price, changePoint, changePercent,
-                                        close_price, close_changePoint, close_changePercent, chart_prices));
+                        ret = new PremarketStock(state, mticker, name, price, changePoint, changePercent,
+                                close_price, close_changePoint, close_changePercent, chart_prices);
+                        break;
+                    }
+                    case OPEN: {
+                        priceElmnt = intradayData.selectFirst("h3[class=intraday__price] > bg-quote[class^=value]");
+                        changePointElmnt = intradayData.selectFirst("bg-quote[class^=intraday__change] > span[class=change--point--q] > bg-quote[field=change]");
+                        changePercentElmnt = intradayData.selectFirst("bg-quote[class^=intraday__change] > span[class=change--percent--q] > bg-quote[field=percentchange]");
+
+                        // Remove ',' or '%' that could be in strings
+                        price = parseDouble(priceElmnt.text().replaceAll("[^0-9.]+", ""));
+                        changePoint = parseDouble(changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
+                        changePercent = parseDouble(changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
+
+                        ret = new AdvancedStock(state, mticker, name, price, changePoint, changePercent, chart_prices);
+                        break;
+                    }
+                    case AFTER_HOURS: {
+                        priceElmnt = intradayData.selectFirst("h3[class=intraday__price] > bg-quote[class^=value]");
+                        changePointElmnt = intradayData.selectFirst("span[class=change--point--q] > bg-quote[field=change]");
+                        changePercentElmnt = intradayData.selectFirst("span[class=change--percent--q] > bg-quote[field=percentchange]");
+
+                        close_intradayDataElmnt = intraday.selectFirst("div[class=intraday__close]");
+                        tableCells = close_intradayDataElmnt.select("tr[class=table__row] > td[class^=table__cell]");
+                        close_priceElmnt = tableCells.get(0);
+                        close_changePointElmnt = tableCells.get(1);
+                        close_changePercentElmnt = tableCells.get(2);
+
+                        // Remove ',' or '%' that could be in strings
+                        price = parseDouble(priceElmnt.text().replaceAll("[^0-9.]+", ""));
+                        changePoint = parseDouble(changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
+                        changePercent = parseDouble(changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
+                        close_price = parseDouble(close_priceElmnt.text().replaceAll("[^0-9.]+", ""));
+                        close_changePoint = parseDouble(close_changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
+                        close_changePercent = parseDouble(close_changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
+
+                        ret = new AfterHoursStock(state, mticker, name, price, changePoint, changePercent,
+                                close_price, close_changePoint, close_changePercent, chart_prices);
                         break;
                     }
                     case CLOSED: {
@@ -169,9 +196,7 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
                         changePoint = parseDouble(changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
                         changePercent = parseDouble(changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
 
-                        stock = new WeakReference<>(
-                                new AdvancedStock(state, ticker, name, price, changePoint,
-                                        changePercent, chart_prices));
+                        ret = new AdvancedStock(state, mticker, name, price, changePoint, changePercent, chart_prices);
                         break;
                     }
                 }
@@ -179,63 +204,70 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
                 ioe.printStackTrace();
             }
 
-            return 0;
+            return ret;
         }
 
         @Override
-        protected void onPostExecute(Integer status) {
-            completionListener.get().onDownloadIndividualStockTaskCompleted(stock.get());
+        protected void onPostExecute(AdvancedStock stock) {
+            mcompletionListener.get().onDownloadIndividualStockTaskCompleted(stock);
         }
     }
 
-    private String ticker; // Needed to create stock
-    private AdvancedStock stock;
-    private boolean wasInFavoritesInitially;
-    private boolean isInFavorites;
-    private TextView scrubInfoTextView;
-    private TextView priceTextView;
-    private TextView changePointTextView;
-    private TextView changePercentTextView;
-    private TextView close_priceTextView;
-    private TextView close_changePointTextView;
-    private TextView close_changePercentTextView;
-    private SparkView sparkView;
-    private SparkViewAdapter sparkViewAdapter;
-    private SharedPreferences preferences;
+    private String mticker; // Needed to create mstock
+    private AdvancedStock mstock;
+    private boolean mwasInFavoritesInitially;
+    private boolean misInFavorites;
+    private TextView mscrubInfoTextView;
+    private TextView mstateTextView;
+    private TextView mpriceTextView;
+    private TextView mchangePointTextView;
+    private TextView mchangePercentTextView;
+    private TextView mclose_priceTextView;
+    private TextView mclose_changePointTextView;
+    private TextView mclose_changePercentTextView;
+    private SparkView msparkView;
+    private SparkViewAdapter msparkViewAdapter;
+    private SharedPreferences mpreferences;
 
     @Override
     public void onDownloadIndividualStockTaskCompleted(AdvancedStock stock) {
-        this.stock = stock;
+        mstock = stock;
 
         if (getTitle().equals("")) {
-            setTitle(stock.getName());
+            setTitle(mstock.getName());
         }
 
-        sparkViewAdapter.setyData(stock.getyData());
-        sparkViewAdapter.notifyDataSetChanged();
+        msparkViewAdapter.setyData(mstock.getyData());
+        msparkViewAdapter.notifyDataSetChanged();
 
-        scrubInfoTextView.setText(getString(R.string.double2dec, stock.getPrice())); // Init text view
+        mscrubInfoTextView.setText(getString(R.string.double2dec, mstock.getPrice())); // Init text view
 
-        sparkView.setScrubListener((Object valueObj) -> {
+        msparkView.setScrubListener((Object valueObj) -> {
             if (valueObj == null) {
-                scrubInfoTextView.setText(getString(R.string.double2dec, stock.getPrice()));
+                mscrubInfoTextView.setText(getString(R.string.double2dec, mstock.getPrice()));
                 int color_deactivated = getResources().getColor(R.color.colorAccentTransparent, getTheme());
-                scrubInfoTextView.setTextColor(color_deactivated);
+                mscrubInfoTextView.setTextColor(color_deactivated);
             } else {
-                scrubInfoTextView.setText(getString(R.string.double2dec, (double) valueObj));
+                mscrubInfoTextView.setText(getString(R.string.double2dec, (double) valueObj));
                 int color_activated = getResources().getColor(R.color.colorAccent, getTheme());
-                scrubInfoTextView.setTextColor(color_activated);
+                mscrubInfoTextView.setTextColor(color_activated);
             }
         });
 
-        priceTextView.setText(getString(R.string.string_colon_double2dec, "Price", stock.getPrice()));
-        changePointTextView.setText(getString(R.string.string_colon_double2dec, "Point Change", stock.getChangePoint()));
-        changePercentTextView.setText(getString(R.string.string_colon_double2dec_percent, "Percent Change", stock.getChangePercent()));
-        if (stock instanceof AfterHoursStock) {
-            AfterHoursStock ahStock = (AfterHoursStock) stock;
-            close_priceTextView.setText(getString(R.string.string_colon_double2dec, "Price at Close", ahStock.getClose_price()));
-            close_changePointTextView.setText(getString(R.string.string_colon_double2dec, "Point Change at Close", ahStock.getClose_changePoint()));
-            close_changePercentTextView.setText(getString(R.string.string_colon_double2dec_percent, "Percent Change at Close", ahStock.getClose_changePercent()));
+        mstateTextView.setText(getString(R.string.string_colon_string, "State", mstock.getState().toString()));
+        mpriceTextView.setText(getString(R.string.string_colon_double2dec, "Price", mstock.getPrice()));
+        mchangePointTextView.setText(getString(R.string.string_colon_double2dec, "Point Change", mstock.getChangePoint()));
+        mchangePercentTextView.setText(getString(R.string.string_colon_double2dec_percent, "Percent Change", mstock.getChangePercent()));
+        if (mstock instanceof AfterHoursStock) {
+            AfterHoursStock ahStock = (AfterHoursStock) mstock;
+            mclose_priceTextView.setText(getString(R.string.string_colon_double2dec, "Price at Close", ahStock.getClose_price()));
+            mclose_changePointTextView.setText(getString(R.string.string_colon_double2dec, "Point Change at Close", ahStock.getClose_changePoint()));
+            mclose_changePercentTextView.setText(getString(R.string.string_colon_double2dec_percent, "Percent Change at Close", ahStock.getClose_changePercent()));
+        } else if (mstock instanceof PremarketStock) {
+            PremarketStock ahStock = (PremarketStock) mstock;
+            mclose_priceTextView.setText(getString(R.string.string_colon_double2dec, "Price at Close", ahStock.getClose_price()));
+            mclose_changePointTextView.setText(getString(R.string.string_colon_double2dec, "Point Change at Close", ahStock.getClose_changePoint()));
+            mclose_changePercentTextView.setText(getString(R.string.string_colon_double2dec_percent, "Percent Change at Close", ahStock.getClose_changePercent()));
         }
     }
 
@@ -244,81 +276,49 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_stock);
         setTitle(""); // Show empty title now, company name will be shown (in onPostExecute())
-        preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        ticker = getIntent().getStringExtra("Ticker");
-        isInFavorites = getIntent().getBooleanExtra("Is in favorites", false);
-        wasInFavoritesInitially = isInFavorites;
+        mpreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        mticker = getIntent().getStringExtra("Ticker");
+        misInFavorites = getIntent().getBooleanExtra("Is in favorites", false);
+        mwasInFavoritesInitially = misInFavorites;
 
-        DownloadStockDataTask task = new DownloadStockDataTask(ticker, stock, this);
+        // Start task ASAP
+        DownloadStockDataTask task = new DownloadStockDataTask(mticker, this);
         task.execute();
 
-        scrubInfoTextView = findViewById(R.id.textView_scrub);
-        priceTextView = findViewById(R.id.test_price);
-        changePointTextView = findViewById(R.id.test_changePoint);
-        changePercentTextView = findViewById(R.id.test_changePercent);
-        close_priceTextView = findViewById(R.id.test_close_price);
-        close_changePointTextView = findViewById(R.id.test_close_changePoint);
-        close_changePercentTextView = findViewById(R.id.test_close_changePercent);
+        mscrubInfoTextView = findViewById(R.id.textView_scrub);
+        mstateTextView = findViewById(R.id.test_state);
+        mpriceTextView = findViewById(R.id.test_price);
+        mchangePointTextView = findViewById(R.id.test_changePoint);
+        mchangePercentTextView = findViewById(R.id.test_changePercent);
+        mclose_priceTextView = findViewById(R.id.test_close_price);
+        mclose_changePointTextView = findViewById(R.id.test_close_changePoint);
+        mclose_changePercentTextView = findViewById(R.id.test_close_changePercent);
 
-        sparkViewAdapter = new SparkViewAdapter(new ArrayList<>()); // Init as empty
-        sparkView = findViewById(R.id.sparkView);
-        sparkView.setAdapter(sparkViewAdapter);
+        msparkViewAdapter = new SparkViewAdapter(new ArrayList<>()); // Init as empty
+        msparkView = findViewById(R.id.sparkView);
+        msparkView.setAdapter(msparkViewAdapter);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        if (isInFavorites != wasInFavoritesInitially) {
+        if (misInFavorites != mwasInFavoritesInitially) {
             // If the star status (favorite status) has changed
-            if (wasInFavoritesInitially) {
-                // Remove fullStock's ticker from Tickers CSV preference
-                String[] tickers = preferences.getString("Tickers CSV", "").split(",");
-                String[] data = preferences.getString("Data CSV", "").split(",");
-                StringBuilder tickersCSV = new StringBuilder(tickers.length * 5); // Approximate
-                StringBuilder dataCSV = new StringBuilder(data.length * 5); // Approximate
-                for (int tickerNdx = 0, dataNdx = 0; tickerNdx < tickers.length; tickerNdx++, dataNdx += 4) {
-                    if (!tickers[tickerNdx].equalsIgnoreCase(ticker)) {
-                        tickersCSV.append(tickers[tickerNdx]);
-                        tickersCSV.append(',');
-
-                        dataCSV.append(data[dataNdx] + ',' + data[dataNdx + 1] + ',' +
-                                data[dataNdx + 2] + ',' + data[dataNdx + 3] + ',');
-                    }
-                }
-
-                if (!tickersCSV.toString().isEmpty()) {
-                    tickersCSV.deleteCharAt(tickersCSV.length() - 1); // Delete extra comma
-                    dataCSV.deleteCharAt(dataCSV.length() - 1); // Delete extra comma
-                    preferences.edit().putString("Tickers CSV", tickersCSV.toString()).apply();
-                    preferences.edit().putString("Data CSV", dataCSV.toString()).apply();
-                } else {
-                    // The only ticker in favorites has been removed
-                    preferences.edit().putString("Tickers CSV", "").apply();
-                    preferences.edit().putString("Data CSV", "").apply();
-                }
+            if (mwasInFavoritesInitially) {
+                /* Remove mstock's mticker from Tickers CSV preference.
+                 * Remove mstock's data from Data CSV preference. */
+                removeStockFromPreferences();
             } else {
-                // Add stock's ticker to Tickers CSV preference.
-                // Add stock's data to Data CSV preference.
-                // Insert stock at the front of the string (top of the list).
-                String tickersCSV = preferences.getString("Tickers CSV", "");
-                String dataCSV = preferences.getString("Data CSV", "");
-                if (tickersCSV.isEmpty()) {
-                    preferences.edit().putString("Tickers CSV", stock.getTicker()).apply();
-                    preferences.edit().putString("Data CSV", stock.getState().toString() + ',' +
-                            stock.getPrice() + ',' + stock.getChangePoint() + ',' +
-                            stock.getChangePercent()).apply();
-                } else {
-                    preferences.edit().putString("Tickers CSV", stock.getTicker() + ',' + tickersCSV).apply();
-                    preferences.edit().putString("Data CSV", stock.getState().toString() + ',' +
-                            stock.getPrice() + ',' + stock.getChangePoint() + ',' +
-                            stock.getChangePercent() + ',' + dataCSV).apply();
-                }
+                /* Add mstock's mticker to Tickers CSV preference.
+                 * Add mstock's data to Data CSV preference.
+                 * Insert mstock at the front of the preference strings (top of the list). */
+                addStockToPreferences();
             }
 
             /* The activity has paused. Update the favorites status.
              * This is vital because the condition to be able to edit Tickers CSV and Data CSV are
              * whether or not the favorites status has changed. */
-            wasInFavoritesInitially = isInFavorites;
+            mwasInFavoritesInitially = misInFavorites;
         }
     }
 
@@ -333,7 +333,7 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_stock_activity, menu);
 
-        if (isInFavorites) {
+        if (misInFavorites) {
             menu.findItem(R.id.starMenuItem).setIcon(R.drawable.star_on);
         } else {
             menu.findItem(R.id.starMenuItem).setIcon(R.drawable.star_off);
@@ -346,8 +346,8 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.starMenuItem:
-                isInFavorites = !isInFavorites; // Toggle
-                if (isInFavorites) {
+                misInFavorites = !misInFavorites; // Toggle
+                if (misInFavorites) {
                     item.setIcon(R.drawable.star_on);
                 } else {
                     item.setIcon(R.drawable.star_off);
@@ -358,4 +358,64 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
         }
     }
 
+    /**
+     * Adds mstock to mpreferences; adds mstock's ticker to Tickers CSV and and adds mstock's data
+     * to Data CSV. mstock is added to the front of each preference string, meaning that mstock
+     * is inserted at the top of the list of stocks. This function does not check if mstock is
+     * already in mpreferences before adding mstock.
+     */
+    private void addStockToPreferences() {
+        final String tickersCSV = mpreferences.getString("Tickers CSV", "");
+        final String dataCSV = mpreferences.getString("Data CSV", "");
+        String dataStr;
+
+        if (!tickersCSV.isEmpty()) {
+            mpreferences.edit().putString("Tickers CSV", mticker + ',' + tickersCSV).apply();
+            dataStr = mstock.getState().toString() + ',' + mstock.getPrice() + ',' +
+                    mstock.getChangePoint() + ',' + mstock.getChangePercent() + ',';
+            mpreferences.edit().putString("Data CSV", dataStr + dataCSV).apply();
+        } else {
+            mpreferences.edit().putString("Tickers CSV", mticker).apply();
+            dataStr = mstock.getState().toString() + ',' + mstock.getPrice() + ',' +
+                    mstock.getChangePoint() + ',' + mstock.getChangePercent();
+            mpreferences.edit().putString("Data CSV", dataStr).apply();
+        }
+    }
+
+    /**
+     * Removes mstock from mpreferences; removes mstock's ticker from Tickers CSV and removes
+     * mStock's data from Data CSV. If the mstock is not found (mticker is not found in Tickers
+     * CSV), this function does nothing.
+     *
+     * @return True if mstock was removed, false otherwise.
+     */
+    private boolean removeStockFromPreferences() {
+        final String tickersCSV = mpreferences.getString("Tickers CSV", "");
+        final String[] tickerArr = tickersCSV.split(","); // "".split(",") returns {""}
+
+        if (!tickerArr[0].isEmpty()) {
+            final ArrayList<String> tickerList = new ArrayList<>(Arrays.asList(tickerArr));
+
+            int tickerNdx = tickerList.indexOf(mstock.getTicker());
+            if (tickerNdx != -1) {
+                /* Delete mstock's mticker. */
+                tickerList.remove(tickerNdx);
+                mpreferences.edit().putString("Tickers CSV", String.join(",", tickerList)).apply();
+
+                /* Delete mstock's data. */
+                String dataCSV = mpreferences.getString("Data CSV", "");
+                final ArrayList<String> dataList = new ArrayList<>(Arrays.asList(dataCSV.split(",")));
+
+                // 4 data elements per 1 mticker. DataNdx is the index of the first element to delete.
+                int dataNdx = tickerNdx * 4;
+                for (int deleteCount = 1; deleteCount <= 4; deleteCount++) { // Delete 4 data elements
+                    dataList.remove(dataNdx);
+                }
+                mpreferences.edit().putString("Data CSV", String.join(",", dataList)).apply();
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

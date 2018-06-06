@@ -6,43 +6,43 @@ import java.util.ArrayList;
 
 public class SparkViewAdapter extends SparkAdapter {
 
-    private ArrayList<Double> yData;
+    private ArrayList<Double> myData;
 
     public SparkViewAdapter(ArrayList<Double> yData) {
-        this.yData = yData;
+        this.myData = yData;
     }
 
     @Override
     public int getCount() {
-        return yData.size();
+        return myData.size();
     }
 
     @Override
     public Object getItem(int index) {
-        return yData.get(index);
+        return myData.get(index);
     }
 
     @Override
     public float getY(int index) {
-        return (float) yData.get(index).doubleValue();
+        return (float) myData.get(index).doubleValue();
     }
 
     public double getyData(int index) {
-        return yData.get(index);
+        return myData.get(index);
     }
 
     public ArrayList<Double> getyData() {
-        return yData;
+        return myData;
     }
 
     /* Does not call notifyDataSetChanged(). */
     public void setyData(int index, double data) {
-        yData.set(index, data);
+        myData.set(index, data);
     }
 
     /* Does not call notifyDataSetChanged(). */
     public void setyData(ArrayList<Double> yData) {
-        this.yData = yData;
+        this.myData = yData;
     }
 
 }

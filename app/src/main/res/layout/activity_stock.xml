@@ -35,6 +35,15 @@
         android:background="@android:color/white" />
 
     <TextView
+        android:id="@+id/test_state"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:gravity="start"
+        android:textAppearance="?android:textAppearanceMedium"
+        android:textColor="@android:color/white" />
+
+    <TextView
         android:id="@+id/test_price"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

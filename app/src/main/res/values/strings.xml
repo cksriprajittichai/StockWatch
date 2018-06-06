@@ -11,9 +11,7 @@
     <!--IndividualStockActivity menu item titles-->
     <string name="starMenuItem">"Star"</string>
 
-    <!--<string name="scrub_notPressed">%1$.2f</string>-->
-    <!--<string name="scrub_pressed">%1$.2f</string>-->
-
+    <string name="string_colon_string">%1$s: %2$s</string>
     <string name="double2dec">%1$.2f</string>
     <string name="string_colon_double2dec">%1$s: %2$.2f</string>
     <!--'%' escapes itself-->

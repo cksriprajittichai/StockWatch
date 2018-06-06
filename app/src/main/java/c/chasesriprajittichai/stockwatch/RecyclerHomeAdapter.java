@@ -6,11 +6,12 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.Locale;
+
+import c.chasesriprajittichai.stockwatch.Stocks.BasicStock;
 
 
 public class RecyclerHomeAdapter extends RecyclerView.Adapter<RecyclerHomeAdapter.ViewHolder> {
@@ -21,41 +22,41 @@ public class RecyclerHomeAdapter extends RecyclerView.Adapter<RecyclerHomeAdapte
 
     public class ViewHolder extends RecyclerView.ViewHolder {
 
-        private TextView tickerTextView;
-        private TextView priceTextView;
-        private TextView priceChangePercentTextView;
+        private TextView mtickerTextView;
+        private TextView mpriceTextView;
+        private TextView mpriceChangePercentTextView;
 
         public ViewHolder(View v) {
             super(v);
 
-            tickerTextView = v.findViewById(R.id.textView_ticker_homeRecyclerItem);
-            priceTextView = v.findViewById(R.id.textView_price_homeRecyclerItem);
-            priceChangePercentTextView = v.findViewById(R.id.textView_priceChangePercent_homeRecyclerItem);
+            mtickerTextView = v.findViewById(R.id.textView_ticker_homeRecyclerItem);
+            mpriceTextView = v.findViewById(R.id.textView_price_homeRecyclerItem);
+            mpriceChangePercentTextView = v.findViewById(R.id.textView_priceChangePercent_homeRecyclerItem);
         }
 
         public void bind(final BasicStock basicStock, final OnItemClickListener listener) {
-            tickerTextView.setText(basicStock.getTicker());
-            priceTextView.setText(String.format(Locale.US, "%.2f", basicStock.getPrice()));
-            // Append '%' onto end of price change percent. First '%' is escape char for '%'.
-            priceChangePercentTextView.setText(String.format(Locale.US, "%.2f%%", basicStock.getChangePercent()));
+            mtickerTextView.setText(basicStock.getTicker());
+            mpriceTextView.setText(String.format(Locale.US, "%.2f", basicStock.getPrice()));
+            // Append '%' onto end of mprice change percent. First '%' is escape char for '%'.
+            mpriceChangePercentTextView.setText(String.format(Locale.US, "%.2f%%", basicStock.getChangePercent()));
 
-            // Assign green or red color to price change percent text
+            // Assign green or red color to mprice change percent text
             if (basicStock.getChangePercent() < 0) {
-                priceChangePercentTextView.setTextColor(Color.RED);
+                mpriceChangePercentTextView.setTextColor(Color.RED);
             } else {
-                priceChangePercentTextView.setTextColor(Color.GREEN);
+                mpriceChangePercentTextView.setTextColor(Color.GREEN);
             }
 
             itemView.setOnClickListener(l -> listener.onItemClick(basicStock));
         }
     }
 
-    private ArrayList<BasicStock> stocks;
-    private OnItemClickListener onItemClickListener;
+    private ArrayList<BasicStock> mstocks;
+    private OnItemClickListener monItemClickListener;
 
     public RecyclerHomeAdapter(ArrayList<BasicStock> stocks, OnItemClickListener listener) {
-        this.stocks = stocks;
-        this.onItemClickListener = listener;
+        this.mstocks = stocks;
+        this.monItemClickListener = listener;
     }
 
     @NonNull
@@ -71,12 +72,12 @@ public class RecyclerHomeAdapter extends RecyclerView.Adapter<RecyclerHomeAdapte
     @NonNull
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.bind(stocks.get(position), onItemClickListener);
+        holder.bind(mstocks.get(position), monItemClickListener);
     }
 
     @Override
     public int getItemCount() {
-        return stocks.size();
+        return mstocks.size();
     }
 
 }
