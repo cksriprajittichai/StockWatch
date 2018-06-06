@@ -29,4 +29,9 @@
         android:title="@string/shuffleMenuItem"
         app:showAsAction="collapseActionView" />
 
+    <item
+        android:id="@+id/flipListMenuItem"
+        android:title="@string/flipListMenuItem"
+        app:showAsAction="collapseActionView" />
+
 </menu>

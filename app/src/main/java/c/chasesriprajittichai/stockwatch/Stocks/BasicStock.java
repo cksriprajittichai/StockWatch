@@ -4,18 +4,18 @@ public class BasicStock {
 
     public enum State {PREMARKET, OPEN, AFTER_HOURS, CLOSED}
 
-    protected State mstate;
-    protected String mticker;
-    protected double mprice;
-    protected double mchangePoint;
-    protected double mchangePercent;
+    private State mstate;
+    private String mticker;
+    private double mprice;
+    private double mchangePoint;
+    private double mchangePercent;
 
     public BasicStock(State state, String ticker, double price, double changePoint, double changePercent) {
-        this.mstate = state;
-        this.mticker = ticker;
-        this.mprice = price;
-        this.mchangePoint = changePoint;
-        this.mchangePercent = changePercent;
+        mstate = state;
+        mticker = ticker;
+        mprice = price;
+        mchangePoint = changePoint;
+        mchangePercent = changePercent;
     }
 
     public State getState() {
@@ -23,7 +23,7 @@ public class BasicStock {
     }
 
     public void setState(State state) {
-        this.mstate = state;
+        mstate = state;
     }
 
     public String getTicker() {
@@ -31,7 +31,7 @@ public class BasicStock {
     }
 
     public void setTicker(String ticker) {
-        this.mticker = ticker;
+        mticker = ticker;
     }
 
     public double getPrice() {
@@ -39,7 +39,7 @@ public class BasicStock {
     }
 
     public void setPrice(double price) {
-        this.mprice = price;
+        mprice = price;
     }
 
     public double getChangePoint() {
@@ -47,7 +47,7 @@ public class BasicStock {
     }
 
     public void setChangePoint(double changePoint) {
-        this.mchangePoint = changePoint;
+        mchangePoint = changePoint;
     }
 
     public double getChangePercent() {
@@ -55,7 +55,7 @@ public class BasicStock {
     }
 
     public void setChangePercent(double changePercent) {
-        this.mchangePercent = changePercent;
+        mchangePercent = changePercent;
     }
 
 }

@@ -10,9 +10,9 @@ public class AdvancedStock extends BasicStock {
     public AdvancedStock(State state, String ticker, String name, double price, double changePoint,
                          double changePercent, ArrayList<Double> yData) {
         super(state, ticker, price, changePoint, changePercent);
-        this.mname = name;
+        mname = name;
 
-        this.myData = yData;
+        myData = yData;
     }
 
     public String getName() {
@@ -20,7 +20,7 @@ public class AdvancedStock extends BasicStock {
     }
 
     public void setName(String name) {
-        this.mname = name;
+        mname = name;
     }
 
     public ArrayList<Double> getyData() {
@@ -28,7 +28,7 @@ public class AdvancedStock extends BasicStock {
     }
 
     public void setyData(ArrayList<Double> yData) {
-        this.myData = yData;
+        myData = yData;
     }
 
 }

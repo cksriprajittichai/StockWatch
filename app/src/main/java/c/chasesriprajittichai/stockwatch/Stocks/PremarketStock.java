@@ -12,9 +12,9 @@ public class PremarketStock extends AdvancedStock {
                           double changePercent, double close_price, double close_changePoint,
                           double close_changePercent, ArrayList<Double> yData) {
         super(state, ticker, name, price, changePoint, changePercent, yData);
-        this.mclose_price = close_price;
-        this.mclose_changePoint = close_changePoint;
-        this.mclose_changePercent = close_changePercent;
+        mclose_price = close_price;
+        mclose_changePoint = close_changePoint;
+        mclose_changePercent = close_changePercent;
     }
 
     public double getClose_price() {
@@ -22,7 +22,7 @@ public class PremarketStock extends AdvancedStock {
     }
 
     public void setClose_price(double close_price) {
-        this.mclose_price = close_price;
+        mclose_price = close_price;
     }
 
     public double getClose_changePoint() {
@@ -30,7 +30,7 @@ public class PremarketStock extends AdvancedStock {
     }
 
     public void setClose_changePoint(double close_changePoint) {
-        this.mclose_changePoint = close_changePoint;
+        mclose_changePoint = close_changePoint;
     }
 
     public double getClose_changePercent() {
@@ -38,6 +38,6 @@ public class PremarketStock extends AdvancedStock {
     }
 
     public void setClose_changePercent(double close_changePercent) {
-        this.mclose_changePercent = close_changePercent;
+        mclose_changePercent = close_changePercent;
     }
 }
