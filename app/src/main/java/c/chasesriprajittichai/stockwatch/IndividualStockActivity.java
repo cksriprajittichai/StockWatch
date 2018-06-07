@@ -97,8 +97,7 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
                 Element intraday = singleDoc.selectFirst("body div[class=element element--intraday]");
                 Element intradayData = intraday.selectFirst("div[class=intraday__data]");
 
-                Element icon = intraday.selectFirst(
-                        "small[class~=intraday__status status--(before|open|after|closed)] > i[class^=icon]");
+                Element icon = intraday.selectFirst("small[class~=intraday__status status--(before|open|after|closed)] > i[class^=icon]");
                 String stateStr = icon.nextSibling().toString();
                 BasicStock.State state;
                 switch (stateStr.toLowerCase(Locale.US)) {
