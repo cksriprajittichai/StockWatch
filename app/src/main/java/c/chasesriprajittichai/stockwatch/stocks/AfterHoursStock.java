@@ -1,16 +1,16 @@
-package c.chasesriprajittichai.stockwatch.Stocks;
+package c.chasesriprajittichai.stockwatch.stocks;
 
 import java.util.ArrayList;
 
-public class PremarketStock extends AdvancedStock {
+public class AfterHoursStock extends AdvancedStock {
 
-    protected double mclose_price;
-    protected double mclose_changePoint;
-    protected double mclose_changePercent;
+    private double mclose_price;
+    private double mclose_changePoint;
+    private double mclose_changePercent;
 
-    public PremarketStock(State state, String ticker, String name, double price, double changePoint,
-                          double changePercent, double close_price, double close_changePoint,
-                          double close_changePercent, ArrayList<Double> yData) {
+    public AfterHoursStock(State state, String ticker, String name, double price, double changePoint,
+                           double changePercent, double close_price, double close_changePoint,
+                           double close_changePercent, ArrayList<Double> yData) {
         super(state, ticker, name, price, changePoint, changePercent, yData);
         mclose_price = close_price;
         mclose_changePoint = close_changePoint;

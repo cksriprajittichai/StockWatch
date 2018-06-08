@@ -1,4 +1,4 @@
-package c.chasesriprajittichai.stockwatch.Stocks;
+package c.chasesriprajittichai.stockwatch.stocks;
 
 public class BasicStock {
 

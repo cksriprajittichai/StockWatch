@@ -8,7 +8,7 @@ public class SparkViewAdapter extends SparkAdapter {
 
     private ArrayList<Double> myData;
 
-    public SparkViewAdapter(ArrayList<Double> yData) {
+    SparkViewAdapter(ArrayList<Double> yData) {
         this.myData = yData;
     }
 

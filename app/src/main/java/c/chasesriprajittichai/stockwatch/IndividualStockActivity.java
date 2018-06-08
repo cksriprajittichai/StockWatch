@@ -23,28 +23,28 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Locale;
 
-import c.chasesriprajittichai.stockwatch.AsyncTaskListeners.DownloadIndividualStockTask;
-import c.chasesriprajittichai.stockwatch.Stocks.AdvancedStock;
-import c.chasesriprajittichai.stockwatch.Stocks.AfterHoursStock;
-import c.chasesriprajittichai.stockwatch.Stocks.BasicStock;
-import c.chasesriprajittichai.stockwatch.Stocks.PremarketStock;
+import c.chasesriprajittichai.stockwatch.listeners.DownloadIndividualStockTaskListener;
+import c.chasesriprajittichai.stockwatch.stocks.AdvancedStock;
+import c.chasesriprajittichai.stockwatch.stocks.AfterHoursStock;
+import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
+import c.chasesriprajittichai.stockwatch.stocks.PremarketStock;
 
-import static c.chasesriprajittichai.stockwatch.Stocks.BasicStock.State.AFTER_HOURS;
-import static c.chasesriprajittichai.stockwatch.Stocks.BasicStock.State.CLOSED;
-import static c.chasesriprajittichai.stockwatch.Stocks.BasicStock.State.OPEN;
-import static c.chasesriprajittichai.stockwatch.Stocks.BasicStock.State.PREMARKET;
+import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.AFTER_HOURS;
+import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.CLOSED;
+import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.OPEN;
+import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.PREMARKET;
 import static java.lang.Double.parseDouble;
 import static org.apache.commons.lang3.StringUtils.substringBetween;
 
 
-public class IndividualStockActivity extends AppCompatActivity implements DownloadIndividualStockTask {
+public class IndividualStockActivity extends AppCompatActivity implements DownloadIndividualStockTaskListener {
 
     private static class DownloadStockDataTask extends AsyncTask<Void, Integer, AdvancedStock> {
 
         private String mticker;
-        private WeakReference<DownloadIndividualStockTask> mcompletionListener;
+        private WeakReference<DownloadIndividualStockTaskListener> mcompletionListener;
 
-        private DownloadStockDataTask(String ticker, DownloadIndividualStockTask completionListener) {
+        private DownloadStockDataTask(String ticker, DownloadIndividualStockTaskListener completionListener) {
             mticker = ticker.toUpperCase(Locale.US);
             mcompletionListener = new WeakReference<>(completionListener);
         }
@@ -304,13 +304,8 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
         if (misInFavorites != mwasInFavoritesInitially) {
             // If the star status (favorite status) has changed
             if (mwasInFavoritesInitially) {
-                /* Remove mstock's mticker from Tickers CSV preference.
-                 * Remove mstock's data from Data CSV preference. */
                 removeStockFromPreferences();
             } else {
-                /* Add mstock's mticker to Tickers CSV preference.
-                 * Add mstock's data to Data CSV preference.
-                 * Insert mstock at the front of the preference strings (top of the list). */
                 addStockToPreferences();
             }
 
@@ -331,13 +326,8 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_stock_activity, menu);
-
-        if (misInFavorites) {
-            menu.findItem(R.id.starMenuItem).setIcon(R.drawable.star_on);
-        } else {
-            menu.findItem(R.id.starMenuItem).setIcon(R.drawable.star_off);
-        }
-
+        MenuItem starItem = menu.findItem(R.id.starMenuItem);
+        starItem.setIcon(misInFavorites ? R.drawable.star_on : R.drawable.star_off);
         return true;
     }
 
@@ -346,11 +336,7 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
         switch (item.getItemId()) {
             case R.id.starMenuItem:
                 misInFavorites = !misInFavorites; // Toggle
-                if (misInFavorites) {
-                    item.setIcon(R.drawable.star_on);
-                } else {
-                    item.setIcon(R.drawable.star_off);
-                }
+                item.setIcon(misInFavorites ? R.drawable.star_on : R.drawable.star_off);
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -383,12 +369,9 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
 
     /**
      * Removes mstock from mpreferences; removes mstock's ticker from Tickers CSV and removes
-     * mStock's data from Data CSV. If the mstock is not found (mticker is not found in Tickers
-     * CSV), this function does nothing.
-     *
-     * @return True if mstock was removed, false otherwise.
+     * mStock's data from Data CSV.
      */
-    private boolean removeStockFromPreferences() {
+    private void removeStockFromPreferences() {
         final String tickersCSV = mpreferences.getString("Tickers CSV", "");
         final String[] tickerArr = tickersCSV.split(","); // "".split(",") returns {""}
 
@@ -411,10 +394,7 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
                     dataList.remove(dataNdx);
                 }
                 mpreferences.edit().putString("Data CSV", String.join(",", dataList)).apply();
-                return true;
             }
         }
-
-        return false;
     }
 }

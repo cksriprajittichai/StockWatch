@@ -2,14 +2,9 @@ package c.chasesriprajittichai.stockwatch;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -17,7 +12,6 @@ import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.SearchView;
 import android.widget.Toast;
 
@@ -42,17 +36,19 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Locale;
 
-import c.chasesriprajittichai.stockwatch.AsyncTaskListeners.FindStockTaskListener;
-import c.chasesriprajittichai.stockwatch.Stocks.BasicStock;
+import c.chasesriprajittichai.stockwatch.listeners.FindStockTaskListener;
+import c.chasesriprajittichai.stockwatch.listeners.StockSwipeLeftListener;
+import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
+import c.chasesriprajittichai.stockwatch.stocks.StockList;
 
-import static c.chasesriprajittichai.stockwatch.Stocks.BasicStock.State.AFTER_HOURS;
-import static c.chasesriprajittichai.stockwatch.Stocks.BasicStock.State.CLOSED;
-import static c.chasesriprajittichai.stockwatch.Stocks.BasicStock.State.OPEN;
-import static c.chasesriprajittichai.stockwatch.Stocks.BasicStock.State.PREMARKET;
+import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.AFTER_HOURS;
+import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.CLOSED;
+import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.OPEN;
+import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.PREMARKET;
 import static java.lang.Double.parseDouble;
 
 public class HomeActivity extends AppCompatActivity implements FindStockTaskListener,
-        Response.Listener<String>, Response.ErrorListener {
+        StockSwipeLeftListener, Response.Listener<String>, Response.ErrorListener {
 
     private static class FindStockTask extends AsyncTask<Void, Integer, Boolean> {
 
@@ -91,7 +87,7 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         }
     }
 
-    private final ArrayList<BasicStock> mstocks = new ArrayList<>();
+    private final StockList mstocks = new StockList();
     private RecyclerView mrecyclerView;
     private SearchView msearchView;
     private SharedPreferences mpreferences;
@@ -119,6 +115,20 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         }
     }
 
+    /* Called from StockSwipeLeftCallback.onSwipe(). */
+    @Override
+    public void onStockSwipedLeft(int position) {
+        RecyclerAdapter adapter = (RecyclerAdapter) mrecyclerView.getAdapter();
+        final String removeTicker = mstocks.get(position).getTicker();
+
+        mtickerToStockMap.remove(removeTicker);
+        mtickerToIndexMap.remove(removeTicker);
+        updateTickerToIndexMap(position);
+        mstocks.remove(position);
+
+        adapter.notifyItemRemoved(position);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -126,17 +136,13 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         setTitle("Stock Watch");
 
         mrequestQueue = Volley.newRequestQueue(this);
-
         mpreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
         /* Starter kit */
-//        fillPreferencesWithRandomStocks(0);
+//        fillPreferencesWithRandomStocks(500);
 
-        String tickersCSV = mpreferences.getString("Tickers CSV", "");
-        String[] tickers = tickersCSV.split(","); // "".split(",") returns {""}
-        String dataCSV = mpreferences.getString("Data CSV", "");
-        String[] data = dataCSV.split(","); // "".split(",") returns {""}
-
+        final String[] tickers = mpreferences.getString("Tickers CSV", "").split(","); // "".split(",") returns {""}
+        final String[] data = mpreferences.getString("Data CSV", "").split(","); // "".split(",") returns {""}
         /* If there are stocks in favorites, initialize recycler view to show tickers with the
          * previous data. */
         if (!tickers[0].isEmpty()) {
@@ -170,7 +176,7 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
 
                 curStock = new BasicStock(curState, curTicker, curPrice, curChangePoint, curChangePercent);
 
-                /* Fill mstocks, mtickerToStockMap, and mtickerToIndexMap. */
+                // Fill mstocks, mtickerToStockMap, and mtickerToIndexMap
                 mstocks.add(curStock);
                 mtickerToStockMap.put(curTicker, curStock);
                 mtickerToIndexMap.put(curTicker, tickerNdx);
@@ -179,8 +185,8 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
 
         mrecyclerView = findViewById(R.id.recyclerView_home);
         mrecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        mrecyclerView.addItemDecoration(new RecyclerHomeDivider(this));
-        mrecyclerView.setAdapter(new RecyclerHomeAdapter(mstocks, basicStock -> {
+        mrecyclerView.addItemDecoration(new RecyclerDivider(this));
+        mrecyclerView.setAdapter(new RecyclerAdapter(mstocks, basicStock -> {
             // Go to individual stock activity
             Intent intent = new Intent(this, IndividualStockActivity.class);
             intent.putExtra("Ticker", basicStock.getTicker());
@@ -188,76 +194,9 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
             intent.putExtra("Is in favorites", mtickerToStockMap.containsKey(basicStock.getTicker()));
             startActivity(intent);
         }));
-        setUpItemTouchHelper();
-    }
-
-    private void setUpItemTouchHelper() {
-        ItemTouchHelper.SimpleCallback simpleItemTouchHelper = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
-
-            // Minimize the amount of object allocation done in onChildDraw()
-            final Drawable background = new ColorDrawable(Color.RED);
-            final Drawable garbageIcon = ContextCompat.getDrawable(HomeActivity.this, R.drawable.ic_delete_black_24dp);
-            final float dpUnit = HomeActivity.this.getResources().getDisplayMetrics().density;
-            final int garbageMargin = (int) (16 * dpUnit);
-
-            @Override
-            public boolean onMove(RecyclerView rv, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
-                return false;
-            }
-
-            @Override
-            public int getSwipeDirs(RecyclerView rv, RecyclerView.ViewHolder viewHolder) {
-                return super.getSwipeDirs(rv, viewHolder);
-            }
-
-            @Override
-            public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
-                RecyclerHomeAdapter adapter = (RecyclerHomeAdapter) mrecyclerView.getAdapter();
-                int position = viewHolder.getAdapterPosition();
-                final String removeTicker = mstocks.get(position).getTicker();
-
-                mtickerToStockMap.remove(removeTicker);
-                mtickerToIndexMap.remove(removeTicker);
-                updateTickerToIndexMap(position);
-                mstocks.remove(position);
-
-                adapter.notifyItemRemoved(position);
-            }
-
-            @Override
-            public void onChildDraw(Canvas c, RecyclerView rv, RecyclerView.ViewHolder viewHolder,
-                                    float dX, float dY, int actionState, boolean isCurrentlyActive) {
-                View itemView = viewHolder.itemView;
-
-                /* This method can be called on ViewHolders that have already been swiped away.
-                 * Ignore these. */
-                if (viewHolder.getAdapterPosition() == -1) {
-                    return;
-                }
-
-                // Draw red background
-                background.setBounds(itemView.getRight() + (int) dX, itemView.getTop(), itemView.getRight(), itemView.getBottom());
-                background.draw(c);
-
-                // Draw garbage can
-                int itemHeight = itemView.getBottom() - itemView.getTop();
-                int intrinsicWidth = garbageIcon.getIntrinsicWidth();
-                int intrinsicHeight = garbageIcon.getIntrinsicHeight();
-
-                int xMarkLeft = itemView.getRight() - garbageMargin - intrinsicWidth;
-                int xMarkRight = itemView.getRight() - garbageMargin;
-                int xMarkTop = itemView.getTop() + (itemHeight - intrinsicHeight) / 2;
-                int xMarkBottom = xMarkTop + intrinsicHeight;
-                garbageIcon.setBounds(xMarkLeft, xMarkTop, xMarkRight, xMarkBottom);
-
-                garbageIcon.draw(c);
-
-                super.onChildDraw(c, rv, viewHolder, dX, dY, actionState, isCurrentlyActive);
-            }
-        };
-
-        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(simpleItemTouchHelper);
-        itemTouchHelper.attachToRecyclerView(mrecyclerView);
+        // Init swipe to delete for mrecyclerView.
+        StockSwipeLeftCallback stockSwipeLeftCallback = new StockSwipeLeftCallback(this, this);
+        new ItemTouchHelper(stockSwipeLeftCallback).attachToRecyclerView(mrecyclerView);
     }
 
     @Override
@@ -278,7 +217,7 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
      * of the HTML retrieved from the websites and updating of variables happens in onResponse().
      */
     private void updateStocks() {
-        final ArrayList<String> tickers = getStockTickers();
+        final ArrayList<String> tickers = mstocks.getStockTickers();
         final int numStocksTotal = tickers.size();
         int numStocksUpdated = 0;
 
@@ -323,20 +262,38 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         String curTicker;
         BasicStock.State curState;
         double curPrice, curChangePoint, curChangePercent;
-        Elements valueRoots, tickers, states, prices, priceChangeRoots, priceChanges, priceChangePercents;
+        Elements quoteRoots, live_valueRoots, tickers, states, live_prices, live_changeRoots,
+                live_changePoints, live_changePercents, close_valueRoots, close_prices,
+                close_changeRoots, close_changePoints, close_changePercents;
+
+        /* Prices and changes gathered now are the current values. For example, if a stock's is in
+         * the AFTER_HOURS state, then it's price, change point, and change percent will be the
+         * stock's current price, after hours change point, and after hours change percent. */
 
         Document doc = Jsoup.parse(response);
+        quoteRoots = doc.select("body > div[id=blanket] div[id=maincontent] > div[class^=block multiquote] > div[class^=quotedisplay]");
 
-        valueRoots = doc.select("body > div[id=blanket] div[id=maincontent] > div[class^=block multiquote] div[class~=section activeQuote bgQuote (down|up)?]");
+        live_valueRoots = quoteRoots.select("div[class^=section activeQuote bgQuote]");
+        tickers = live_valueRoots.select("div[class=ticker] > a[href][title]");
+        states = live_valueRoots.select("div[class=marketheader] > p[class=column marketstate]");
+        live_prices = live_valueRoots.select("div[class=lastprice] > div[class=pricewrap] > p[class=data bgLast]");
+        live_changeRoots = live_valueRoots.select("div[class=lastpricedetails] > p[class=lastcolumn data]");
+        live_changePoints = live_changeRoots.select("span[class=bgChange]");
+        live_changePercents = live_changeRoots.select("span[class=bgPercentChange]");
 
-        tickers = valueRoots.select("div[class=ticker] > a[href][title]");
-        states = valueRoots.select("div[class=marketheader] > p[class=column marketstate]");
-        prices = valueRoots.select("div[class=lastprice] > div[class=pricewrap] > p[class=data bgLast]");
-        priceChangeRoots = valueRoots.select("div[class=lastpricedetails] > p[class=lastcolumn data]");
-        priceChanges = priceChangeRoots.select("span[class=bgChange]");
-        priceChangePercents = priceChangeRoots.select("span[class=bgPercentChange]");
+        close_valueRoots = quoteRoots.select("div[class=prevclose section bgQuote] > div[class=offhours]");
+        close_prices = close_valueRoots.select("p[class=lastcolumn data bgLast price]");
+        close_changeRoots = close_valueRoots.select("p[class=lastcolumn data]");
+        close_changePoints = close_changeRoots.select("span[class=bgChange]");
+        close_changePercents = close_changeRoots.select("span[class=bgPercentChange]");
 
         final int numStocksToUpdate = tickers.size();
+
+        /* Let curPrice be the price that is displayed. If a stock's state is OPEN or CLOSED, then
+         * its display price should be the live price. If a stock's state is PREMARKET OR
+         * AFTER_HOURS, then its display price should be the last price that the stock closed at.
+         * The same logic applies for curChangePoint and curChangePercent. */
+        boolean curDataShouldBeCloseData;
 
         // Iterate through mstocks that we're updating
         for (int i = 0; i < numStocksToUpdate; i++) {
@@ -344,26 +301,38 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
                 case "premarket": // Individual stock site uses this
                 case "before the bell": // Multiple stock view site uses this
                     curState = PREMARKET;
+                    curDataShouldBeCloseData = true;
                     break;
                 case "open":
                     curState = OPEN;
+                    curDataShouldBeCloseData = false;
                     break;
                 case "after hours":
                     curState = AFTER_HOURS;
+                    curDataShouldBeCloseData = true;
                     break;
                 case "market closed": // Multiple stock view site uses this
                 case "closed":
                     curState = CLOSED;
+                    curDataShouldBeCloseData = false;
                     break;
                 default:
                     curState = OPEN; /** Create error case. */
+                    curDataShouldBeCloseData = false;
                     break;
             }
+
             curTicker = tickers.get(i).text();
             // Remove ',' or '%' that could be in strings
-            curPrice = parseDouble(prices.get(i).text().replaceAll("[^0-9.]+", ""));
-            curChangePoint = parseDouble(priceChanges.get(i).text().replaceAll("[^0-9.-]+", ""));
-            curChangePercent = parseDouble(priceChangePercents.get(i).text().replaceAll("[^0-9.-]+", ""));
+            if (curDataShouldBeCloseData) {
+                curPrice = parseDouble(close_prices.get(i).text().replaceAll("[^0-9.]+", ""));
+                curChangePoint = parseDouble(close_changePoints.get(i).text().replaceAll("[^0-9.-]+", ""));
+                curChangePercent = parseDouble(close_changePercents.get(i).text().replaceAll("[^0-9.-]+", ""));
+            } else {
+                curPrice = parseDouble(live_prices.get(i).text().replaceAll("[^0-9.]+", ""));
+                curChangePoint = parseDouble(live_changePoints.get(i).text().replaceAll("[^0-9.-]+", ""));
+                curChangePercent = parseDouble(live_changePercents.get(i).text().replaceAll("[^0-9.-]+", ""));
+            }
 
             /* mstocks points to the same BasicStock objects that mtickerToStockMap has pointers to.
              * So by updating curStock, which points to a BasicStock in mtickerToStockMap, we are
@@ -387,8 +356,8 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
     protected void onPause() {
         super.onPause();
 
-        mpreferences.edit().putString("Tickers CSV", getStockTickersAsCSV()).apply();
-        mpreferences.edit().putString("Data CSV", getStockDataAsCSV()).apply();
+        mpreferences.edit().putString("Tickers CSV", mstocks.getStockTickersAsCSV()).apply();
+        mpreferences.edit().putString("Data CSV", mstocks.getStockDataAsCSV()).apply();
     }
 
     @Override
@@ -447,9 +416,6 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        /* None of these list transformations needs to update preferences. Any changes that happen
-         * to mstocks while between calls onResume() and onPause() should not update preferences.
-         * When onPause() is called, preferences are updated to reflect the stocks in mstocks. */
         /* All of these list transformations change the indexing of the stocks in mstocks.
          * Therefore, each of these list transformations must update tickerToIndexMap. */
         switch (item.getItemId()) {
@@ -470,7 +436,7 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
                 mrecyclerView.getAdapter().notifyItemRangeChanged(0, mrecyclerView.getAdapter().getItemCount());
                 return true;
             case R.id.sortByPercentChangeMenuItem:
-                // Sort by decreasing magnitude of daily price change percent
+                // Sort by decreasing magnitude of change percent
                 mstocks.sort((BasicStock a, BasicStock b) -> {
                     // Ignore sign, want stocks with the largest percent change (magnitude only)
                     double aMagnitude = Math.abs(a.getChangePercent());
@@ -531,111 +497,6 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
     }
 
     /**
-     * Removes a stock from mpreferences; removes a stock from Tickers CSV and Data CSV.
-     * If the stock is not found (mticker is not found in Tickers CSV), this function does nothing.
-     *
-     * @param ticker Ticker of the stock to remove.
-     * @return True if stock was removed, false otherwise.
-     */
-    private boolean removeStockFromPreferences(String ticker) {
-        final String tickersCSV = mpreferences.getString("Tickers CSV", "");
-        final String[] tickerArr = tickersCSV.split(","); // "".split(",") returns {""}
-
-        if (!tickerArr[0].isEmpty()) {
-            final ArrayList<String> tickerList = new ArrayList<>(Arrays.asList(tickerArr));
-
-            int tickerNdx = tickerList.indexOf(ticker);
-            if (tickerNdx != -1) {
-                /* Delete stock's ticker. */
-                tickerList.remove(tickerNdx);
-                mpreferences.edit().putString("Tickers CSV", String.join(",", tickerList)).apply();
-
-                /* Delete stock's data. */
-                String dataCSV = mpreferences.getString("Data CSV", "");
-                final ArrayList<String> dataList = new ArrayList<>(Arrays.asList(dataCSV.split(",")));
-
-                // 4 data elements per 1 ticker. DataNdx is the index of the first element to delete.
-                int dataNdx = tickerNdx * 4;
-                for (int deleteCount = 1; deleteCount <= 4; deleteCount++) { // Delete 4 data elements
-                    dataList.remove(dataNdx);
-                }
-                mpreferences.edit().putString("Data CSV", String.join(",", dataList)).apply();
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * @return A CSV string of the tickers of the stocks in mstocks.
-     */
-    private String getStockTickersAsCSV() {
-        return String.join(",", getStockTickers());
-    }
-
-    /**
-     * Stock data includes the stock's state, price, change point, and change percent.
-     *
-     * @return A CSV string of the data of the stocks in mstocks.
-     */
-    private String getStockDataAsCSV() {
-        final int size = mstocks.size();
-        final ArrayList<BasicStock.State> states = getStockStates();
-        final ArrayList<Double> prices = getStockPrices();
-        final ArrayList<Double> changePoints = getStockChangePoints();
-        final ArrayList<Double> changePercents = getStockChangePercents();
-
-        final ArrayList<String> data = new ArrayList<>(size);
-        for (int i = 0; i < size; i++) {
-            data.add(states.get(i).toString() + ',' + prices.get(i) + ',' +
-                    changePoints.get(i) + ',' + changePercents.get(i));
-        }
-
-        return String.join(",", data);
-    }
-
-    private ArrayList<BasicStock.State> getStockStates() {
-        final ArrayList<BasicStock.State> states = new ArrayList<>(mstocks.size());
-        for (BasicStock s : mstocks) {
-            states.add(s.getState());
-        }
-        return states;
-    }
-
-    private ArrayList<String> getStockTickers() {
-        final ArrayList<String> tickers = new ArrayList<>(mstocks.size());
-        for (BasicStock s : mstocks) {
-            tickers.add(s.getTicker());
-        }
-        return tickers;
-    }
-
-    private ArrayList<Double> getStockPrices() {
-        final ArrayList<Double> prices = new ArrayList<>(mstocks.size());
-        for (BasicStock s : mstocks) {
-            prices.add(s.getPrice());
-        }
-        return prices;
-    }
-
-    private ArrayList<Double> getStockChangePoints() {
-        final ArrayList<Double> changePoints = new ArrayList<>(mstocks.size());
-        for (BasicStock s : mstocks) {
-            changePoints.add(s.getChangePoint());
-        }
-        return changePoints;
-    }
-
-    private ArrayList<Double> getStockChangePercents() {
-        final ArrayList<Double> changePercents = new ArrayList<>(mstocks.size());
-        for (BasicStock s : mstocks) {
-            changePercents.add(s.getChangePercent());
-        }
-        return changePercents;
-    }
-
-    /**
      * Testing function. Fills Tickers CSV preference with all the tickers from the NASDAQ and fills
      * Data CSV preference with -1. The largest number of stocks that can be added is the number of
      * companies in the NASDAQ.
@@ -668,4 +529,5 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         }
         mpreferences.edit().putString("Data CSV", String.join(",", dataArr)).apply();
     }
+
 }

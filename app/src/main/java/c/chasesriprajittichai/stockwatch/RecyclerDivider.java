@@ -7,14 +7,14 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 
-public class RecyclerHomeDivider extends RecyclerView.ItemDecoration {
+public class RecyclerDivider extends RecyclerView.ItemDecoration {
 
     private Drawable mdivider;
 
-    public RecyclerHomeDivider(Context context) {
+    RecyclerDivider(Context context) {
         mdivider = ContextCompat.getDrawable(context, R.drawable.recycler_view_divider_home);
     }
-    
+
     @Override
     public void onDrawOver(Canvas c, RecyclerView parent, RecyclerView.State state) {
         int left = parent.getPaddingLeft();

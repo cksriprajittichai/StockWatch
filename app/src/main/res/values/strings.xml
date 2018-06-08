@@ -9,7 +9,7 @@
     <string name="shuffleMenuItem">Shuffle</string>
     <string name="flipListMenuItem">Flip List</string>
 
-    <!--IndividualStockActivity menu item titles-->
+    <!--IndividualStockActivityListener menu item titles-->
     <string name="starMenuItem">Star</string>
 
     <string name="string_colon_string">%1$s: %2$s</string>
