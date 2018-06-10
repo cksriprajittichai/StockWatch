@@ -30,12 +30,13 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Locale;
 
+import butterknife.BindView;
+import butterknife.ButterKnife;
 import c.chasesriprajittichai.stockwatch.listeners.FindStockTaskListener;
 import c.chasesriprajittichai.stockwatch.listeners.StockSwipeLeftListener;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
@@ -70,9 +71,9 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
                 Document doc = Jsoup.connect(url).get();
 
                 // This element exists if the stock's individual page is found on MarketWatch
-                Element flagElement = doc.selectFirst("html > body[role=document][class~=page--quote symbol--(Stock|AmericanDepositoryReceiptStock) page--Index]");
+                Element foundElement = doc.selectFirst("html > body[role=document][class~=page--quote symbol--(Stock|AmericanDepositoryReceiptStock) page--Index]");
 
-                stockExists = (flagElement != null);
+                stockExists = (foundElement != null);
             } catch (IOException ioe) {
                 /* Show "No internet connection", or something. */
                 Log.e("IOException", ioe.getLocalizedMessage());
@@ -87,8 +88,9 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         }
     }
 
+    @BindView(R.id.recyclerView_home) RecyclerView mrecyclerView;
+
     private final StockList mstocks = new StockList();
-    private RecyclerView mrecyclerView;
     private SearchView msearchView;
     private SharedPreferences mpreferences;
     private RequestQueue mrequestQueue;
@@ -134,6 +136,7 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
         setTitle("Stock Watch");
+        ButterKnife.bind(this);
 
         mrequestQueue = Volley.newRequestQueue(this);
         mpreferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -153,17 +156,17 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
             double curPrice, curChangePoint, curChangePercent;
             for (int tickerNdx = 0, dataNdx = 0; tickerNdx < tickers.length; tickerNdx++, dataNdx += 4) {
                 curTicker = tickers[tickerNdx];
-                switch (data[dataNdx].toLowerCase(Locale.US)) {
-                    case "premarket":
+                switch (data[dataNdx]) {
+                    case "PREMARKET":
                         curState = PREMARKET;
                         break;
-                    case "open":
+                    case "OPEN":
                         curState = OPEN;
                         break;
-                    case "after_hours":
+                    case "AFTER_HOURS":
                         curState = AFTER_HOURS;
                         break;
-                    case "closed":
+                    case "CLOSEDO":
                         curState = CLOSED;
                         break;
                     default:
@@ -183,7 +186,6 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
             }
         }
 
-        mrecyclerView = findViewById(R.id.recyclerView_home);
         mrecyclerView.setLayoutManager(new LinearLayoutManager(this));
         mrecyclerView.addItemDecoration(new RecyclerDivider(this));
         mrecyclerView.setAdapter(new RecyclerAdapter(mstocks, basicStock -> {
@@ -197,16 +199,27 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         // Init swipe to delete for mrecyclerView.
         StockSwipeLeftCallback stockSwipeLeftCallback = new StockSwipeLeftCallback(this, this);
         new ItemTouchHelper(stockSwipeLeftCallback).attachToRecyclerView(mrecyclerView);
+
+        Log.d("test", "onCreate() called");
     }
 
     @Override
     protected void onResume() {
         super.onResume();
 
+
         // If there are stocks in favorites, update mstocks and mrecyclerView.
         if (!mstocks.isEmpty()) {
             updateStocks();
         }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        mpreferences.edit().putString("Tickers CSV", mstocks.getStockTickersAsCSV()).apply();
+        mpreferences.edit().putString("Data CSV", mstocks.getStockDataAsCSV()).apply();
     }
 
     /**
@@ -289,7 +302,7 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
 
         final int numStocksToUpdate = tickers.size();
 
-        /* Let curPrice be the price that is displayed. If a stock's state is OPEN or CLOSED, then
+        /* curPrice will be displayed on mrecyclerView. If a stock's state is OPEN or CLOSED, then
          * its display price should be the live price. If a stock's state is PREMARKET OR
          * AFTER_HOURS, then its display price should be the last price that the stock closed at.
          * The same logic applies for curChangePoint and curChangePercent. */
@@ -353,44 +366,20 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
-
-        mpreferences.edit().putString("Tickers CSV", mstocks.getStockTickersAsCSV()).apply();
-        mpreferences.edit().putString("Data CSV", mstocks.getStockDataAsCSV()).apply();
-    }
-
-    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_home_activity, menu);
 
-        MenuItem searchMenuItem = menu.findItem(R.id.searchMenuItem);
-        msearchView = (SearchView) searchMenuItem.getActionView();
-
-        msearchView.setEnabled(true);
-        msearchView.setQueryHint("Ticker");
+        msearchView = (SearchView) menu.findItem(R.id.searchMenuItem).getActionView();
         msearchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
                 final String ticker = query.trim().toUpperCase();
 
-                // Parse query before creating a FindStockTask.
-                /* Valid tickers are between [1,5] characters long, will all characters being either
-                 * letters, numbers, '.', or '-'. */
-                boolean isValidTicker = true;
-                if (ticker.length() <= 0 || ticker.length() > 5) {
-                    isValidTicker = false;
-                }
-                for (char c : ticker.toCharArray()) {
-                    if (!Character.isLetterOrDigit(c) && c != '.') {
-                        isValidTicker = false;
-                        break;
-                    }
-                }
+                /* Valid tickers are between [1,5] characters long, with all characters being
+                 * either digits, letters, or '.'. */
+                boolean isValidTicker = ticker.matches("[0-9A-Z.]{1,6}");
 
                 if (isValidTicker) {
-                    /* The thread executing the FindStockTask will call onFindStockTaskCompleted()
-                     * when completed. */
                     FindStockTask task = new FindStockTask(ticker, HomeActivity.this);
                     task.execute();
 
@@ -428,8 +417,7 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
                 return true;
             case R.id.sortByPriceMenuItem:
                 // Sort by decreasing price
-                Comparator<BasicStock> ascendingPriceComparator = Comparator.comparingDouble(BasicStock::getPrice);
-                Comparator<BasicStock> descendingPriceComparator = ascendingPriceComparator.reversed();
+                Comparator<BasicStock> descendingPriceComparator = Comparator.comparingDouble(BasicStock::getPrice).reversed();
                 mstocks.sort(descendingPriceComparator);
                 updateTickerToIndexMap();
 
@@ -438,11 +426,8 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
             case R.id.sortByPercentChangeMenuItem:
                 // Sort by decreasing magnitude of change percent
                 mstocks.sort((BasicStock a, BasicStock b) -> {
-                    // Ignore sign, want stocks with the largest percent change (magnitude only)
-                    double aMagnitude = Math.abs(a.getChangePercent());
-                    double bMagnitude = Math.abs(b.getChangePercent());
-
-                    return Double.compare(aMagnitude, bMagnitude) * -1; // Flip to get descending
+                    // Ignore sign, compare change percents by magnitude
+                    return Double.compare(Math.abs(b.getChangePercent()), Math.abs(a.getChangePercent()));
                 });
                 updateTickerToIndexMap();
 
@@ -459,6 +444,7 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
                 updateTickerToIndexMap();
 
                 mrecyclerView.getAdapter().notifyItemRangeChanged(0, mrecyclerView.getAdapter().getItemCount());
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }

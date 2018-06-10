@@ -4,9 +4,11 @@
 
     <item
         android:id="@+id/searchMenuItem"
+        android:enabled="true"
         android:icon="@android:drawable/ic_menu_search"
         android:title="@string/searchMenuItem"
         app:actionViewClass="android.widget.SearchView"
+        app:queryHint="Ticker"
         app:showAsAction="always" />
 
     <item

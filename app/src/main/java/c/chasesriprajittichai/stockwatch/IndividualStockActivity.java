@@ -12,6 +12,7 @@ import android.widget.TextView;
 
 import com.robinhood.spark.SparkView;
 
+import org.apache.commons.lang3.ObjectUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -23,6 +24,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Locale;
 
+import butterknife.BindView;
+import butterknife.BindViews;
+import butterknife.ButterKnife;
 import c.chasesriprajittichai.stockwatch.listeners.DownloadIndividualStockTaskListener;
 import c.chasesriprajittichai.stockwatch.stocks.AdvancedStock;
 import c.chasesriprajittichai.stockwatch.stocks.AfterHoursStock;
@@ -45,7 +49,7 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
         private WeakReference<DownloadIndividualStockTaskListener> mcompletionListener;
 
         private DownloadStockDataTask(String ticker, DownloadIndividualStockTaskListener completionListener) {
-            mticker = ticker.toUpperCase(Locale.US);
+            mticker = ticker;
             mcompletionListener = new WeakReference<>(completionListener);
         }
 
@@ -58,13 +62,15 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
                 Document multiDoc = Jsoup.connect("https://www.marketwatch.com/investing/multi?tickers=" + mticker).get();
                 Element quoteRoot = multiDoc.selectFirst("div[class~=section activeQuote bgQuote (down|up)?]");
                 Element intradayChart = quoteRoot.selectFirst("script[type=text/javascript]");
-                String jsStr = substringBetween(intradayChart.toString(), "Trades\":[", "]");
-                // jsStr is in CSV format. Values in jsStr could be "null". Values do not contain ','.
-                // If null values are found, replace them with the last non-null value.
-                String[] chart_priceStrs = jsStr.split(",");
+
+                String javascriptStr = substringBetween(intradayChart.toString(), "Trades\":[", "]");
+                /* javascriptStr is in CSV format. Values in javascriptStr could be "null". Values
+                 * do not contain ','. If null values are found, replace them with the last
+                 * non-null value. */
+                String[] chart_priceStrs = javascriptStr.split(",");
                 ArrayList<Double> chart_prices = new ArrayList<>();
 
-                // Init previous price as first non-null value
+                // Init chart_prevPrice as first non-null value
                 double chart_prevPrice = -1;
                 boolean chart_priceFound = false;
                 for (String s : chart_priceStrs) {
@@ -74,7 +80,7 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
                         break;
                     }
                 }
-
+                // Fill chart_prices
                 if (chart_priceFound) {
                     chart_prices.ensureCapacity(chart_priceStrs.length);
                     for (int i = 0; i < chart_priceStrs.length; i++) {
@@ -122,9 +128,9 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
 
                 Element priceElmnt, changePointElmnt, changePercentElmnt, close_intradayDataElmnt,
                         close_priceElmnt, close_changePointElmnt, close_changePercentElmnt;
-                Elements tableCells;
+                Elements close_tableCells;
                 double price, changePoint, changePercent, close_price, close_changePoint, close_changePercent;
-                /* Do something different for each mstate. */
+                // Do something different for each mstate.
                 switch (state) {
                     case PREMARKET: {
                         priceElmnt = intradayData.selectFirst("h3[class=intraday__price] > bg-quote[class^=value]");
@@ -132,10 +138,10 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
                         changePercentElmnt = intradayData.selectFirst("span[class=change--percent--q] > bg-quote[field=percentchange]");
 
                         close_intradayDataElmnt = intraday.selectFirst("div[class=intraday__close]");
-                        tableCells = close_intradayDataElmnt.select("tr[class=table__row] > td[class^=table__cell]");
-                        close_priceElmnt = tableCells.get(0);
-                        close_changePointElmnt = tableCells.get(1);
-                        close_changePercentElmnt = tableCells.get(2);
+                        close_tableCells = close_intradayDataElmnt.select("tr[class=table__row] > td[class^=table__cell]");
+                        close_priceElmnt = close_tableCells.get(0);
+                        close_changePointElmnt = close_tableCells.get(1);
+                        close_changePercentElmnt = close_tableCells.get(2);
 
                         // Remove ',' or '%' that could be in strings
                         price = parseDouble(priceElmnt.text().replaceAll("[^0-9.]+", ""));
@@ -159,7 +165,8 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
                         changePoint = parseDouble(changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
                         changePercent = parseDouble(changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
 
-                        ret = new AdvancedStock(state, mticker, name, price, changePoint, changePercent, chart_prices);
+                        ret = new AdvancedStock(state, mticker, name, price, changePoint,
+                                changePercent, chart_prices);
                         break;
                     }
                     case AFTER_HOURS: {
@@ -168,10 +175,10 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
                         changePercentElmnt = intradayData.selectFirst("span[class=change--percent--q] > bg-quote[field=percentchange]");
 
                         close_intradayDataElmnt = intraday.selectFirst("div[class=intraday__close]");
-                        tableCells = close_intradayDataElmnt.select("tr[class=table__row] > td[class^=table__cell]");
-                        close_priceElmnt = tableCells.get(0);
-                        close_changePointElmnt = tableCells.get(1);
-                        close_changePercentElmnt = tableCells.get(2);
+                        close_tableCells = close_intradayDataElmnt.select("tr[class=table__row] > td[class^=table__cell]");
+                        close_priceElmnt = close_tableCells.get(0);
+                        close_changePointElmnt = close_tableCells.get(1);
+                        close_changePercentElmnt = close_tableCells.get(2);
 
                         // Remove ',' or '%' that could be in strings
                         price = parseDouble(priceElmnt.text().replaceAll("[^0-9.]+", ""));
@@ -195,7 +202,8 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
                         changePoint = parseDouble(changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
                         changePercent = parseDouble(changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
 
-                        ret = new AdvancedStock(state, mticker, name, price, changePoint, changePercent, chart_prices);
+                        ret = new AdvancedStock(state, mticker, name, price, changePoint,
+                                changePercent, chart_prices);
                         break;
                     }
                 }
@@ -212,19 +220,20 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
         }
     }
 
+    @BindView(R.id.textView_scrub) TextView mscrubInfoTextView;
+    @BindView(R.id.test_state) TextView mstateTextView;
+    @BindView(R.id.test_price) TextView mpriceTextView;
+    @BindView(R.id.test_changePoint) TextView mchangePointTextView;
+    @BindView(R.id.test_changePercent) TextView mchangePercentTextView;
+    @BindView(R.id.test_close_price) TextView mclose_priceTextView;
+    @BindView(R.id.test_close_changePoint) TextView mclose_changePointTextView;
+    @BindView(R.id.test_close_changePercent) TextView mclose_changePercentTextView;
+    @BindView(R.id.sparkView) SparkView msparkView;
+
     private String mticker; // Needed to create mstock
     private AdvancedStock mstock;
     private boolean mwasInFavoritesInitially;
     private boolean misInFavorites;
-    private TextView mscrubInfoTextView;
-    private TextView mstateTextView;
-    private TextView mpriceTextView;
-    private TextView mchangePointTextView;
-    private TextView mchangePercentTextView;
-    private TextView mclose_priceTextView;
-    private TextView mclose_changePointTextView;
-    private TextView mclose_changePercentTextView;
-    private SparkView msparkView;
     private SparkViewAdapter msparkViewAdapter;
     private SharedPreferences mpreferences;
 
@@ -275,26 +284,18 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_stock);
         setTitle(""); // Show empty title now, company name will be shown (in onPostExecute())
+        ButterKnife.bind(this);
         mpreferences = PreferenceManager.getDefaultSharedPreferences(this);
         mticker = getIntent().getStringExtra("Ticker");
-        misInFavorites = getIntent().getBooleanExtra("Is in favorites", false);
-        mwasInFavoritesInitially = misInFavorites;
 
         // Start task ASAP
         DownloadStockDataTask task = new DownloadStockDataTask(mticker, this);
         task.execute();
 
-        mscrubInfoTextView = findViewById(R.id.textView_scrub);
-        mstateTextView = findViewById(R.id.test_state);
-        mpriceTextView = findViewById(R.id.test_price);
-        mchangePointTextView = findViewById(R.id.test_changePoint);
-        mchangePercentTextView = findViewById(R.id.test_changePercent);
-        mclose_priceTextView = findViewById(R.id.test_close_price);
-        mclose_changePointTextView = findViewById(R.id.test_close_changePoint);
-        mclose_changePercentTextView = findViewById(R.id.test_close_changePercent);
+        misInFavorites = getIntent().getBooleanExtra("Is in favorites", false);
+        mwasInFavoritesInitially = misInFavorites;
 
         msparkViewAdapter = new SparkViewAdapter(new ArrayList<>()); // Init as empty
-        msparkView = findViewById(R.id.sparkView);
         msparkView.setAdapter(msparkViewAdapter);
     }
 
@@ -310,15 +311,21 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
             }
 
             /* The activity has paused. Update the favorites status.
-             * This is vital because the condition to be able to edit Tickers CSV and Data CSV are
-             * whether or not the favorites status has changed. */
+             * The condition to be able to edit Tickers CSV and Data CSV are dependent on whether
+             * or not the favorites status has changed. */
             mwasInFavoritesInitially = misInFavorites;
         }
     }
 
-    /* Back button is the only way to get back to HomeActivity. */
     @Override
     public void onBackPressed() {
+        /* The parent (non-override) onBackPressed() does not create a new HomeActivity. So when we
+         * go back back to HomeActivity, the first function called is onResume(); onCreate() is not
+         * called. HomeActivity depends on the property that Tickers CSV and Data CSV are not
+         * changed in between calls to HomeActivity.onPause() and HomeActivity.onResume(). Tickers
+         * CSV and Data CSV can be changed within this class. Therefore, if we don't start a new
+         * HomeActivity in this function, then it is possible that Tickers CSV and Data CSV are
+         * changed in between calls to HomeActivity.onResume() and HomeActivity.onPause(). */
         Intent intent = new Intent(this, HomeActivity.class);
         startActivity(intent);
     }
@@ -377,24 +384,19 @@ public class IndividualStockActivity extends AppCompatActivity implements Downlo
 
         if (!tickerArr[0].isEmpty()) {
             final ArrayList<String> tickerList = new ArrayList<>(Arrays.asList(tickerArr));
+            final ArrayList<String> dataList = new ArrayList<>(Arrays.asList(
+                    mpreferences.getString("Data CSV", "").split(",")));
 
-            int tickerNdx = tickerList.indexOf(mstock.getTicker());
-            if (tickerNdx != -1) {
-                /* Delete mstock's mticker. */
-                tickerList.remove(tickerNdx);
-                mpreferences.edit().putString("Tickers CSV", String.join(",", tickerList)).apply();
+            final int tickerNdx = tickerList.indexOf(mstock.getTicker());
+            tickerList.remove(tickerNdx);
+            mpreferences.edit().putString("Tickers CSV", String.join(",", tickerList)).apply();
 
-                /* Delete mstock's data. */
-                String dataCSV = mpreferences.getString("Data CSV", "");
-                final ArrayList<String> dataList = new ArrayList<>(Arrays.asList(dataCSV.split(",")));
-
-                // 4 data elements per 1 mticker. DataNdx is the index of the first element to delete.
-                int dataNdx = tickerNdx * 4;
-                for (int deleteCount = 1; deleteCount <= 4; deleteCount++) { // Delete 4 data elements
-                    dataList.remove(dataNdx);
-                }
-                mpreferences.edit().putString("Data CSV", String.join(",", dataList)).apply();
+            // 4 data elements per 1 ticker. DataNdx is the index of the first element to delete.
+            final int dataNdx = tickerNdx * 4;
+            for (int deleteCount = 1; deleteCount <= 4; deleteCount++) { // Delete 4 data elements
+                dataList.remove(dataNdx);
             }
+            mpreferences.edit().putString("Data CSV", String.join(",", dataList)).apply();
         }
     }
 }
