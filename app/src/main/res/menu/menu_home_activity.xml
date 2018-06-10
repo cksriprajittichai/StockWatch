@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
-        android:id="@+id/searchMenuItem"
+        android:id="@+id/menuItem_search_home"
         android:enabled="true"
         android:icon="@android:drawable/ic_menu_search"
         android:title="@string/searchMenuItem"
@@ -12,28 +12,34 @@
         app:showAsAction="always" />
 
     <item
-        android:id="@+id/sortAlphabeticallyMenuItem"
+        android:id="@+id/menuItem_sortAlphabetically_home"
         android:title="@string/sortAlphabeticallyMenuItem"
         app:showAsAction="collapseActionView" />
 
     <item
-        android:id="@+id/sortByPriceMenuItem"
+        android:id="@+id/menuItem_sortByPrice_home"
         android:title="@string/sortByPriceMenuItem"
         app:showAsAction="collapseActionView" />
 
     <item
-        android:id="@+id/sortByPercentChangeMenuItem"
+        android:id="@+id/menuItem_sortByChangePercent_home"
         android:title="@string/sortByPercentMenuItem"
         app:showAsAction="collapseActionView" />
 
     <item
-        android:id="@+id/shuffleMenuItem"
+        android:id="@+id/menuItem_sortByState_home"
+        android:title="@string/sortByStateMenuItem"
+        app:showAsAction="collapseActionView" />
+
+    <item
+        android:id="@+id/menuItem_shuffle_home"
         android:title="@string/shuffleMenuItem"
         app:showAsAction="collapseActionView" />
 
     <item
-        android:id="@+id/flipListMenuItem"
+        android:id="@+id/menuItem_flipList_home"
         android:title="@string/flipListMenuItem"
         app:showAsAction="collapseActionView" />
+
 
 </menu>

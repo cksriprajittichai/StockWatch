@@ -1,5 +1,5 @@
 package c.chasesriprajittichai.stockwatch.listeners;
 
 public interface FindStockTaskListener {
-    void onFindStockTaskCompleted(String ticker, boolean stockExists);
+    void onFindStockTaskCompleted(final String ticker, final boolean stockExists);
 }

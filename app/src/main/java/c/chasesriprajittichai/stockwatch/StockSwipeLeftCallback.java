@@ -12,7 +12,7 @@ import android.view.View;
 
 import c.chasesriprajittichai.stockwatch.listeners.StockSwipeLeftListener;
 
-public class StockSwipeLeftCallback extends ItemTouchHelper.SimpleCallback {
+public final class StockSwipeLeftCallback extends ItemTouchHelper.SimpleCallback {
 
     private final StockSwipeLeftListener mswipeLeftListener;
 

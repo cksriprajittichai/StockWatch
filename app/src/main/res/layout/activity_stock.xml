@@ -1,100 +1,123 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@android:color/black"
-    android:orientation="vertical"
-    android:paddingLeft="16dp"
-    android:paddingRight="16dp">
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:background="@android:color/black">
 
-    <com.robinhood.spark.SparkView
-        android:id="@+id/sparkView"
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:app="http://schemas.android.com/apk/res-auto"
         android:layout_width="match_parent"
-        android:layout_height="200dp"
-        android:layout_marginBottom="2dp"
-        android:layout_marginTop="4dp"
-        app:spark_lineColor="@color/colorAccent"
-        app:spark_scrubEnabled="true"
-        app:spark_scrubLineWidth="1dp" />
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingLeft="16dp"
+        android:paddingRight="16dp">
 
-    <TextView
-        android:id="@+id/textView_scrub"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="0dp"
-        android:gravity="start"
-        android:textAppearance="?android:textAppearanceLarge"
-        android:textColor="@color/colorAccentTransparent" />
+        <com.robinhood.spark.SparkView
+            android:id="@+id/sparkView_individual"
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:layout_marginBottom="2dp"
+            android:layout_marginTop="4dp"
+            app:spark_lineColor="@color/colorAccent"
+            app:spark_scrubEnabled="true"
+            app:spark_scrubLineWidth="1dp" />
 
-    <View
-        android:id="@+id/view_sparkAndRecyclerViewDivider"
-        android:layout_width="match_parent"
-        android:layout_height="2dp"
-        android:layout_marginBottom="8dp"
-        android:background="@android:color/white" />
+        <TextView
+            android:id="@+id/textView_scrub_individual"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:gravity="start"
+            android:textAppearance="?android:textAppearanceLarge"
+            android:textColor="@color/colorAccentTransparent" />
 
-    <TextView
-        android:id="@+id/test_state"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:gravity="start"
-        android:textAppearance="?android:textAppearanceMedium"
-        android:textColor="@android:color/white" />
+        <View
+            android:id="@+id/divider_sparkViewToStats_individual"
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:background="@android:color/darker_gray"
+            android:visibility="gone" />
 
-    <TextView
-        android:id="@+id/test_price"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:gravity="start"
-        android:textAppearance="?android:textAppearanceMedium"
-        android:textColor="@android:color/white" />
+        <TextView
+            android:id="@+id/textView_state_individual"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:layout_marginTop="8dp"
+            android:gravity="start"
+            android:textAppearance="?android:textAppearanceMedium"
+            android:textColor="@android:color/white" />
 
-    <TextView
-        android:id="@+id/test_changePoint"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:gravity="start"
-        android:textAppearance="?android:textAppearanceMedium"
-        android:textColor="@android:color/white" />
+        <TextView
+            android:id="@+id/textView_price_individual"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:gravity="start"
+            android:textAppearance="?android:textAppearanceMedium"
+            android:textColor="@android:color/white" />
 
-    <TextView
-        android:id="@+id/test_changePercent"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:gravity="start"
-        android:textAppearance="?android:textAppearanceMedium"
-        android:textColor="@android:color/white" />
+        <TextView
+            android:id="@+id/textView_changePoint_individual"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:gravity="start"
+            android:textAppearance="?android:textAppearanceMedium"
+            android:textColor="@android:color/white" />
 
-    <TextView
-        android:id="@+id/test_close_price"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:gravity="start"
-        android:textAppearance="?android:textAppearanceMedium"
-        android:textColor="@android:color/white" />
+        <TextView
+            android:id="@+id/textView_changePercent_individual"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:gravity="start"
+            android:textAppearance="?android:textAppearanceMedium"
+            android:textColor="@android:color/white" />
 
-    <TextView
-        android:id="@+id/test_close_changePoint"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:gravity="start"
-        android:textAppearance="?android:textAppearanceMedium"
-        android:textColor="@android:color/white" />
+        <TextView
+            android:id="@+id/textView_close_price_individual"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:gravity="start"
+            android:textAppearance="?android:textAppearanceMedium"
+            android:textColor="@android:color/white" />
 
-    <TextView
-        android:id="@+id/test_close_changePercent"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:gravity="start"
-        android:textAppearance="?android:textAppearanceMedium"
-        android:textColor="@android:color/white" />
+        <TextView
+            android:id="@+id/textView_close_changePoint_individual"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:gravity="start"
+            android:textAppearance="?android:textAppearanceMedium"
+            android:textColor="@android:color/white" />
 
-</LinearLayout>
+        <TextView
+            android:id="@+id/textView_close_changePercent_individual"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:gravity="start"
+            android:textAppearance="?android:textAppearanceMedium"
+            android:textColor="@android:color/white" />
+
+        <View
+            android:id="@+id/divider_statisticsToDescription_individual"
+            android:layout_width="match_parent"
+            android:layout_height="2dp"
+            android:background="@android:color/darker_gray"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/textView_description_individual"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:layout_marginTop="8dp"
+            android:gravity="start"
+            android:textAppearance="?android:textAppearanceMedium"
+            android:textColor="@android:color/white" />
+
+    </LinearLayout>
+</ScrollView>

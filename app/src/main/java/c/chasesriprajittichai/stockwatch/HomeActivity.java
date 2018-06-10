@@ -40,7 +40,7 @@ import butterknife.ButterKnife;
 import c.chasesriprajittichai.stockwatch.listeners.FindStockTaskListener;
 import c.chasesriprajittichai.stockwatch.listeners.StockSwipeLeftListener;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
-import c.chasesriprajittichai.stockwatch.stocks.StockList;
+import c.chasesriprajittichai.stockwatch.stocks.BasicStockList;
 
 import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.AFTER_HOURS;
 import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.CLOSED;
@@ -48,33 +48,34 @@ import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.OPEN;
 import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.PREMARKET;
 import static java.lang.Double.parseDouble;
 
-public class HomeActivity extends AppCompatActivity implements FindStockTaskListener,
+
+public final class HomeActivity extends AppCompatActivity implements FindStockTaskListener,
         StockSwipeLeftListener, Response.Listener<String>, Response.ErrorListener {
 
     private static class FindStockTask extends AsyncTask<Void, Integer, Boolean> {
 
-        private String mticker;
-        private WeakReference<FindStockTaskListener> mcompletionListener;
+        private final String mticker;
+        private final WeakReference<FindStockTaskListener> mcompletionListener;
 
-        private FindStockTask(String ticker, FindStockTaskListener completionListener) {
+        private FindStockTask(final String ticker, final FindStockTaskListener completionListener) {
             this.mticker = ticker;
             this.mcompletionListener = new WeakReference<>(completionListener);
         }
 
         @Override
-        protected Boolean doInBackground(Void... params) {
+        protected Boolean doInBackground(final Void... params) {
             final String baseUrl = "https://www.marketwatch.com/tools/quotes/lookup.asp?lookup=";
-            String url = baseUrl + mticker;
+            final String url = baseUrl + mticker;
 
             boolean stockExists = false;
             try {
-                Document doc = Jsoup.connect(url).get();
+                final Document doc = Jsoup.connect(url).get();
 
                 // This element exists if the stock's individual page is found on MarketWatch
-                Element foundElement = doc.selectFirst("html > body[role=document][class~=page--quote symbol--(Stock|AmericanDepositoryReceiptStock) page--Index]");
+                final Element foundElement = doc.selectFirst("html > body[role=document][class~=page--quote symbol--(Stock|AmericanDepositoryReceiptStock) page--Index]");
 
                 stockExists = (foundElement != null);
-            } catch (IOException ioe) {
+            } catch (final IOException ioe) {
                 /* Show "No internet connection", or something. */
                 Log.e("IOException", ioe.getLocalizedMessage());
             }
@@ -83,30 +84,30 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         }
 
         @Override
-        protected void onPostExecute(Boolean stockExists) {
+        protected void onPostExecute(final Boolean stockExists) {
             mcompletionListener.get().onFindStockTaskCompleted(mticker, stockExists);
         }
     }
 
     @BindView(R.id.recyclerView_home) RecyclerView mrecyclerView;
 
-    private final StockList mstocks = new StockList();
+    private final BasicStockList mstocks = new BasicStockList();
     private SearchView msearchView;
     private SharedPreferences mpreferences;
     private RequestQueue mrequestQueue;
 
-    /* Maps tickers to BasicStock objects in mstocks. */
+    // Maps tickers to BasicStock objects in mstocks.
     private final HashMap<String, BasicStock> mtickerToStockMap = new HashMap<>();
 
-    /* Maps tickers to indexes in mstocks. */
+    // Maps tickers to indexes in mstocks.
     private final HashMap<String, Integer> mtickerToIndexMap = new HashMap<>();
 
     /* Called from FindStockTask.onPostExecute(). */
     @Override
-    public void onFindStockTaskCompleted(String ticker, boolean stockExists) {
+    public void onFindStockTaskCompleted(final String ticker, final boolean stockExists) {
         if (stockExists) {
             // Go to individual stock activity
-            Intent intent = new Intent(this, IndividualStockActivity.class);
+            final Intent intent = new Intent(this, IndividualStockActivity.class);
             intent.putExtra("Ticker", ticker);
             // Equivalent to checking if ticker is in mtickerToIndexMap or in mstocks
             intent.putExtra("Is in favorites", mtickerToStockMap.containsKey(ticker));
@@ -119,8 +120,8 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
 
     /* Called from StockSwipeLeftCallback.onSwipe(). */
     @Override
-    public void onStockSwipedLeft(int position) {
-        RecyclerAdapter adapter = (RecyclerAdapter) mrecyclerView.getAdapter();
+    public void onStockSwipedLeft(final int position) {
+        final RecyclerAdapter adapter = (RecyclerAdapter) mrecyclerView.getAdapter();
         final String removeTicker = mstocks.get(position).getTicker();
 
         mtickerToStockMap.remove(removeTicker);
@@ -132,12 +133,11 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
     }
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
         setTitle("Stock Watch");
         ButterKnife.bind(this);
-
         mrequestQueue = Volley.newRequestQueue(this);
         mpreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
@@ -190,23 +190,20 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         mrecyclerView.addItemDecoration(new RecyclerDivider(this));
         mrecyclerView.setAdapter(new RecyclerAdapter(mstocks, basicStock -> {
             // Go to individual stock activity
-            Intent intent = new Intent(this, IndividualStockActivity.class);
+            final Intent intent = new Intent(this, IndividualStockActivity.class);
             intent.putExtra("Ticker", basicStock.getTicker());
             // Equivalent to checking if ticker is in mtickerToIndexMap or in mstocks
             intent.putExtra("Is in favorites", mtickerToStockMap.containsKey(basicStock.getTicker()));
             startActivity(intent);
         }));
         // Init swipe to delete for mrecyclerView.
-        StockSwipeLeftCallback stockSwipeLeftCallback = new StockSwipeLeftCallback(this, this);
+        final StockSwipeLeftCallback stockSwipeLeftCallback = new StockSwipeLeftCallback(this, this);
         new ItemTouchHelper(stockSwipeLeftCallback).attachToRecyclerView(mrecyclerView);
-
-        Log.d("test", "onCreate() called");
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-
 
         // If there are stocks in favorites, update mstocks and mrecyclerView.
         if (!mstocks.isEmpty()) {
@@ -240,7 +237,7 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         /* Up to 10 stocks are shown in the MarketWatch view multiple stocks website. The first
          * 10 tickers listed in the URL are shown. Appending more than 10 tickers onto the URL
          * has no effect on the website - the first 10 tickers will be shown. */
-        StringBuilder url = new StringBuilder(50); // Approximate size
+        final StringBuilder url = new StringBuilder(50); // Approximate size
 
         StringRequest stringRequest;
         int numStocksToUpdateThisIteration, i;
@@ -270,12 +267,12 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
     }
 
     @Override
-    public void onResponse(String response) {
+    public void onResponse(final String response) {
         BasicStock curStock;
         String curTicker;
         BasicStock.State curState;
         double curPrice, curChangePoint, curChangePercent;
-        Elements quoteRoots, live_valueRoots, tickers, states, live_prices, live_changeRoots,
+        final Elements quoteRoots, live_valueRoots, tickers, states, live_prices, live_changeRoots,
                 live_changePoints, live_changePercents, close_valueRoots, close_prices,
                 close_changeRoots, close_changePoints, close_changePercents;
 
@@ -283,7 +280,7 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
          * the AFTER_HOURS state, then it's price, change point, and change percent will be the
          * stock's current price, after hours change point, and after hours change percent. */
 
-        Document doc = Jsoup.parse(response);
+        final Document doc = Jsoup.parse(response);
         quoteRoots = doc.select("body > div[id=blanket] div[id=maincontent] > div[class^=block multiquote] > div[class^=quotedisplay]");
 
         live_valueRoots = quoteRoots.select("div[class^=section activeQuote bgQuote]");
@@ -361,23 +358,23 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
     }
 
     @Override
-    public void onErrorResponse(VolleyError error) {
+    public void onErrorResponse(final VolleyError error) {
         Log.e("VolleyError", error.getLocalizedMessage());
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
+    public boolean onCreateOptionsMenu(final Menu menu) {
         getMenuInflater().inflate(R.menu.menu_home_activity, menu);
 
-        msearchView = (SearchView) menu.findItem(R.id.searchMenuItem).getActionView();
+        msearchView = (SearchView) menu.findItem(R.id.menuItem_search_home).getActionView();
         msearchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
-            public boolean onQueryTextSubmit(String query) {
+            public boolean onQueryTextSubmit(final String query) {
                 final String ticker = query.trim().toUpperCase();
 
                 /* Valid tickers are between [1,5] characters long, with all characters being
                  * either digits, letters, or '.'. */
-                boolean isValidTicker = ticker.matches("[0-9A-Z.]{1,6}");
+                final boolean isValidTicker = ticker.matches("[0-9A-Z.]{1,6}");
 
                 if (isValidTicker) {
                     FindStockTask task = new FindStockTask(ticker, HomeActivity.this);
@@ -395,7 +392,7 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
             }
 
             @Override
-            public boolean onQueryTextChange(String newText) {
+            public boolean onQueryTextChange(final String newText) {
                 return false;
             }
         });
@@ -404,45 +401,45 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
     }
 
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
+    public boolean onOptionsItemSelected(final MenuItem item) {
         /* All of these list transformations change the indexing of the stocks in mstocks.
          * Therefore, each of these list transformations must update tickerToIndexMap. */
         switch (item.getItemId()) {
-            case R.id.sortAlphabeticallyMenuItem:
-                Comparator<BasicStock> tickerComparator = Comparator.comparing(BasicStock::getTicker);
+            case R.id.menuItem_sortAlphabetically_home:
+                final Comparator<BasicStock> tickerComparator = Comparator.comparing(BasicStock::getTicker);
                 mstocks.sort(tickerComparator);
                 updateTickerToIndexMap();
-
                 mrecyclerView.getAdapter().notifyItemRangeChanged(0, mrecyclerView.getAdapter().getItemCount());
                 return true;
-            case R.id.sortByPriceMenuItem:
+            case R.id.menuItem_sortByPrice_home:
                 // Sort by decreasing price
-                Comparator<BasicStock> descendingPriceComparator = Comparator.comparingDouble(BasicStock::getPrice).reversed();
+                final Comparator<BasicStock> descendingPriceComparator = Comparator.comparingDouble(BasicStock::getPrice).reversed();
                 mstocks.sort(descendingPriceComparator);
                 updateTickerToIndexMap();
-
                 mrecyclerView.getAdapter().notifyItemRangeChanged(0, mrecyclerView.getAdapter().getItemCount());
                 return true;
-            case R.id.sortByPercentChangeMenuItem:
+            case R.id.menuItem_sortByChangePercent_home:
                 // Sort by decreasing magnitude of change percent
                 mstocks.sort((BasicStock a, BasicStock b) -> {
                     // Ignore sign, compare change percents by magnitude
                     return Double.compare(Math.abs(b.getChangePercent()), Math.abs(a.getChangePercent()));
                 });
                 updateTickerToIndexMap();
-
                 mrecyclerView.getAdapter().notifyItemRangeChanged(0, mrecyclerView.getAdapter().getItemCount());
                 return true;
-            case R.id.shuffleMenuItem:
+            case R.id.menuItem_sortByState_home:
+                final Comparator<BasicStock> stateComparator = Comparator.comparing(BasicStock::getState);
+                mstocks.sort(stateComparator);
+                mrecyclerView.getAdapter().notifyItemRangeChanged(0, mrecyclerView.getAdapter().getItemCount());
+                return true;
+            case R.id.menuItem_shuffle_home:
                 Collections.shuffle(mstocks);
                 updateTickerToIndexMap();
-
                 mrecyclerView.getAdapter().notifyItemRangeChanged(0, mrecyclerView.getAdapter().getItemCount());
                 return true;
-            case R.id.flipListMenuItem:
+            case R.id.menuItem_flipList_home:
                 Collections.reverse(mstocks);
                 updateTickerToIndexMap();
-
                 mrecyclerView.getAdapter().notifyItemRangeChanged(0, mrecyclerView.getAdapter().getItemCount());
                 return true;
             default:
@@ -459,7 +456,7 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
      *
      * @param lastRemovedIndex The index of stock most recently removed.
      */
-    private void updateTickerToIndexMap(int lastRemovedIndex) {
+    private void updateTickerToIndexMap(final int lastRemovedIndex) {
         if (lastRemovedIndex >= mstocks.size()) {
             // If the last removed stock was the last stock in mstocks
             return;
@@ -490,8 +487,8 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
      * @param size The number of stocks to put in preferences.
      */
     private void fillPreferencesWithRandomStocks(int size) {
-        String tickersStr = getString(R.string.nasdaqTickers);
-        String[] tickerArr = tickersStr.split(",");
+        final String tickersStr = getString(R.string.nasdaqTickers);
+        final String[] tickerArr = tickersStr.split(",");
         boolean usingMaxSize = false;
         if (size >= tickerArr.length) {
             size = tickerArr.length;
@@ -501,12 +498,12 @@ public class HomeActivity extends AppCompatActivity implements FindStockTaskList
         if (usingMaxSize) {
             mpreferences.edit().putString("Tickers CSV", String.join(",", tickerArr)).apply();
         } else {
-            String[] subTickerArr = new String[size];
+            final String[] subTickerArr = new String[size];
             System.arraycopy(tickerArr, 0, subTickerArr, 0, size);
             mpreferences.edit().putString("Tickers CSV", String.join(",", subTickerArr)).apply();
         }
 
-        String[] dataArr = new String[4 * size];
+        final String[] dataArr = new String[4 * size];
         for (int i = 0; i < size * 4; i += 4) {
             dataArr[i] = BasicStock.State.CLOSED.toString();
             dataArr[i + 1] = "-1";

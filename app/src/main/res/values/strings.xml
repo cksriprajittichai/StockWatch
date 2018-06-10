@@ -6,6 +6,7 @@
     <string name="sortAlphabeticallyMenuItem">Sort Alphabetically</string>
     <string name="sortByPriceMenuItem">Sort By Price</string>
     <string name="sortByPercentMenuItem">Sort By % Change</string>
+    <string name="sortByStateMenuItem">Sort By State</string>
     <string name="shuffleMenuItem">Shuffle</string>
     <string name="flipListMenuItem">Flip List</string>
 

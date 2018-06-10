@@ -2,7 +2,7 @@ package c.chasesriprajittichai.stockwatch.stocks;
 
 import java.util.ArrayList;
 
-public class StockList extends ArrayList<BasicStock> {
+public final class BasicStockList extends ArrayList<BasicStock> {
 
     /**
      * @return A CSV string of the tickers of the stocks in mstocks.
@@ -33,7 +33,7 @@ public class StockList extends ArrayList<BasicStock> {
 
     private ArrayList<BasicStock.State> getStockStates() {
         final ArrayList<BasicStock.State> states = new ArrayList<>(size());
-        for (BasicStock s : this) {
+        for (final BasicStock s : this) {
             states.add(s.getState());
         }
         return states;
@@ -41,7 +41,7 @@ public class StockList extends ArrayList<BasicStock> {
 
     public ArrayList<String> getStockTickers() {
         final ArrayList<String> tickers = new ArrayList<>(size());
-        for (BasicStock s : this) {
+        for (final BasicStock s : this) {
             tickers.add(s.getTicker());
         }
         return tickers;
@@ -49,7 +49,7 @@ public class StockList extends ArrayList<BasicStock> {
 
     private ArrayList<Double> getStockPrices() {
         final ArrayList<Double> prices = new ArrayList<>(size());
-        for (BasicStock s : this) {
+        for (final BasicStock s : this) {
             prices.add(s.getPrice());
         }
         return prices;
@@ -57,7 +57,7 @@ public class StockList extends ArrayList<BasicStock> {
 
     private ArrayList<Double> getStockChangePoints() {
         final ArrayList<Double> changePoints = new ArrayList<>(size());
-        for (BasicStock s : this) {
+        for (final BasicStock s : this) {
             changePoints.add(s.getChangePoint());
         }
         return changePoints;
@@ -65,7 +65,7 @@ public class StockList extends ArrayList<BasicStock> {
 
     private ArrayList<Double> getStockChangePercents() {
         final ArrayList<Double> changePercents = new ArrayList<>(size());
-        for (BasicStock s : this) {
+        for (final BasicStock s : this) {
             changePercents.add(s.getChangePercent());
         }
         return changePercents;

@@ -4,7 +4,7 @@ import com.robinhood.spark.SparkAdapter;
 
 import java.util.ArrayList;
 
-public class SparkViewAdapter extends SparkAdapter {
+public final class SparkViewAdapter extends SparkAdapter {
 
     private ArrayList<Double> myData;
 

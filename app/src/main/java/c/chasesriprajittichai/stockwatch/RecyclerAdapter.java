@@ -14,7 +14,7 @@ import java.util.Locale;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
 
 
-public class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.ViewHolder> {
+public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.ViewHolder> {
 
     public interface OnItemClickListener {
         void onItemClick(BasicStock basicStock);
@@ -72,7 +72,7 @@ public class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.ViewHo
     public RecyclerAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         LayoutInflater inflater = LayoutInflater.from(parent.getContext());
 
-        View stockView = inflater.inflate(R.layout.recycler_item_home_activity, parent, false);
+        View stockView = inflater.inflate(R.layout.recycler_item_home, parent, false);
 
         return new ViewHolder(stockView);
     }

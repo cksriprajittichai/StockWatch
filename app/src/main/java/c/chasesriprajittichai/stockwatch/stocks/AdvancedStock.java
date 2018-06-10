@@ -1,17 +1,20 @@
 package c.chasesriprajittichai.stockwatch.stocks;
 
 import java.util.ArrayList;
+import java.util.Collections;
 
 public class AdvancedStock extends BasicStock {
 
-    private String mname;
-    private ArrayList<Double> myData;
+    private final String mname;
+    private final String mdescription;
+    private final ArrayList<Double> myData;
 
-    public AdvancedStock(State state, String ticker, String name, double price, double changePoint,
-                         double changePercent, ArrayList<Double> yData) {
+    public AdvancedStock(final State state, final String ticker, final String name,
+                         final double price, final double changePoint, final double changePercent,
+                         final String description, final ArrayList<Double> yData) {
         super(state, ticker, price, changePoint, changePercent);
         mname = name;
-
+        mdescription = description;
         myData = yData;
     }
 
@@ -19,16 +22,17 @@ public class AdvancedStock extends BasicStock {
         return mname;
     }
 
-    public void setName(String name) {
-        mname = name;
+    public String getDescription() {
+        return mdescription;
     }
 
     public ArrayList<Double> getyData() {
         return myData;
     }
 
-    public void setyData(ArrayList<Double> yData) {
-        myData = yData;
+    public void setyData(final ArrayList<Double> yData) {
+        myData.clear();
+        Collections.copy(myData, yData);
     }
 
 }

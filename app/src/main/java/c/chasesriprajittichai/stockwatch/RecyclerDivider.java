@@ -7,12 +7,12 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 
-public class RecyclerDivider extends RecyclerView.ItemDecoration {
+public final class RecyclerDivider extends RecyclerView.ItemDecoration {
 
     private Drawable mdivider;
 
     RecyclerDivider(Context context) {
-        mdivider = ContextCompat.getDrawable(context, R.drawable.recycler_view_divider_home);
+        mdivider = ContextCompat.getDrawable(context, R.drawable.recycler_divider_home);
     }
 
     @Override
