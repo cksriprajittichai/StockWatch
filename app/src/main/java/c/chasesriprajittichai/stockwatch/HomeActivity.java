@@ -34,6 +34,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Locale;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -93,6 +95,8 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
     private final BasicStockList mstocks = new BasicStockList();
     private SearchView msearchView;
+    private Timer mtimer;
+    private TimerTask mtimerTask;
     private SharedPreferences mpreferences;
     private RequestQueue mrequestQueue;
 
@@ -142,7 +146,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
         mpreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
         /* Starter kit */
-//        fillPreferencesWithRandomStocks(500);
+        fillPreferencesWithRandomStocks(50);
 
         final String[] tickers = mpreferences.getString("Tickers CSV", "").split(","); // "".split(",") returns {""}
         final String[] data = mpreferences.getString("Data CSV", "").split(","); // "".split(",") returns {""}
@@ -166,7 +170,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
                     case "AFTER_HOURS":
                         curState = AFTER_HOURS;
                         break;
-                    case "CLOSEDO":
+                    case "CLOSED":
                         curState = CLOSED;
                         break;
                     default:
@@ -206,14 +210,26 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
         super.onResume();
 
         // If there are stocks in favorites, update mstocks and mrecyclerView.
-        if (!mstocks.isEmpty()) {
-            updateStocks();
-        }
+        mtimer = new Timer();
+        mtimerTask = new TimerTask() {
+            @Override
+            public void run() {
+                if (!mstocks.isEmpty()) {
+                    updateStocks();
+                }
+            }
+        };
+        // Run every 10 seconds, starting immediately
+        mtimer.schedule(mtimerTask, 0, 10000);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+
+        /* Stop updating. This ruins mtimer and mtimerTask, so they must be re-initilized to be
+         * used again. */
+        mtimer.cancel();
 
         mpreferences.edit().putString("Tickers CSV", mstocks.getStockTickersAsCSV()).apply();
         mpreferences.edit().putString("Data CSV", mstocks.getStockDataAsCSV()).apply();
