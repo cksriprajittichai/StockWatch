@@ -96,7 +96,6 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
     private final BasicStockList mstocks = new BasicStockList();
     private SearchView msearchView;
     private Timer mtimer;
-    private TimerTask mtimerTask;
     private SharedPreferences mpreferences;
     private RequestQueue mrequestQueue;
 
@@ -146,7 +145,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
         mpreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
         /* Starter kit */
-        fillPreferencesWithRandomStocks(50);
+//        fillPreferencesWithRandomStocks(50);
 
         final String[] tickers = mpreferences.getString("Tickers CSV", "").split(","); // "".split(",") returns {""}
         final String[] data = mpreferences.getString("Data CSV", "").split(","); // "".split(",") returns {""}
@@ -209,9 +208,9 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
     protected void onResume() {
         super.onResume();
 
-        // If there are stocks in favorites, update mstocks and mrecyclerView.
+        // If there are stocks in favorites, update mstocks and mrecyclerView
         mtimer = new Timer();
-        mtimerTask = new TimerTask() {
+        final TimerTask timerTask = new TimerTask() {
             @Override
             public void run() {
                 if (!mstocks.isEmpty()) {
@@ -220,7 +219,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
             }
         };
         // Run every 10 seconds, starting immediately
-        mtimer.schedule(mtimerTask, 0, 10000);
+        mtimer.schedule(timerTask, 0, 10000);
     }
 
     @Override

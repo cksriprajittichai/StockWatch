@@ -11,9 +11,15 @@ public final class PremarketStock extends AdvancedStock {
     public PremarketStock(final State state, final String ticker, final String name,
                           final double price, final double changePoint, final double changePercent,
                           final double close_price, final double close_changePoint,
-                          final double close_changePercent, final String description,
-                          final ArrayList<Double> yData) {
-        super(state, ticker, name, price, changePoint, changePercent, description, yData);
+                          final double close_changePercent, final double openPrice,
+                          final double dayRangeLow, final double dayRangeHigh,
+                          final double fiftyTwoWeekRangeLow, final double fiftyTwoWeekRangeHigh,
+                          final String marketCap, final double beta, final double peRatio,
+                          final double eps, final double yield, final String averageVolume,
+                          final String description, final ArrayList<Double> yData) {
+        super(state, ticker, name, price, changePoint, changePercent, openPrice, dayRangeLow,
+                dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh, marketCap, beta, peRatio,
+                eps, yield, averageVolume, description, yData);
         mclose_price = close_price;
         mclose_changePoint = close_changePoint;
         mclose_changePercent = close_changePercent;
@@ -23,23 +29,12 @@ public final class PremarketStock extends AdvancedStock {
         return mclose_price;
     }
 
-    public void setClose_price(final double close_price) {
-        mclose_price = close_price;
-    }
-
     public double getClose_changePoint() {
         return mclose_changePoint;
-    }
-
-    public void setClose_changePoint(final double close_changePoint) {
-        mclose_changePoint = close_changePoint;
     }
 
     public double getClose_changePercent() {
         return mclose_changePercent;
     }
 
-    public void setClose_changePercent(final double close_changePercent) {
-        mclose_changePercent = close_changePercent;
-    }
 }

@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Locale;
 
 import butterknife.BindView;
@@ -39,6 +40,7 @@ import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.OPEN;
 import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.PREMARKET;
 import static java.lang.Double.parseDouble;
 import static org.apache.commons.lang3.StringUtils.substring;
+import static org.apache.commons.lang3.StringUtils.substringAfter;
 import static org.apache.commons.lang3.StringUtils.substringBefore;
 import static org.apache.commons.lang3.StringUtils.substringBetween;
 
@@ -48,6 +50,12 @@ public final class IndividualStockActivity extends AppCompatActivity implements 
     private static final class DownloadStockDataTask extends AsyncTask<Void, Integer, AdvancedStock> {
 
         private final String mticker;
+
+        /* It is quite common that a stock's stat is missing. If this is the case, "n/a"
+         * replaces the value that should be there, or in rarer cases, there is an empty string
+         * replacing the value that should be there. */
+        private final HashSet<String> missingStats = new HashSet<>();
+
         private final WeakReference<DownloadIndividualStockTaskListener> mcompletionListener;
 
         private DownloadStockDataTask(final String ticker, final DownloadIndividualStockTaskListener completionListener) {
@@ -63,7 +71,10 @@ public final class IndividualStockActivity extends AppCompatActivity implements 
                 multiDoc = Jsoup.connect("https://www.marketwatch.com/investing/multi?tickers=" + mticker).get();
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
-                return new AdvancedStock(OPEN, "", "", -1, -1, -1, "", new ArrayList<>());
+                return new AdvancedStock(OPEN, "", "", -1, -1,
+                        -1, -1, -1, -1,
+                        -1, -1, "", -1,
+                        -1, -1, -1, "", "", new ArrayList<>());
             }
 
             /* Some stocks have no chart data. If this is the case, chart_prices will be an
@@ -109,14 +120,17 @@ public final class IndividualStockActivity extends AppCompatActivity implements 
                 }
             }
 
+            /* Get non-chart data. */
             final Document individualDoc;
             final AdvancedStock ret;
-            /* Get non-chart data. */
             try {
                 individualDoc = Jsoup.connect("https://www.marketwatch.com/investing/stock/" + mticker).get();
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
-                return new AdvancedStock(OPEN, "", "", -1, -1, -1, "", new ArrayList<>());
+                return new AdvancedStock(OPEN, "", "", -1, -1,
+                        -1, -1, -1, -1,
+                        -1, -1, "", -1,
+                        -1, -1, -1, "", "", new ArrayList<>());
             }
 
             final Element quoteRoot = individualDoc.selectFirst("body[role=document] > div[data-symbol=" + mticker + "]");
@@ -241,38 +255,126 @@ public final class IndividualStockActivity extends AppCompatActivity implements 
             }
 
             final Element regionPrimary = quoteRoot.selectFirst("div.content-region.region--primary");
+            final Element keyDataElmnt = regionPrimary.selectFirst(":root > div.template.template--aside > div.column.column--full.left.clearfix > div.element.element--list > ul.list.list--kv.list--col50");
+            final Elements keyDataItemElmnts = keyDataElmnt.select(":root > li");
+
+            final Element openPriceElmnt = keyDataItemElmnts.get(0);
+            final Element dayRangeElmnt = keyDataItemElmnts.get(1);
+            final Element fiftyTwoWeekRangeElmnt = keyDataItemElmnts.get(2);
+            final Element marketCapElmnt = keyDataItemElmnts.get(3);
+            final Element betaElmnt = keyDataItemElmnts.get(6);
+            final Element peRatioElmnt = keyDataItemElmnts.get(8);
+            final Element epsElmnt = keyDataItemElmnts.get(9);
+            final Element yieldElmnt = keyDataItemElmnts.get(10);
+            final Element avgVolumeElmnt = keyDataItemElmnts.get(15);
+
+            final double openPrice;
+            // Remove ',' or '%' that could be in strings
+            if (!openPriceElmnt.text().contains("n/a") && !openPriceElmnt.text().equalsIgnoreCase("Open")) {
+                openPrice = parseDouble(openPriceElmnt.text().replaceAll("[^0-9.]+", ""));
+            } else {
+                openPrice = -1;
+                missingStats.add("Price at Open");
+            }
+            final double dayRangeLow, dayRangeHigh;
+            if (!dayRangeElmnt.text().contains("n/a") && !dayRangeElmnt.text().equalsIgnoreCase("Day Range")) {
+                dayRangeLow = parseDouble(substringBefore(dayRangeElmnt.text(), "-").replaceAll("[^0-9.]+", ""));
+                dayRangeHigh = parseDouble(substringAfter(dayRangeElmnt.text(), "-").replaceAll("[^0-9.]+", ""));
+            } else {
+                dayRangeLow = -1;
+                dayRangeHigh = -1;
+                missingStats.add("Day Range");
+            }
+            final double fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh;
+            if (!fiftyTwoWeekRangeElmnt.text().contains("n/a") && !fiftyTwoWeekRangeElmnt.text().equalsIgnoreCase("52 Week Range")) {
+                fiftyTwoWeekRangeLow = parseDouble(substringBetween(fiftyTwoWeekRangeElmnt.text(), "52 Week Range", "-").replaceAll("[^0-9.]+", ""));
+                fiftyTwoWeekRangeHigh = parseDouble(substringAfter(fiftyTwoWeekRangeElmnt.text(), "-").replaceAll("[^0-9.]+", ""));
+            } else {
+                fiftyTwoWeekRangeLow = -1;
+                fiftyTwoWeekRangeHigh = -1;
+                missingStats.add("52 Week Range");
+            }
+            final String marketCap;
+            if (!marketCapElmnt.text().contains("n/a") && !marketCapElmnt.text().equalsIgnoreCase("Market Cap")) {
+                marketCap = substringAfter(marketCapElmnt.text(), "Market Cap").trim();
+            } else {
+                marketCap = "";
+                missingStats.add("Market Cap");
+            }
+            final double beta;
+            if (!betaElmnt.text().contains("n/a") && !betaElmnt.text().equalsIgnoreCase("Beta")) {
+                beta = parseDouble(betaElmnt.text().replaceAll("[^0-9.]+", ""));
+            } else {
+                beta = -1;
+                missingStats.add("Beta");
+            }
+            final double peRatio;
+            if (!peRatioElmnt.text().contains("n/a") && !peRatioElmnt.text().equalsIgnoreCase("P/E Ratio")) {
+                peRatio = parseDouble(peRatioElmnt.text().replaceAll("[^0-9.]+", ""));
+            } else {
+                peRatio = -1;
+                missingStats.add("P/E Ratio");
+            }
+            final double eps;
+            if (!epsElmnt.text().contains("n/a") && !epsElmnt.text().equalsIgnoreCase("EPS")) {
+                eps = parseDouble(epsElmnt.text().replaceAll("[^0-9.]+", ""));
+            } else {
+                eps = -1;
+                missingStats.add("EPS");
+            }
+            final double yield;
+            if (!yieldElmnt.text().contains("n/a") && !yieldElmnt.text().equalsIgnoreCase("Yield")) {
+                yield = parseDouble(yieldElmnt.text().replaceAll("[^0-9.]+", ""));
+            } else {
+                yield = -1;
+                missingStats.add("Yield");
+            }
+            final String avgVolume;
+            if (!avgVolumeElmnt.text().contains("n/a") && !avgVolumeElmnt.text().equalsIgnoreCase("Average Volume")) {
+                avgVolume = substringAfter(avgVolumeElmnt.text(), "Average Volume").trim();
+            } else {
+                avgVolume = "";
+                missingStats.add("Average Volume");
+            }
+
 
             /* Some stocks don't have a description. If there is no description, then
              * descriptionElmnt does not exist. */
             final Element descriptionElmnt = regionPrimary.selectFirst(":root > div.template.template--primary > div.column.column--full > div[class*=description] > p.description__text");
             final String description;
             if (descriptionElmnt != null) {
-                /* There's a button at the bottom of the description that is a link to the profile
+                /* There is a button at the bottom of the description that is a link to the profile
                  * tab of the individual stock site. The button's title shows up as part of the
                  * text - remove it. */
                 description = substringBefore(descriptionElmnt.text(), " (See Full Profile)");
             } else {
                 description = "";
+                missingStats.add("Description");
             }
+
 
             switch (state) {
                 case PREMARKET:
-                    ret = new PremarketStock(state, mticker, name, price, changePoint,
-                            changePercent, close_price, close_changePoint, close_changePercent,
-                            description, chart_prices);
+                    ret = new PremarketStock(state, mticker, name, price, changePoint, changePercent,
+                            close_price, close_changePoint, close_changePercent, openPrice, dayRangeLow,
+                            dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh, marketCap,
+                            beta, peRatio, eps, yield, avgVolume, description, chart_prices);
                     break;
                 case OPEN:
                     ret = new AdvancedStock(state, mticker, name, price, changePoint, changePercent,
-                            description, chart_prices);
+                            openPrice, dayRangeLow, dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh,
+                            marketCap, beta, peRatio, eps, yield, avgVolume, description, chart_prices);
                     break;
                 case AFTER_HOURS:
-                    ret = new AfterHoursStock(state, mticker, name, price, changePoint,
-                            changePercent, close_price, close_changePoint, close_changePercent,
-                            description, chart_prices);
+                    ret = new AfterHoursStock(state, mticker, name, price, changePoint, changePercent,
+                            close_price, close_changePoint, close_changePercent, openPrice, dayRangeLow,
+                            dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh, marketCap,
+                            beta, peRatio, eps, yield, avgVolume, description, chart_prices);
                     break;
                 case CLOSED:
                     ret = new AdvancedStock(state, mticker, name, price, changePoint, changePercent,
-                            description, chart_prices);
+                            openPrice, dayRangeLow, dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh,
+                            marketCap, beta, peRatio, eps, yield, avgVolume, description, chart_prices);
                     break;
                 default:
                     ret = null;
@@ -284,7 +386,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements 
 
         @Override
         protected void onPostExecute(final AdvancedStock stock) {
-            mcompletionListener.get().onDownloadIndividualStockTaskCompleted(stock);
+            mcompletionListener.get().onDownloadIndividualStockTaskCompleted(stock, missingStats);
         }
     }
 
@@ -298,6 +400,15 @@ public final class IndividualStockActivity extends AppCompatActivity implements 
     @BindView(R.id.textView_close_price_individual) TextView mclose_price;
     @BindView(R.id.textView_close_changePoint_individual) TextView mclose_changePoint;
     @BindView(R.id.textView_close_changePercent_individual) TextView mclose_changePercent;
+    @BindView(R.id.textView_openPrice_individual) TextView mopenPrice;
+    @BindView(R.id.textView_dayRange_individual) TextView mdayRange;
+    @BindView(R.id.textView_fiftyTwoWeekRange_individual) TextView mfiftyTwoWeekRange;
+    @BindView(R.id.textView_marketCap_individual) TextView mmarketCap;
+    @BindView(R.id.textView_beta_individual) TextView mbeta;
+    @BindView(R.id.textView_peRatio_individual) TextView mpeRatio;
+    @BindView(R.id.textView_eps_individual) TextView meps;
+    @BindView(R.id.textView_yield_individual) TextView myield;
+    @BindView(R.id.textView_averageVolume_individual) TextView mavgVolume;
     @BindView(R.id.divider_statisticsToDescription_individual) View mstatsToDescriptionDivider;
     @BindView(R.id.textView_description_individual) TextView mdescriptionTextView;
 
@@ -308,8 +419,9 @@ public final class IndividualStockActivity extends AppCompatActivity implements 
     private SparkViewAdapter msparkViewAdapter;
     private SharedPreferences mpreferences;
 
+    /* Called from DownloadStockDataTask.onPostExecute(). */
     @Override
-    public void onDownloadIndividualStockTaskCompleted(final AdvancedStock stock) {
+    public void onDownloadIndividualStockTaskCompleted(final AdvancedStock stock, final HashSet missingStats) {
         mstock = stock;
 
         if (!getTitle().equals(mstock.getName())) {
@@ -322,53 +434,103 @@ public final class IndividualStockActivity extends AppCompatActivity implements 
             mclose_changePercent.setVisibility(View.GONE);
         }
 
-        if (!mstock.getyData().isEmpty()) {
-            msparkViewAdapter.setyData(mstock.getyData());
+        if (!mstock.getYData().isEmpty()) {
+            msparkViewAdapter.setyData(mstock.getYData());
             msparkViewAdapter.notifyDataSetChanged();
             mscrubInfo.setText(getString(R.string.double2dec, mstock.getPrice())); // Init text view
             msparkView.setScrubListener((final Object valueObj) -> {
                 if (valueObj == null) {
+                    // The user is not scrubbing
                     mscrubInfo.setText(getString(R.string.double2dec, mstock.getPrice()));
                     int color_deactivated = getResources().getColor(R.color.colorAccentTransparent, getTheme());
                     mscrubInfo.setTextColor(color_deactivated);
                 } else {
+                    // The user is scrubbing
                     mscrubInfo.setText(getString(R.string.double2dec, (double) valueObj));
                     int color_activated = getResources().getColor(R.color.colorAccent, getTheme());
                     mscrubInfo.setTextColor(color_activated);
                 }
             });
-            msparkViewToStatsDivider.setVisibility(View.VISIBLE); // Initialized as GONE in xml
         } else {
             msparkView.setVisibility(View.GONE);
             mscrubInfo.setVisibility(View.GONE);
+            msparkViewToStatsDivider.setVisibility(View.GONE);
         }
 
         mstate.setText(getString(R.string.string_colon_string, "State", mstock.getState().toString()));
         mprice.setText(getString(R.string.string_colon_double2dec, "Price", mstock.getPrice()));
         mchangePoint.setText(getString(R.string.string_colon_double2dec, "Point Change", mstock.getChangePoint()));
         mchangePercent.setText(getString(R.string.string_colon_double2dec_percent, "Percent Change", mstock.getChangePercent()));
-        if (mstock instanceof AfterHoursStock) {
-            final AfterHoursStock ahStock = (AfterHoursStock) mstock;
+        if (mstock.getState() == PREMARKET) {
+            final PremarketStock ahStock = (PremarketStock) mstock;
             mclose_price.setText(getString(R.string.string_colon_double2dec, "Price at Close", ahStock.getClose_price()));
             mclose_changePoint.setText(getString(R.string.string_colon_double2dec, "Point Change at Close", ahStock.getClose_changePoint()));
             mclose_changePercent.setText(getString(R.string.string_colon_double2dec_percent, "Percent Change at Close", ahStock.getClose_changePercent()));
-        } else if (mstock instanceof PremarketStock) {
-            final PremarketStock ahStock = (PremarketStock) mstock;
+        } else if (mstock.getState() == AFTER_HOURS) {
+            final AfterHoursStock ahStock = (AfterHoursStock) mstock;
             mclose_price.setText(getString(R.string.string_colon_double2dec, "Price at Close", ahStock.getClose_price()));
             mclose_changePoint.setText(getString(R.string.string_colon_double2dec, "Point Change at Close", ahStock.getClose_changePoint()));
             mclose_changePercent.setText(getString(R.string.string_colon_double2dec_percent, "Percent Change at Close", ahStock.getClose_changePercent()));
         }
 
-        if (!mstock.getDescription().isEmpty()) {
-            mdescriptionTextView.setText(mstock.getDescription());
-            mstatsToDescriptionDivider.setVisibility(View.VISIBLE); // Initialized as GONE in xml
+        if (!missingStats.contains("Price at Open")) {
+            mopenPrice.setText(getString(R.string.string_colon_double2dec, "Price at Open", mstock.getOpenPrice()));
+        } else {
+            mopenPrice.setVisibility(View.GONE);
         }
+        if (!missingStats.contains("Day Range")) {
+            mdayRange.setText(getString(R.string.string_colon_double2dec_hyphen_double2dec, "Day Range", mstock.getDayRangeLow(), mstock.getDayRangeHigh()));
+        } else {
+            mdayRange.setVisibility(View.GONE);
+        }
+        if (!missingStats.contains("52 Week Range")) {
+            mfiftyTwoWeekRange.setText(getString(R.string.string_colon_double2dec_hyphen_double2dec, "52 Week Range", mstock.getFiftyTwoWeekRangeLow(), mstock.getFiftyTwoWeekRangeHigh()));
+        } else {
+            mfiftyTwoWeekRange.setVisibility(View.GONE);
+        }
+        if (!missingStats.contains("Market Cap")) {
+            mmarketCap.setText(getString(R.string.string_colon_string, "MarketCap", mstock.getMarketCap()));
+        } else {
+            mmarketCap.setVisibility(View.GONE);
+        }
+        if (!missingStats.contains("Beta")) {
+            mbeta.setText(getString(R.string.string_colon_double2dec, "Beta", mstock.getBeta()));
+        } else {
+            mbeta.setVisibility(View.GONE);
+        }
+        if (!missingStats.contains("P/E Ratio")) {
+            mpeRatio.setText(getString(R.string.string_colon_double2dec, "P/E Ratio", mstock.getPeRatio()));
+        } else {
+            mpeRatio.setVisibility(View.GONE);
+        }
+        if (!missingStats.contains("EPS")) {
+            meps.setText(getString(R.string.string_colon_double2dec, "EPS", mstock.getEps()));
+        } else {
+            meps.setVisibility(View.GONE);
+        }
+        if (!missingStats.contains("Yield")) {
+            myield.setText(getString(R.string.string_colon_double2dec, "Yield", mstock.getYield()));
+        } else {
+            myield.setVisibility(View.GONE);
+        }
+        if (!missingStats.contains("Average Volume")) {
+            mavgVolume.setText(getString(R.string.string_colon_string, "Average Volume", mstock.getAverageVolume()));
+        } else {
+            mavgVolume.setVisibility(View.GONE);
+        }
+        if (!missingStats.contains("Description")) {
+            mdescriptionTextView.setText(mstock.getDescription());
+        } else {
+            mdescriptionTextView.setVisibility(View.GONE);
+            mstatsToDescriptionDivider.setVisibility(View.GONE);
+        }
+
     }
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_stock);
+        setContentView(R.layout.activity_individual_stock);
         setTitle(""); // Show empty title now, company name will be shown (in onPostExecute())
         ButterKnife.bind(this);
         mpreferences = PreferenceManager.getDefaultSharedPreferences(this);
