@@ -81,7 +81,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements 
              * empty array list. */
             final ArrayList<Double> chart_prices = new ArrayList<>();
 
-            final Element multiQuoteRoot = multiDoc.selectFirst("div[class~=section activeQuote bgQuote (down|up)?]");
+            final Element multiQuoteRoot = multiDoc.selectFirst("div[class^=section activeQuote bgQuote]");
             final Element javascriptElmnt = multiQuoteRoot.selectFirst(":root > div.intradaychart > script[type=text/javascript]");
 
             /* If there is no chart data, javascriptElmnt element still exists in the HTML and
@@ -133,17 +133,17 @@ public final class IndividualStockActivity extends AppCompatActivity implements 
                         -1, -1, -1, "", "", new ArrayList<>());
             }
 
-            final Element quoteRoot = individualDoc.selectFirst("body[role=document] > div[data-symbol=" + mticker + "]");
+            final Element quoteRoot = individualDoc.selectFirst(":root > body[role=document] > div[data-symbol=" + mticker + "]");
 
-            final Element regionFixed = quoteRoot.selectFirst("div[class=content-region region--fixed]");
+            final Element regionFixed = quoteRoot.selectFirst(":root > div.content-region.region--fixed");
 
-            final Element nameElmnt = regionFixed.selectFirst("div[class=column column--full company] div[class=row] > h1[class=company__name]");
+            final Element nameElmnt = regionFixed.selectFirst(":root > div > div.column.column--full.company div.row > h1.company__name");
             final String name = nameElmnt.text();
 
-            final Element intraday = regionFixed.selectFirst("div[class=template template--aside] div[class=element element--intraday]");
-            final Element intradayData = intraday.selectFirst("div[class=intraday__data]");
+            final Element intraday = regionFixed.selectFirst(":root > div.template.template--aside > div > div.element.element--intraday");
+            final Element intradayData = intraday.selectFirst(":root > div.intraday__data");
 
-            final Element icon = intraday.selectFirst("small[class~=intraday__status status--(before|open|after|closed)] > i[class^=icon]");
+            final Element icon = intraday.selectFirst(":root > small[class~=intraday__status status--(before|open|after|closed)] > i[class^=icon]");
             final String stateStr = icon.nextSibling().toString();
             final BasicStock.State state;
             switch (stateStr.toLowerCase(Locale.US)) {
@@ -173,12 +173,12 @@ public final class IndividualStockActivity extends AppCompatActivity implements 
             // Parsing of certain data varies depending on the state of the stock.
             switch (state) {
                 case PREMARKET: {
-                    priceElmnt = intradayData.selectFirst("h3.intraday__price > bg-quote[class^=value]");
-                    changePointElmnt = intradayData.selectFirst("span.change--point--q > bg-quote[field=change]");
-                    changePercentElmnt = intradayData.selectFirst("span.change--percent--q > bg-quote[field=percentchange]");
+                    priceElmnt = intradayData.selectFirst(":root > h3.intraday__price > bg-quote[class^=value]");
+                    changePointElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--point--q > bg-quote[field=change]");
+                    changePercentElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--percent--q > bg-quote[field=percentchange]");
 
-                    close_intradayElmnt = intraday.selectFirst("div.intraday__close");
-                    close_tableCells = close_intradayElmnt.select("tr.table__row > td[class^=table__cell]");
+                    close_intradayElmnt = intraday.selectFirst(":root > div.intraday__close");
+                    close_tableCells = close_intradayElmnt.select(":root > table > tbody > tr.table__row > td[class^=table__cell]");
                     close_priceElmnt = close_tableCells.get(0);
                     close_changePointElmnt = close_tableCells.get(1);
                     close_changePercentElmnt = close_tableCells.get(2);
@@ -193,9 +193,9 @@ public final class IndividualStockActivity extends AppCompatActivity implements 
                     break;
                 }
                 case OPEN: {
-                    priceElmnt = intradayData.selectFirst("h3.intraday__price > bg-quote[class^=value]");
-                    changePointElmnt = intradayData.selectFirst("bg-quote[class^=intraday__change] > span.change--point--q > bg-quote[field=change]");
-                    changePercentElmnt = intradayData.selectFirst("bg-quote[class^=intraday__change] > span.change--percent--q > bg-quote[field=percentchange]");
+                    priceElmnt = intradayData.selectFirst(":root > h3.intraday__price > bg-quote[class^=value]");
+                    changePointElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--point--q > bg-quote[field=change]");
+                    changePercentElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--percent--q > bg-quote[field=percentchange]");
 
                     // Remove ',' or '%' that could be in strings
                     price = parseDouble(priceElmnt.text().replaceAll("[^0-9.]+", ""));
@@ -209,12 +209,12 @@ public final class IndividualStockActivity extends AppCompatActivity implements 
                     break;
                 }
                 case AFTER_HOURS: {
-                    priceElmnt = intradayData.selectFirst("h3.intraday__price > bg-quote[class^=value]");
-                    changePointElmnt = intradayData.selectFirst("span.change--point--q > bg-quote[field=change]");
-                    changePercentElmnt = intradayData.selectFirst("span.change--percent--q > bg-quote[field=percentchange]");
+                    priceElmnt = intradayData.selectFirst(":root > h3.intraday__price > bg-quote[class^=value]");
+                    changePointElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--point--q > bg-quote[field=change]");
+                    changePercentElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--percent--q > bg-quote[field=percentchange]");
 
-                    close_intradayElmnt = intraday.selectFirst("div.intraday__close");
-                    close_tableCells = close_intradayElmnt.select("tr.table__row > td[class^=table__cell]");
+                    close_intradayElmnt = intraday.selectFirst(":root > div.intraday__close");
+                    close_tableCells = close_intradayElmnt.select(":root > table > tbody > tr.table__row > td");
                     close_priceElmnt = close_tableCells.get(0);
                     close_changePointElmnt = close_tableCells.get(1);
                     close_changePercentElmnt = close_tableCells.get(2);
@@ -229,9 +229,9 @@ public final class IndividualStockActivity extends AppCompatActivity implements 
                     break;
                 }
                 case CLOSED: {
-                    priceElmnt = intradayData.selectFirst("h3.intraday__price > span.value");
-                    changePointElmnt = intradayData.selectFirst("bg-quote[class^=intraday__change] > span.change--point--q");
-                    changePercentElmnt = intradayData.selectFirst("bg-quote[class^=intraday__change] > span.change--percent--q");
+                    priceElmnt = intradayData.selectFirst(":root > h3.intraday__price > span.value");
+                    changePointElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--point--q");
+                    changePercentElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--percent--q");
 
                     // Remove ',' or '%' that could be in strings
                     price = parseDouble(priceElmnt.text().replaceAll("[^0-9.]+", ""));
@@ -254,7 +254,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements 
                 }
             }
 
-            final Element regionPrimary = quoteRoot.selectFirst("div.content-region.region--primary");
+            final Element regionPrimary = quoteRoot.selectFirst(":root > div.content-region.region--primary");
             final Element keyDataElmnt = regionPrimary.selectFirst(":root > div.template.template--aside > div.column.column--full.left.clearfix > div.element.element--list > ul.list.list--kv.list--col50");
             final Elements keyDataItemElmnts = keyDataElmnt.select(":root > li");
 

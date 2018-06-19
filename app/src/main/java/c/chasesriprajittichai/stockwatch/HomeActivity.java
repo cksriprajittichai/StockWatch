@@ -15,25 +15,20 @@ import android.view.MenuItem;
 import android.widget.SearchView;
 import android.widget.Toast;
 
-import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
-import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -52,7 +47,7 @@ import static java.lang.Double.parseDouble;
 
 
 public final class HomeActivity extends AppCompatActivity implements FindStockTaskListener,
-        StockSwipeLeftListener, Response.Listener<String>, Response.ErrorListener {
+        StockSwipeLeftListener, Response.Listener<BasicStockList>, Response.ErrorListener {
 
     private static class FindStockTask extends AsyncTask<Void, Integer, Boolean> {
 
@@ -74,7 +69,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
                 final Document doc = Jsoup.connect(url).get();
 
                 // This element exists if the stock's individual page is found on MarketWatch
-                final Element foundElement = doc.selectFirst("html > body[role=document][class~=page--quote symbol--(Stock|AmericanDepositoryReceiptStock) page--Index]");
+                final Element foundElement = doc.selectFirst("html > body[role=document][class~=page--quote symbol--(Stock|AmericanDepositoryReceiptStock|PreferredStock) page--Index]");
 
                 stockExists = (foundElement != null);
             } catch (final IOException ioe) {
@@ -99,11 +94,9 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
     private SharedPreferences mpreferences;
     private RequestQueue mrequestQueue;
 
-    // Maps tickers to BasicStock objects in mstocks.
-    private final HashMap<String, BasicStock> mtickerToStockMap = new HashMap<>();
-
     // Maps tickers to indexes in mstocks.
     private final HashMap<String, Integer> mtickerToIndexMap = new HashMap<>();
+
 
     /* Called from FindStockTask.onPostExecute(). */
     @Override
@@ -112,8 +105,8 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
             // Go to individual stock activity
             final Intent intent = new Intent(this, IndividualStockActivity.class);
             intent.putExtra("Ticker", ticker);
-            // Equivalent to checking if ticker is in mtickerToIndexMap or in mstocks
-            intent.putExtra("Is in favorites", mtickerToStockMap.containsKey(ticker));
+            // Equivalent to checking if ticker is in mstocks
+            intent.putExtra("Is in favorites", mtickerToIndexMap.containsKey(ticker));
             startActivity(intent);
         } else {
             msearchView.setQuery("", false);
@@ -127,10 +120,9 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
         final RecyclerAdapter adapter = (RecyclerAdapter) mrecyclerView.getAdapter();
         final String removeTicker = mstocks.get(position).getTicker();
 
-        mtickerToStockMap.remove(removeTicker);
+        mstocks.remove(position);
         mtickerToIndexMap.remove(removeTicker);
         updateTickerToIndexMap(position);
-        mstocks.remove(position);
 
         adapter.notifyItemRemoved(position);
     }
@@ -145,7 +137,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
         mpreferences = PreferenceManager.getDefaultSharedPreferences(this);
 
         /* Starter kit */
-//        fillPreferencesWithRandomStocks(50);
+//        fillPreferencesWithRandomStocks(0);
 
         final String[] tickers = mpreferences.getString("Tickers CSV", "").split(","); // "".split(",") returns {""}
         final String[] data = mpreferences.getString("Data CSV", "").split(","); // "".split(",") returns {""}
@@ -182,9 +174,8 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
                 curStock = new BasicStock(curState, curTicker, curPrice, curChangePoint, curChangePercent);
 
-                // Fill mstocks, mtickerToStockMap, and mtickerToIndexMap
+                // Fill mstocks and mtickerToIndexMap
                 mstocks.add(curStock);
-                mtickerToStockMap.put(curTicker, curStock);
                 mtickerToIndexMap.put(curTicker, tickerNdx);
             }
         }
@@ -195,8 +186,8 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
             // Go to individual stock activity
             final Intent intent = new Intent(this, IndividualStockActivity.class);
             intent.putExtra("Ticker", basicStock.getTicker());
-            // Equivalent to checking if ticker is in mtickerToIndexMap or in mstocks
-            intent.putExtra("Is in favorites", mtickerToStockMap.containsKey(basicStock.getTicker()));
+            // Equivalent to checking if ticker is in mstocks
+            intent.putExtra("Is in favorites", mtickerToIndexMap.containsKey(basicStock.getTicker()));
             startActivity(intent);
         }));
         // Init swipe to delete for mrecyclerView.
@@ -234,28 +225,39 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
         mpreferences.edit().putString("Data CSV", mstocks.getStockDataAsCSV()).apply();
     }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+        mrequestQueue.cancelAll(this);
+    }
+
     /**
      * Partitions stocks in mstocks into sets of maximum size 10. The maximum size of each partition
      * is 10 because the Market Watch multiple-stock-website only supports displaying up to 10
      * stocks. The tickers from each partition's stocks are used to build a URL for the Market
-     * Watch multiple-stock-website. The URL is then sent into a Volley request queue. The parsing
-     * of the HTML retrieved from the websites and updating of variables happens in onResponse().
+     * Watch multiple-stock-website. For each partition, a MultiStockRequest is created using the
+     * URL and the references to the stocks represented in the URL. The MultiStockRequest is then
+     * added to mrequestQueue.
      */
     private void updateStocks() {
-        final ArrayList<String> tickers = mstocks.getStockTickers();
-        final int numStocksTotal = tickers.size();
+        /* During this function's lifetime, the user could swipe-delete a stock. Using the original
+         * stocks in mstocks allows us to not worry about the consequences of a stock being removed
+         * from mstocks. As a result, this function, as well as MultiStockRequest could possibly
+         * edit stocks that have been removed from mstocks. HomeActivity.onResponse() handles this
+         * by ensuring that mstocks contains a stock before updating the UI. */
+        final BasicStockList stocksToUpdate = new BasicStockList(mstocks);
+        final int numStocksTotal = stocksToUpdate.size();
         int numStocksUpdated = 0;
 
         // URL form: <base URL><mticker 1>,<mticker 2>,<mticker 3>,<mticker n>
-        final String baseUrl = "https://www.marketwatch.com/investing/multi?tickers=";
-
+        final String BASE_URL_MULTI = "https://www.marketwatch.com/investing/multi?tickers=";
         /* Up to 10 stocks are shown in the MarketWatch view multiple stocks website. The first
          * 10 tickers listed in the URL are shown. Appending more than 10 tickers onto the URL
          * has no effect on the website - the first 10 tickers will be shown. */
-        final StringBuilder url = new StringBuilder(50); // Approximate size
+        final StringBuilder tickersPartUrl = new StringBuilder(50); // Approximate size
 
-        StringRequest stringRequest;
-        int numStocksToUpdateThisIteration, i;
+        BasicStockList stocksToUpdateThisIteration;
+        int numStocksToUpdateThisIteration;
         while (numStocksUpdated < numStocksTotal) {
             // Ex: if we've already updated 30 / 37 stocks, finish only 7 on the last iteration
             if (numStocksTotal - numStocksUpdated >= 10) {
@@ -264,117 +266,44 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
                 numStocksToUpdateThisIteration = numStocksTotal - numStocksUpdated;
             }
 
-            url.append(baseUrl);
-            // Append tickers for stocks that will be updated in this iteration
-            for (i = numStocksUpdated; i < numStocksUpdated + numStocksToUpdateThisIteration; i++) {
-                url.append(tickers.get(i));
-                url.append(',');
-            }
-            url.deleteCharAt(url.length() - 1); // Delete extra comma
+            stocksToUpdateThisIteration = new BasicStockList(stocksToUpdate.subList(numStocksUpdated,
+                    numStocksUpdated + numStocksToUpdateThisIteration));
 
-            // URL is now finished. Get HTML from URL and parse and fill mstocks.
-            stringRequest = new StringRequest(Request.Method.GET, url.toString(), this, this);
-            mrequestQueue.add(stringRequest);
+            // Append tickers for stocks that will be updated in this iteration.
+            for (BasicStock s : stocksToUpdateThisIteration) {
+                tickersPartUrl.append(s.getTicker());
+                tickersPartUrl.append(',');
+            }
+            tickersPartUrl.deleteCharAt(tickersPartUrl.length() - 1); // Delete extra comma
+
+            // Send stocks that will be updated and their URL to the MultiStockRequest.
+            mrequestQueue.add(new MultiStockRequest(BASE_URL_MULTI + tickersPartUrl.toString(),
+                    stocksToUpdateThisIteration, this, this));
 
             numStocksUpdated += numStocksToUpdateThisIteration;
-            url.setLength(0); // Clear URL
+            tickersPartUrl.setLength(0); // Clear tickers part of the URL
         }
     }
 
     @Override
-    public void onResponse(final String response) {
-        BasicStock curStock;
-        String curTicker;
-        BasicStock.State curState;
-        double curPrice, curChangePoint, curChangePercent;
-        final Elements quoteRoots, live_valueRoots, tickers, states, live_prices, live_changeRoots,
-                live_changePoints, live_changePercents, close_valueRoots, close_prices,
-                close_changeRoots, close_changePoints, close_changePercents;
-
-        /* Prices and changes gathered now are the current values. For example, if a stock's is in
-         * the AFTER_HOURS state, then it's price, change point, and change percent will be the
-         * stock's current price, after hours change point, and after hours change percent. */
-
-        final Document doc = Jsoup.parse(response);
-        quoteRoots = doc.select("body > div[id=blanket] div[id=maincontent] > div[class^=block multiquote] > div[class^=quotedisplay]");
-
-        live_valueRoots = quoteRoots.select("div[class^=section activeQuote bgQuote]");
-        tickers = live_valueRoots.select("div[class=ticker] > a[href][title]");
-        states = live_valueRoots.select("div[class=marketheader] > p[class=column marketstate]");
-        live_prices = live_valueRoots.select("div[class=lastprice] > div[class=pricewrap] > p[class=data bgLast]");
-        live_changeRoots = live_valueRoots.select("div[class=lastpricedetails] > p[class=lastcolumn data]");
-        live_changePoints = live_changeRoots.select("span[class=bgChange]");
-        live_changePercents = live_changeRoots.select("span[class=bgPercentChange]");
-
-        close_valueRoots = quoteRoots.select("div[class=prevclose section bgQuote] > div[class=offhours]");
-        close_prices = close_valueRoots.select("p[class=lastcolumn data bgLast price]");
-        close_changeRoots = close_valueRoots.select("p[class=lastcolumn data]");
-        close_changePoints = close_changeRoots.select("span[class=bgChange]");
-        close_changePercents = close_changeRoots.select("span[class=bgPercentChange]");
-
-        final int numStocksToUpdate = tickers.size();
-
-        /* curPrice will be displayed on mrecyclerView. If a stock's state is OPEN or CLOSED, then
-         * its display price should be the live price. If a stock's state is PREMARKET OR
-         * AFTER_HOURS, then its display price should be the last price that the stock closed at.
-         * The same logic applies for curChangePoint and curChangePercent. */
-        boolean curDataShouldBeCloseData;
-
-        // Iterate through mstocks that we're updating
-        for (int i = 0; i < numStocksToUpdate; i++) {
-            switch (states.get(i).text().toLowerCase(Locale.US)) {
-                case "premarket": // Individual stock site uses this
-                case "before the bell": // Multiple stock view site uses this
-                    curState = PREMARKET;
-                    curDataShouldBeCloseData = true;
-                    break;
-                case "open":
-                    curState = OPEN;
-                    curDataShouldBeCloseData = false;
-                    break;
-                case "after hours":
-                    curState = AFTER_HOURS;
-                    curDataShouldBeCloseData = true;
-                    break;
-                case "market closed": // Multiple stock view site uses this
-                case "closed":
-                    curState = CLOSED;
-                    curDataShouldBeCloseData = false;
-                    break;
-                default:
-                    curState = OPEN; /** Create error case. */
-                    curDataShouldBeCloseData = false;
-                    break;
+    public void onResponse(final BasicStockList updatedStocks) {
+        for (final BasicStock s : updatedStocks) {
+            /* The user could have swipe-deleted curStock in the time that the MultiStockRequest was
+             * executing. If so, mtickerToIndexMap does not contain curTicker, and get() will
+             * return null. */
+            if (mtickerToIndexMap.containsKey(s.getTicker())) {
+                mrecyclerView.getAdapter().notifyItemChanged(mtickerToIndexMap.get(s.getTicker()));
             }
-
-            curTicker = tickers.get(i).text();
-            // Remove ',' or '%' that could be in strings
-            if (curDataShouldBeCloseData) {
-                curPrice = parseDouble(close_prices.get(i).text().replaceAll("[^0-9.]+", ""));
-                curChangePoint = parseDouble(close_changePoints.get(i).text().replaceAll("[^0-9.-]+", ""));
-                curChangePercent = parseDouble(close_changePercents.get(i).text().replaceAll("[^0-9.-]+", ""));
-            } else {
-                curPrice = parseDouble(live_prices.get(i).text().replaceAll("[^0-9.]+", ""));
-                curChangePoint = parseDouble(live_changePoints.get(i).text().replaceAll("[^0-9.-]+", ""));
-                curChangePercent = parseDouble(live_changePercents.get(i).text().replaceAll("[^0-9.-]+", ""));
-            }
-
-            /* mstocks points to the same BasicStock objects that mtickerToStockMap has pointers to.
-             * So by updating curStock, which points to a BasicStock in mtickerToStockMap, we are
-             * also updating mstocks. */
-            curStock = mtickerToStockMap.get(curTicker);
-            curStock.setState(curState);
-            curStock.setPrice(curPrice);
-            curStock.setChangePoint(curChangePoint);
-            curStock.setChangePercent(curChangePercent);
-
-            mrecyclerView.getAdapter().notifyItemChanged(mtickerToIndexMap.get(curTicker));
         }
     }
 
     @Override
     public void onErrorResponse(final VolleyError error) {
-        Log.e("VolleyError", error.getLocalizedMessage());
+        if (error != null) {
+            Log.e("VolleyError", error.getLocalizedMessage());
+        } else {
+            Log.e("VolleyError", "Error is null.");
+        }
     }
 
     @Override
@@ -418,7 +347,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
     @Override
     public boolean onOptionsItemSelected(final MenuItem item) {
         /* All of these list transformations change the indexing of the stocks in mstocks.
-         * Therefore, each of these list transformations must update tickerToIndexMap. */
+         * Therefore, each of these list transformations must call updateTickerToIndexMap(). */
         switch (item.getItemId()) {
             case R.id.menuItem_sortAlphabetically_home:
                 final Comparator<BasicStock> tickerComparator = Comparator.comparing(BasicStock::getTicker);
@@ -445,6 +374,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
             case R.id.menuItem_sortByState_home:
                 final Comparator<BasicStock> stateComparator = Comparator.comparing(BasicStock::getState);
                 mstocks.sort(stateComparator);
+                updateTickerToIndexMap();
                 mrecyclerView.getAdapter().notifyItemRangeChanged(0, mrecyclerView.getAdapter().getItemCount());
                 return true;
             case R.id.menuItem_shuffle_home:
@@ -485,9 +415,10 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
     /**
      * Updates the indexes in mstocks that a ticker in mtickerToIndexMap maps to. This function
      * clears mtickerToIndexMap and rebuilds it with the current stock indexing of mstocks. This
-     * function is equivalent to calling updateTickerToIndexMap(0).
+     * should be called anytime after the indexing of stocks in mstocks changes. This is equivalent
+     * to calling updateTickerToIndexMap(0).
      */
-    private void updateTickerToIndexMap() {
+    private synchronized void updateTickerToIndexMap() {
         mtickerToIndexMap.clear();
         for (int i = 0; i < mstocks.size(); i++) {
             mtickerToIndexMap.put(mstocks.get(i).getTicker(), i);

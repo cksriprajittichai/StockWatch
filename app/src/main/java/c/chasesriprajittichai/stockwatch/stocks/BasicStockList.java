@@ -1,8 +1,22 @@
 package c.chasesriprajittichai.stockwatch.stocks;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 public final class BasicStockList extends ArrayList<BasicStock> {
+
+    public BasicStockList() {
+        super();
+    }
+
+    public BasicStockList(final int initialCapacity) {
+        super(initialCapacity);
+    }
+
+    public BasicStockList(Collection<BasicStock> c) {
+        super(c);
+    }
 
     /**
      * @return A CSV string of the tickers of the stocks in mstocks.

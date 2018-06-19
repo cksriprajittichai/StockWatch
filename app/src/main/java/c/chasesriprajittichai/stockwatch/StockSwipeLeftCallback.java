@@ -23,7 +23,6 @@ public final class StockSwipeLeftCallback extends ItemTouchHelper.SimpleCallback
 
     StockSwipeLeftCallback(Context context, StockSwipeLeftListener swipeLeftListener) {
         super(0, ItemTouchHelper.LEFT);
-
         mswipeLeftListener = swipeLeftListener;
 
         background = new ColorDrawable(Color.RED);
