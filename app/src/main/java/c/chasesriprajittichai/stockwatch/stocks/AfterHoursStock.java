@@ -16,10 +16,14 @@ public final class AfterHoursStock extends AdvancedStock {
                            final double fiftyTwoWeekRangeLow, final double fiftyTwoWeekRangeHigh,
                            final String marketCap, final double beta, final double peRatio,
                            final double eps, final double yield, final String averageVolume,
-                           final String description, final ArrayList<Double> yData) {
+                           final String description, final ArrayList<Double> yData_1day,
+                           final ArrayList<Double> yData_2weeks, final ArrayList<Double> yData_1month,
+                           final ArrayList<Double> yData_3months, final ArrayList<Double> yData_1year,
+                           final ArrayList<Double> yData_5years) {
         super(state, ticker, name, price, changePoint, changePercent, openPrice, dayRangeLow,
                 dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh, marketCap, beta, peRatio,
-                eps, yield, averageVolume, description, yData);
+                eps, yield, averageVolume, description, yData_1day, yData_2weeks, yData_1month,
+                yData_3months, yData_1year, yData_5years);
         mclose_price = close_price;
         mclose_changePoint = close_changePoint;
         mclose_changePercent = close_changePercent;

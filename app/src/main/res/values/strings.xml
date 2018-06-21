@@ -10,8 +10,16 @@
     <string name="shuffleMenuItem">Shuffle</string>
     <string name="flipListMenuItem">Flip List</string>
 
-    <!--IndividualStockActivityListener menu item titles-->
     <string name="starMenuItem">Star</string>
+
+    <string-array name="chartLengths">
+        <item>1D</item>
+        <item>2W</item>
+        <item>1M</item>
+        <item>3M</item>
+        <item>1Y</item>
+        <item>5Y</item>
+    </string-array>
 
     <string name="string">%1$s</string>
     <string name="string_colon_string">%1$s: %2$s</string>

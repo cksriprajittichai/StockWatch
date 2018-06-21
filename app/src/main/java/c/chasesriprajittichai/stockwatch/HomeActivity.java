@@ -299,11 +299,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
     @Override
     public void onErrorResponse(final VolleyError error) {
-        if (error != null) {
-            Log.e("VolleyError", error.getLocalizedMessage());
-        } else {
-            Log.e("VolleyError", "Error is null.");
-        }
+        Log.e("VolleyError", error.getLocalizedMessage());
     }
 
     @Override

@@ -4,11 +4,15 @@ import com.robinhood.spark.SparkAdapter;
 
 import java.util.ArrayList;
 
+import c.chasesriprajittichai.stockwatch.stocks.AdvancedStock;
+
 public final class SparkViewAdapter extends SparkAdapter {
 
     private ArrayList<Double> myData;
 
-    SparkViewAdapter(ArrayList<Double> yData) {
+    private AdvancedStock.ChartPeriod mchartPeriod = AdvancedStock.ChartPeriod.ONE_DAY; // Initial period
+
+    SparkViewAdapter(final ArrayList<Double> yData) {
         this.myData = yData;
     }
 
@@ -18,31 +22,27 @@ public final class SparkViewAdapter extends SparkAdapter {
     }
 
     @Override
-    public Object getItem(int index) {
+    public Object getItem(final int index) {
         return myData.get(index);
     }
 
+    /* This function shouldn't be used. Chart data should be taken from the AdvancedStock directly. */
     @Override
-    public float getY(int index) {
+    public float getY(final int index) {
         return (float) myData.get(index).doubleValue();
     }
 
-    public double getyData(int index) {
-        return myData.get(index);
-    }
-
-    public ArrayList<Double> getyData() {
-        return myData;
-    }
-
     /* Does not call notifyDataSetChanged(). */
-    public void setyData(int index, double data) {
-        myData.set(index, data);
-    }
-
-    /* Does not call notifyDataSetChanged(). */
-    public void setyData(ArrayList<Double> yData) {
+    public void setyData(final ArrayList<Double> yData) {
         this.myData = yData;
+    }
+
+    public AdvancedStock.ChartPeriod getChartPeriod() {
+        return mchartPeriod;
+    }
+
+    public void setMchartPeriod(final AdvancedStock.ChartPeriod chartPeriod) {
+        this.mchartPeriod = chartPeriod;
     }
 
 }
