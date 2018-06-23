@@ -10,12 +10,11 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.Spinner;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.robinhood.spark.SparkView;
+import com.wefika.horizontalpicker.HorizontalPicker;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -28,9 +27,8 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedList;
+import java.util.List;
 import java.util.Locale;
 
 import butterknife.BindView;
@@ -52,7 +50,7 @@ import static org.apache.commons.lang3.StringUtils.substringBetween;
 
 
 public final class IndividualStockActivity extends AppCompatActivity implements
-        DownloadIndividualStockTaskListener, AdapterView.OnItemSelectedListener {
+        DownloadIndividualStockTaskListener, HorizontalPicker.OnItemSelected {
 
     private static final class DownloadStockDataTask extends AsyncTask<Void, Integer, AdvancedStock> {
 
@@ -146,104 +144,91 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                         empty, empty, empty, empty, empty, empty);
             }
 
-            /* Get 2 week chart data from Wall Street Journal. */
+            /* Get chart data for periods greater than one day from Wall Street Journal. */
             // Certain values from Market Watch's individual-stock-site are needed in the WSJ url
             final String wsj_instrumentType = individualDoc.selectFirst(":root > head > meta[name=instrumentType]").attr("content");
             final String wsj_exchange = individualDoc.selectFirst(":root > head > meta[name=exchangeIso]").attr("content");
             final String wsj_exchangeCountry = individualDoc.selectFirst(":root > head > meta[name=exchangeCountry]").attr("content");
 
-            // Subtract one because we don't want to count 1D chart period
-            final int NUM_CHART_PERIODS = AdvancedStock.ChartPeriod.values().length - 1;
-
             final LocalDate today = LocalDate.now();
-            final LocalDate twoWeeksAgo = today.minusWeeks(2);
-            final LocalDate oneMonthAgo = today.minusMonths(1);
-            final LocalDate threeMonthsAgo = today.minusMonths(3);
-            final LocalDate oneYearAgo = today.minusYears(1);
-            final LocalDate fiveYearsAgo = today.minusYears(5);
-            final int chartPeriod_2weeks = (int) ChronoUnit.DAYS.between(twoWeeksAgo, today);
-            final int chartPeriod_1month = (int) ChronoUnit.DAYS.between(oneMonthAgo, today);
-            final int chartPeriod_3months = (int) ChronoUnit.DAYS.between(threeMonthsAgo, today);
-            final int chartPeriod_1year = (int) ChronoUnit.DAYS.between(oneYearAgo, today);
-            final int chartPeriod_5years = (int) ChronoUnit.DAYS.between(fiveYearsAgo, today);
+            /* Deduct extra because it doesn't hurt at all, and ensures that the URL we create
+             * doesn't incorrectly believe that there isn't enough data for the five year chart. */
+            final LocalDate fiveYearsAgo = today.minusYears(5).minusMonths(1);
+            final int period_5years = (int) ChronoUnit.DAYS.between(fiveYearsAgo, today);
 
             // Pad zeros on the left if necessary
-            final String wsj_todayDateStr = String.format(Locale.US, "%02d/%02d/%d", today.getMonthValue(),
+            final String wsj_todayDateStr = String.format(Locale.US, "%d/%d/%d", today.getMonthValue(),
                     today.getDayOfMonth(), today.getYear());
-            final String wsj_2weeksAgoDateStr = String.format(Locale.US, "%02d/%02d/%d", twoWeeksAgo.getMonthValue(),
-                    twoWeeksAgo.getDayOfMonth(), twoWeeksAgo.getYear());
-            final String wsj_1monthAgoDateStr = String.format(Locale.US, "%02d/%02d/%d", oneMonthAgo.getMonthValue(),
-                    oneMonthAgo.getDayOfMonth(), oneMonthAgo.getYear());
-            final String wsj_3monthsAgoDateStr = String.format(Locale.US, "%02d/%02d/%d", threeMonthsAgo.getMonthValue(),
-                    threeMonthsAgo.getDayOfMonth(), threeMonthsAgo.getYear());
-            final String wsj_1yearAgoDateStr = String.format(Locale.US, "%02d/%02d/%d", oneYearAgo.getMonthValue(),
-                    oneYearAgo.getDayOfMonth(), oneYearAgo.getYear());
-            final String wsj_5yearsAgoDateStr = String.format(Locale.US, "%02d/%02d/%d", fiveYearsAgo.getMonthValue(),
+            final String wsj_5yearsAgoDateStr = String.format(Locale.US, "%d/%d/%d", fiveYearsAgo.getMonthValue(),
                     fiveYearsAgo.getDayOfMonth(), fiveYearsAgo.getYear());
 
-            final String wsj_url_2weeks = String.format(Locale.US,
-                    "https://quotes.wsj.com/ajax/historicalprices/4/%s?MOD_VIEW=page&ticker=%s&country=%s" +
-                            "&exchange=%s&instrumentType=%s&num_rows=%d&range_days=%d&startDate=%s&endDate=%s",
-                    mticker, mticker, wsj_exchangeCountry, wsj_exchange, wsj_instrumentType,
-                    chartPeriod_2weeks, chartPeriod_2weeks, wsj_2weeksAgoDateStr, wsj_todayDateStr);
-            final String wsj_url_1month = String.format(Locale.US,
-                    "https://quotes.wsj.com/ajax/historicalprices/4/%s?MOD_VIEW=page&ticker=%s&country=%s" +
-                            "&exchange=%s&instrumentType=%s&num_rows=%d&range_days=%d&startDate=%s&endDate=%s",
-                    mticker, mticker, wsj_exchangeCountry, wsj_exchange, wsj_instrumentType,
-                    chartPeriod_1month, chartPeriod_1month, wsj_1monthAgoDateStr, wsj_todayDateStr);
-            final String wsj_url_3months = String.format(Locale.US,
-                    "https://quotes.wsj.com/ajax/historicalprices/4/%s?MOD_VIEW=page&ticker=%s&country=%s" +
-                            "&exchange=%s&instrumentType=%s&num_rows=%d&range_days=%d&startDate=%s&endDate=%s",
-                    mticker, mticker, wsj_exchangeCountry, wsj_exchange, wsj_instrumentType,
-                    chartPeriod_3months, chartPeriod_3months, wsj_3monthsAgoDateStr, wsj_todayDateStr);
-            final String wsj_url_1year = String.format(Locale.US,
-                    "https://quotes.wsj.com/ajax/historicalprices/4/%s?MOD_VIEW=page&ticker=%s&country=%s" +
-                            "&exchange=%s&instrumentType=%s&num_rows=%d&range_days=%d&startDate=%s&endDate=%s",
-                    mticker, mticker, wsj_exchangeCountry, wsj_exchange, wsj_instrumentType,
-                    chartPeriod_1year, chartPeriod_1year, wsj_1yearAgoDateStr, wsj_todayDateStr);
+            /* If the WSJ URL parameters (ie. start date) request data from dates that are prior to
+             * a stock's existence, then the WSJ response delivers all historical data available for
+             * the stock. Because five years is the largest chart period we are using, data for the
+             * smaller periods can be grabbed from the five year WSJ response page. The actual
+             * number of data points that exists for a stock can be determined by parsing the WSJ
+             * response and counting the number of certain elements (ie. table rows). */
             final String wsj_url_5years = String.format(Locale.US,
                     "https://quotes.wsj.com/ajax/historicalprices/4/%s?MOD_VIEW=page&ticker=%s&country=%s" +
                             "&exchange=%s&instrumentType=%s&num_rows=%d&range_days=%d&startDate=%s&endDate=%s",
                     mticker, mticker, wsj_exchangeCountry, wsj_exchange, wsj_instrumentType,
-                    chartPeriod_5years, chartPeriod_5years, wsj_5yearsAgoDateStr, wsj_todayDateStr);
+                    period_5years, period_5years, wsj_5yearsAgoDateStr, wsj_todayDateStr);
 
-            final String[] wsj_urls = {wsj_url_2weeks, wsj_url_1month, wsj_url_3months, wsj_url_1year, wsj_url_5years};
-            final ArrayList<Double> chartPrices_2weeks = new ArrayList<>();
-            final ArrayList<Double> chartPrices_1month = new ArrayList<>();
-            final ArrayList<Double> chartPrices_3months = new ArrayList<>();
-            final ArrayList<Double> chartPrices_1year = new ArrayList<>();
             final ArrayList<Double> chartPrices_5years = new ArrayList<>();
-            final LinkedList<ArrayList<Double>> chartPricesList = new LinkedList<>(
-                    Arrays.asList(chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year, chartPrices_5years));
+            final ArrayList<Double> chartPrices_1year = new ArrayList<>();
+            final ArrayList<Double> chartPrices_3months = new ArrayList<>();
+            final ArrayList<Double> chartPrices_1month = new ArrayList<>();
+            final ArrayList<Double> chartPrices_2weeks = new ArrayList<>();
+            final List<ArrayList<Double>> chartPricesList = new ArrayList<>(Arrays.asList(
+                    chartPrices_5years, chartPrices_1year, chartPrices_3months, chartPrices_1month, chartPrices_2weeks));
 
-            Document curDoc;
-            String curUrl;
-            Elements tableRows, chartPriceElmnts;
+            Document fiveYearDoc = null;
             // Loop and fill chart prices for each chart period
-            for (int i = 0; i < NUM_CHART_PERIODS; i++) {
-                curUrl = wsj_urls[i];
-                try {
-                    curDoc = Jsoup.connect(curUrl).get();
-                } catch (final IOException ioe) {
-                    Log.e("IOException", ioe.getLocalizedMessage());
-                    /** Add to missing stats? */
-                    continue;
+            try {
+                fiveYearDoc = Jsoup.connect(wsj_url_5years).get();
+            } catch (final IOException ioe) {
+                Log.e("IOException", ioe.getLocalizedMessage());
+                /** Add to missing stats? */
+            }
+
+            if (fiveYearDoc != null) {
+                int i, periodNdx;
+
+                /* This is the number of data points needed for each period. The stock market is
+                 * only open on weekdays, and there are 9 holidays that the stock market closes for.
+                 * So the stock market is open for ~252 days a year. Use this value to approximate
+                 * the number of data points that should be in each period. */
+                final int[] PERIODS = {1260, 252, 63, 21, 10};
+                /* Don't get too many data points for longer chart periods because it takes too long
+                 * and is unnecessary. Take no more than 200 data points max in a period. */
+                final int[] PERIOD_INCREMENTS = {8, 2, 1, 1, 1};
+
+                /* Charts use the closing price of each day. The closing price is the 5th column
+                 * in each table row. */
+                final Elements priceElmnts = fiveYearDoc.select(":root > body > div > div#historical_data_table > div > table > tbody > tr > :eq(4)");
+                final int NUM_DATA_POINTS = priceElmnts.size() <= 1260 ? priceElmnts.size() : 1260;
+                final ArrayList<Double> allChartPrices = new ArrayList<>(NUM_DATA_POINTS);
+
+                /* The most recent prices are at the top of the WSJ page (top of tableRows), and
+                 * the oldest prices are at the bottom. Fill allChartPrices starting with the last
+                 * price elements so that the oldest prices are the front of allPrices and the
+                 * recent prices are at the end. */
+                for (i = NUM_DATA_POINTS - 1; i >= 0; i--) {
+                    allChartPrices.add(parseDouble(priceElmnts.get(i).text()));
                 }
 
-                if (curDoc != null) {
-                    tableRows = curDoc.select(":root > body > div > div#historical_data_table > div > table > tbody > tr");
+                /* Fill chartPrices for each period. If there is not enough data to represent a full
+                 * period, then leave that period's chartPrice empty. */
+                ArrayList<Double> curChartPrices;
+                for (periodNdx = 0; periodNdx < chartPricesList.size(); periodNdx++) {
+                    if (PERIODS[periodNdx] <= NUM_DATA_POINTS) {
+                        // If there are enough data points to fill this period
 
-                    /* Charts use the closing price of each day. The closing price is the 5th column
-                     * in each table row. */
-                    chartPriceElmnts = tableRows.select(":root > :eq(4)");
-                    for (final Element p : chartPriceElmnts) {
-                        chartPricesList.get(i).add(parseDouble(p.text()));
+                        curChartPrices = chartPricesList.get(periodNdx);
+                        for (i = NUM_DATA_POINTS - PERIODS[periodNdx]; i < NUM_DATA_POINTS; i += PERIOD_INCREMENTS[periodNdx]) {
+                            curChartPrices.add(allChartPrices.get(i));
+                        }
                     }
-
-                    /* The most recent prices are at the top of the WSJ page (front of tableRows), and
-                     * the oldest prices are at the bottom. Flip the prices so that the oldest prices
-                     * are the start of the list and the most recent prices are the the end. */
-                    Collections.reverse(chartPricesList.get(i));
                 }
             }
 
@@ -514,9 +499,12 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         }
     }
 
-    @BindView(R.id.spinner_chartLength_individual) Spinner mchartLengthSpinner;
+    @BindView(R.id.progressBar_individual) ProgressBar mprogressBar;
     @BindView(R.id.sparkView_individual) SparkView msparkView;
-    @BindView(R.id.textView_scrub_individual) TextView mscrubInfo;
+    @BindView(R.id.textView_scrubPrice_individual) TextView mscrubPrice;
+    @BindView(R.id.textView_scrubChangePercent_individual) TextView mscrubChangePercent;
+    @BindView(R.id.horizontalPicker_chartPeriod_individual) HorizontalPicker mchartPeriodPicker;
+    @BindView(R.id.view_chartPeriodPickerUnderline_individual) View mchartPeriodPickerUnderline;
     @BindView(R.id.divider_sparkViewToStats_individual) View msparkViewToStatsDivider;
     @BindView(R.id.textView_state_individual) TextView mstate;
     @BindView(R.id.textView_price_individual) TextView mprice;
@@ -559,27 +547,40 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             mclose_changePercent.setVisibility(View.GONE);
         }
 
-        if (!mstock.getYData_1day().isEmpty()) {
+        if (!mstock.getYData_1day().isEmpty()) { /** Change: check for available charts using missingStats. */
             msparkViewAdapter.setyData(mstock.getYData_1day());
             msparkViewAdapter.notifyDataSetChanged();
-            mscrubInfo.setText(getString(R.string.double2dec, mstock.getPrice())); // Init text view
+            mscrubPrice.setText(getString(R.string.dollarSign_double2dec, mstock.getPrice())); // Init
+            mscrubChangePercent.setText(getString(R.string.double2dec_percent, mstock.getChangePercent())); // Init
             msparkView.setScrubListener((final Object valueObj) -> {
                 if (valueObj == null) {
                     // The user is not scrubbing
-                    mscrubInfo.setText(getString(R.string.double2dec, mstock.getPrice()));
-                    int color_deactivated = getResources().getColor(R.color.colorAccentTransparent, getTheme());
-                    mscrubInfo.setTextColor(color_deactivated);
+                    mscrubPrice.setText(getString(R.string.dollarSign_double2dec, mstock.getPrice()));
+                    mscrubChangePercent.setText(getString(R.string.double2dec_percent, mstock.getChangePercent()));
+                    final int deactivatedColor = getResources().getColor(R.color.colorAccentTransparent, getTheme());
+                    mscrubPrice.setTextColor(deactivatedColor);
+                    mscrubChangePercent.setTextColor(deactivatedColor);
                 } else {
                     // The user is scrubbing
-                    mscrubInfo.setText(getString(R.string.double2dec, (double) valueObj));
-                    int color_activated = getResources().getColor(R.color.colorAccent, getTheme());
-                    mscrubInfo.setTextColor(color_activated);
+                    // Calculate the percent change at this scrubbing location
+                    mscrubPrice.setText(getString(R.string.dollarSign_double2dec, (double) valueObj));
+                    final double realPrice = mstock.getPrice();
+                    final double curPrice = (double) valueObj;
+                    final double curChangePercent = 100 * ((curPrice - realPrice) / realPrice);
+                    mscrubChangePercent.setText(getString(R.string.double2dec_percent, curChangePercent));
+                    final int activatedColor = getResources().getColor(R.color.colorAccent, getTheme());
+                    mscrubPrice.setTextColor(activatedColor);
+                    mscrubChangePercent.setTextColor(activatedColor);
                 }
             });
+
+            msparkView.setVisibility(View.VISIBLE);
+            mchartPeriodPicker.setVisibility(View.VISIBLE);
+            mchartPeriodPickerUnderline.setVisibility(View.VISIBLE);
+            msparkViewToStatsDivider.setVisibility(View.VISIBLE);
         } else {
-            msparkView.setVisibility(View.GONE);
-            mscrubInfo.setVisibility(View.GONE);
-            msparkViewToStatsDivider.setVisibility(View.GONE);
+            mscrubPrice.setVisibility(View.GONE);
+            mscrubChangePercent.setVisibility(View.GONE);
         }
 
         mstate.setText(getString(R.string.string_colon_string, "State", mstock.getState().toString()));
@@ -645,10 +646,12 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         }
         if (!missingStats.contains("Description")) {
             mdescriptionTextView.setText(mstock.getDescription());
+            mstatsToDescriptionDivider.setVisibility(View.VISIBLE);
         } else {
             mdescriptionTextView.setVisibility(View.GONE);
-            mstatsToDescriptionDivider.setVisibility(View.GONE);
         }
+
+        mprogressBar.setVisibility(View.GONE);
     }
 
     @Override
@@ -657,24 +660,17 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         setContentView(R.layout.activity_individual_stock);
         setTitle(""); // Show empty title now, company name will be shown (in onPostExecute())
         ButterKnife.bind(this);
-        mpreferences = PreferenceManager.getDefaultSharedPreferences(this);
         mticker = getIntent().getStringExtra("Ticker");
 
-        // Start task ASAP. Task uses mticker.
-        final DownloadStockDataTask task = new DownloadStockDataTask(mticker, this);
-        task.execute();
+        // Start task ASAP
+        new DownloadStockDataTask(mticker, this).execute();
 
-        misInFavorites = getIntent().getBooleanExtra("Is in favorites", false);
-        mwasInFavoritesInitially = misInFavorites;
-
-        final ArrayAdapter<CharSequence> chartLengthAdapter = ArrayAdapter.createFromResource(this,
-                R.array.chartLengths, android.R.layout.simple_spinner_item);
-        chartLengthAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        mchartLengthSpinner.setAdapter(chartLengthAdapter);
-        mchartLengthSpinner.setOnItemSelectedListener(this);
-
+        mpreferences = PreferenceManager.getDefaultSharedPreferences(this);
         msparkViewAdapter = new SparkViewAdapter(new ArrayList<>()); // Init as empty
         msparkView.setAdapter(msparkViewAdapter);
+        mchartPeriodPicker.setOnItemSelectedListener(this);
+        misInFavorites = getIntent().getBooleanExtra("Is in favorites", false);
+        mwasInFavoritesInitially = misInFavorites;
     }
 
     @Override
@@ -708,11 +704,11 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         startActivity(intent);
     }
 
-    /* For mchartLengthSpinner. */
+    /* For mchartPeriodPicker. */
     @Override
-    public void onItemSelected(final AdapterView<?> parent, final View view, final int position, final long id) {
-        if (mstock != null) { // This function is called before mstock is initialized
-            switch (position) {
+    public void onItemSelected(final int index) {
+        if (mstock != null) { // In case user selects something before mstock is initialized.
+            switch (index) {
                 case 0: // 1D
                     if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.ONE_DAY) {
                         msparkViewAdapter.setyData(mstock.getYData_1day());
@@ -757,11 +753,6 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     break;
             }
         }
-    }
-
-    /* For mchartLengthSpinner. */
-    @Override
-    public void onNothingSelected(final AdapterView<?> parent) {
     }
 
     @Override

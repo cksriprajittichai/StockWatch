@@ -11,23 +11,25 @@ public final class RecyclerDivider extends RecyclerView.ItemDecoration {
 
     private Drawable mdivider;
 
-    RecyclerDivider(Context context) {
+    RecyclerDivider(final Context context) {
         mdivider = ContextCompat.getDrawable(context, R.drawable.recycler_divider_home);
     }
 
     @Override
-    public void onDrawOver(Canvas c, RecyclerView parent, RecyclerView.State state) {
-        int left = parent.getPaddingLeft();
-        int right = parent.getWidth() - parent.getPaddingRight();
+    public void onDrawOver(final Canvas c, final RecyclerView parent, final RecyclerView.State state) {
+        final int left = parent.getPaddingLeft();
+        final int right = parent.getWidth() - parent.getPaddingRight();
 
-        int childCount = parent.getChildCount();
-        for (int i = 0; i < childCount; i++) {
-            View child = parent.getChildAt(i);
+        final int childCount = parent.getChildCount();
+        View child;
+        RecyclerView.LayoutParams params;
+        int top, bottom, i;
+        for (i = 0; i < childCount; i++) {
+            child = parent.getChildAt(i);
+            params = (RecyclerView.LayoutParams) child.getLayoutParams();
 
-            RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) child.getLayoutParams();
-
-            int top = child.getBottom() + params.bottomMargin;
-            int bottom = top + mdivider.getIntrinsicHeight();
+            top = child.getBottom() + params.bottomMargin;
+            bottom = top + mdivider.getIntrinsicHeight();
 
             mdivider.setBounds(left, top, right, bottom);
             mdivider.draw(c);

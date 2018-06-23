@@ -17,7 +17,7 @@ import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
 public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.ViewHolder> {
 
     public interface OnItemClickListener {
-        void onItemClick(BasicStock basicStock);
+        void onItemClick(final BasicStock basicStock);
     }
 
     class ViewHolder extends RecyclerView.ViewHolder {
@@ -27,7 +27,7 @@ public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.
         private final TextView mpriceTextView;
         private final TextView mchangePercentTextView;
 
-        ViewHolder(View v) {
+        ViewHolder(final View v) {
             super(v);
 
             mstateTextView = v.findViewById(R.id.textView_state_homeRecyclerItem);
@@ -62,23 +62,23 @@ public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.
     private ArrayList<BasicStock> mstocks;
     private OnItemClickListener monItemClickListener;
 
-    RecyclerAdapter(ArrayList<BasicStock> stocks, OnItemClickListener listener) {
+    RecyclerAdapter(final ArrayList<BasicStock> stocks, final OnItemClickListener listener) {
         this.mstocks = stocks;
         this.monItemClickListener = listener;
     }
 
     @NonNull
     @Override
-    public RecyclerAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        LayoutInflater inflater = LayoutInflater.from(parent.getContext());
+    public RecyclerAdapter.ViewHolder onCreateViewHolder(@NonNull final ViewGroup parent, final int viewType) {
+        final LayoutInflater inflater = LayoutInflater.from(parent.getContext());
 
-        View stockView = inflater.inflate(R.layout.recycler_item_home, parent, false);
+        final View stockView = inflater.inflate(R.layout.recycler_item_home, parent, false);
 
         return new ViewHolder(stockView);
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull final ViewHolder holder, final int position) {
         holder.bind(mstocks.get(position), monItemClickListener);
     }
 

@@ -21,7 +21,7 @@ public final class StockSwipeLeftCallback extends ItemTouchHelper.SimpleCallback
     private final Drawable garbageIcon;
     private final int garbageMargin;
 
-    StockSwipeLeftCallback(Context context, StockSwipeLeftListener swipeLeftListener) {
+    StockSwipeLeftCallback(final Context context, final StockSwipeLeftListener swipeLeftListener) {
         super(0, ItemTouchHelper.LEFT);
         mswipeLeftListener = swipeLeftListener;
 
@@ -33,25 +33,25 @@ public final class StockSwipeLeftCallback extends ItemTouchHelper.SimpleCallback
 
 
     @Override
-    public boolean onMove(RecyclerView rv, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+    public boolean onMove(final RecyclerView rv, final RecyclerView.ViewHolder viewHolder, final RecyclerView.ViewHolder target) {
         return false;
     }
 
     @Override
-    public int getSwipeDirs(RecyclerView rv, RecyclerView.ViewHolder viewHolder) {
+    public int getSwipeDirs(final RecyclerView rv, final RecyclerView.ViewHolder viewHolder) {
         return super.getSwipeDirs(rv, viewHolder);
     }
 
     @Override
-    public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+    public void onSwiped(final RecyclerView.ViewHolder viewHolder, final int direction) {
         final int position = viewHolder.getAdapterPosition();
         mswipeLeftListener.onStockSwipedLeft(position);
     }
 
     @Override
-    public void onChildDraw(Canvas c, RecyclerView rv, RecyclerView.ViewHolder viewHolder,
-                            float dX, float dY, int actionState, boolean isCurrentlyActive) {
-        View itemView = viewHolder.itemView;
+    public void onChildDraw(final Canvas c, final RecyclerView rv, final RecyclerView.ViewHolder viewHolder,
+                            final float dX, final float dY, final int actionState, final boolean isCurrentlyActive) {
+        final View itemView = viewHolder.itemView;
 
         /* This method can be called on ViewHolders that have already been swiped away.
          * Ignore these. */
@@ -64,14 +64,14 @@ public final class StockSwipeLeftCallback extends ItemTouchHelper.SimpleCallback
         background.draw(c);
 
         // Draw garbage can
-        int itemHeight = itemView.getBottom() - itemView.getTop();
-        int intrinsicWidth = garbageIcon.getIntrinsicWidth();
-        int intrinsicHeight = garbageIcon.getIntrinsicHeight();
+        final int itemHeight = itemView.getBottom() - itemView.getTop();
+        final int intrinsicWidth = garbageIcon.getIntrinsicWidth();
+        final int intrinsicHeight = garbageIcon.getIntrinsicHeight();
 
-        int xMarkLeft = itemView.getRight() - garbageMargin - intrinsicWidth;
-        int xMarkRight = itemView.getRight() - garbageMargin;
-        int xMarkTop = itemView.getTop() + (itemHeight - intrinsicHeight) / 2;
-        int xMarkBottom = xMarkTop + intrinsicHeight;
+        final int xMarkLeft = itemView.getRight() - garbageMargin - intrinsicWidth;
+        final int xMarkRight = itemView.getRight() - garbageMargin;
+        final int xMarkTop = itemView.getTop() + (itemHeight - intrinsicHeight) / 2;
+        final int xMarkBottom = xMarkTop + intrinsicHeight;
         garbageIcon.setBounds(xMarkLeft, xMarkTop, xMarkRight, xMarkBottom);
 
         garbageIcon.draw(c);

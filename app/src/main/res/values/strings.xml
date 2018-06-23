@@ -12,7 +12,7 @@
 
     <string name="starMenuItem">Star</string>
 
-    <string-array name="chartLengths">
+    <string-array name="chartPeriods">
         <item>1D</item>
         <item>2W</item>
         <item>1M</item>
@@ -24,8 +24,10 @@
     <string name="string">%1$s</string>
     <string name="string_colon_string">%1$s: %2$s</string>
     <string name="double2dec">%1$.2f</string>
-    <string name="string_colon_double2dec">%1$s: %2$.2f</string>
     <!--'%' escapes itself-->
+    <string name="double2dec_percent">%1$.2f%%</string>
+    <string name="dollarSign_double2dec">\u0024%1$.2f</string>
+    <string name="string_colon_double2dec">%1$s: %2$.2f</string>
     <string name="string_colon_double2dec_percent">%1$s: %2$.2f%%</string>
     <string name="string_colon_double2dec_hyphen_double2dec">%1$s: %2$.2f - %3$.2f</string>
 
