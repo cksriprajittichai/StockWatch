@@ -72,7 +72,10 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         protected AdvancedStock doInBackground(final Void... params) {
             final AdvancedStock ret;
 
-            /* Get 1 day chart data. */
+            /* Some stocks have no chart data. If this is the case, chart_prices will be an
+             * empty array list. */
+            final ArrayList<Double> chartPrices_1day = new ArrayList<>();
+
             final Document multiDoc;
             try {
                 multiDoc = Jsoup.connect("https://www.marketwatch.com/investing/multi?tickers=" + mticker).get();
@@ -86,45 +89,42 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                         empty, empty, empty, empty, empty, empty);
             }
 
-            /* Some stocks have no chart data. If this is the case, chart_prices will be an
-             * empty array list. */
-            final ArrayList<Double> chart_prices_1day = new ArrayList<>();
-
             final Element multiQuoteRoot = multiDoc.selectFirst("html > body > div#blanket > div[class*=multi] > div#maincontent > " +
                     "div[class^=block multiquote] > div[class^=quotedisplay] > div[class^=section activeQuote bgQuote]");
             final Element javascriptElmnt = multiQuoteRoot.selectFirst(":root > div.intradaychart > script[type=text/javascript]");
 
             /* If there is no chart data, javascriptElmnt element still exists in the HTML and
              * there is still some javascript code in javascriptElmnt.toString(). There is just no
-             * chart data embedded in the code. This means that the call to substringBetween() on
-             * javascriptElmnt.toString() will return null, because no substring between the
-             * open and close parameters (substringBetween() parameters) exists. */
+             * chart data embedded in the javascript. This means that the call to substringBetween()
+             * on javascriptElmnt.toString() will return null, because no substring between the open
+             * and close parameters (substringBetween() parameters) exists. */
             final String javascriptStr = substringBetween(javascriptElmnt.toString(), "Trades\":[", "]");
             if (javascriptStr != null) {
                 /* javascriptStr is in CSV format. Values in javascriptStr could be "null". Values
-                 * do not contain ','. If null values are found, replace them with the last
-                 * non-null value. */
-                final String[] chart_priceStrs = javascriptStr.split(",");
+                 * do not contain ','. */
+                final String[] chartPriceStrs = javascriptStr.split(",");
 
-                // Init chart_prevPrice as first non-null value
-                double chart_prevPrice = -1;
-                boolean chart_priceFound = false;
-                for (final String s : chart_priceStrs) {
-                    if (!s.equals("null")) {
-                        chart_prevPrice = parseDouble(s);
-                        chart_priceFound = true;
+                // Init prevPrice as first non-null value
+                double prevPrice = -1;
+                boolean priceFound = false;
+                for (int i = 1; i < chartPriceStrs.length; i++) {
+                    if (chartPriceStrs[i].equals("null") && !chartPriceStrs[i - 1].equals("null")) {
+                        prevPrice = parseDouble(chartPriceStrs[i - 1]);
+                        priceFound = true;
                         break;
                     }
                 }
-                // Fill chart_prices
-                if (chart_priceFound) {
-                    chart_prices_1day.ensureCapacity(chart_priceStrs.length);
-                    for (int i = 0; i < chart_priceStrs.length; i++) {
-                        if (!chart_priceStrs[i].equals("null")) {
-                            chart_prices_1day.add(i, parseDouble(chart_priceStrs[i]));
-                            chart_prevPrice = chart_prices_1day.get(i); // Update prevPrice
+
+                /* Fill chartPrices_1day. If null values are found, replace them with the last
+                 * non-null value (prevPrice). */
+                if (priceFound) {
+                    chartPrices_1day.ensureCapacity(chartPriceStrs.length);
+                    for (int i = 0; i < chartPriceStrs.length; i++) {
+                        if (!chartPriceStrs[i].equals("null")) {
+                            chartPrices_1day.add(i, parseDouble(chartPriceStrs[i]));
+                            prevPrice = chartPrices_1day.get(i); // Update prevPrice
                         } else {
-                            chart_prices_1day.add(i, chart_prevPrice);
+                            chartPrices_1day.add(i, prevPrice);
                         }
                     }
                 }
@@ -236,12 +236,10 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             /* Get non-chart data. */
             final Element quoteRoot = individualDoc.selectFirst(":root > body[role=document] > div[data-symbol=" + mticker + "]");
 
-            final Element regionFixed = quoteRoot.selectFirst(":root > div.content-region.region--fixed");
-
-            final Element nameElmnt = regionFixed.selectFirst(":root > div > div.column.column--full.company div.row > h1.company__name");
+            final Element nameElmnt = quoteRoot.selectFirst(":root > div.content-region.region--fixed > div > div.column.column--full.company div.row > h1.company__name");
             final String name = nameElmnt.text();
 
-            final Element intraday = regionFixed.selectFirst(":root > div.template.template--aside > div > div.element.element--intraday");
+            final Element intraday = quoteRoot.selectFirst(":root > div.content-region.region--fixed > div.template.template--aside > div > div.element.element--intraday");
             final Element intradayData = intraday.selectFirst(":root > div.intraday__data");
 
             final Element icon = intraday.selectFirst(":root > small[class~=intraday__status status--(before|open|after|closed)] > i[class^=icon]");
@@ -267,8 +265,8 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     break;
             }
 
-            final Element priceElmnt, changePointElmnt, changePercentElmnt, close_intradayElmnt,
-                    close_priceElmnt, close_changePointElmnt, close_changePercentElmnt;
+            final Element priceElmnt, changePointElmnt, changePercentElmnt, close_priceElmnt,
+                    close_changePointElmnt, close_changePercentElmnt;
             final Elements close_tableCells;
             final double price, changePoint, changePercent, close_price, close_changePoint, close_changePercent;
             // Parsing of certain data varies depending on the state of the stock.
@@ -278,8 +276,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     changePointElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--point--q > bg-quote[field=change]");
                     changePercentElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--percent--q > bg-quote[field=percentchange]");
 
-                    close_intradayElmnt = intraday.selectFirst(":root > div.intraday__close");
-                    close_tableCells = close_intradayElmnt.select(":root > table > tbody > tr.table__row > td[class^=table__cell]");
+                    close_tableCells = intraday.select(":root > div.intraday__close > table > tbody > tr.table__row > td[class^=table__cell]");
                     close_priceElmnt = close_tableCells.get(0);
                     close_changePointElmnt = close_tableCells.get(1);
                     close_changePercentElmnt = close_tableCells.get(2);
@@ -314,8 +311,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     changePointElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--point--q > bg-quote[field=change]");
                     changePercentElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--percent--q > bg-quote[field=percentchange]");
 
-                    close_intradayElmnt = intraday.selectFirst(":root > div.intraday__close");
-                    close_tableCells = close_intradayElmnt.select(":root > table > tbody > tr.table__row > td");
+                    close_tableCells = intraday.select(":root > div.intraday__close > table > tbody > tr.table__row > td");
                     close_priceElmnt = close_tableCells.get(0);
                     close_changePointElmnt = close_tableCells.get(1);
                     close_changePercentElmnt = close_tableCells.get(2);
@@ -459,14 +455,14 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     ret = new PremarketStock(state, mticker, name, price, changePoint, changePercent,
                             close_price, close_changePoint, close_changePercent, openPrice, dayRangeLow,
                             dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh, marketCap,
-                            beta, peRatio, eps, yield, avgVolume, description, chart_prices_1day,
+                            beta, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
                             chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
                             chartPrices_5years);
                     break;
                 case OPEN:
                     ret = new AdvancedStock(state, mticker, name, price, changePoint, changePercent,
                             openPrice, dayRangeLow, dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh,
-                            marketCap, beta, peRatio, eps, yield, avgVolume, description, chart_prices_1day,
+                            marketCap, beta, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
                             chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
                             chartPrices_5years);
                     break;
@@ -474,14 +470,14 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     ret = new AfterHoursStock(state, mticker, name, price, changePoint, changePercent,
                             close_price, close_changePoint, close_changePercent, openPrice, dayRangeLow,
                             dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh, marketCap,
-                            beta, peRatio, eps, yield, avgVolume, description, chart_prices_1day,
+                            beta, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
                             chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
                             chartPrices_5years);
                     break;
                 case CLOSED:
                     ret = new AdvancedStock(state, mticker, name, price, changePoint, changePercent,
                             openPrice, dayRangeLow, dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh,
-                            marketCap, beta, peRatio, eps, yield, avgVolume, description, chart_prices_1day,
+                            marketCap, beta, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
                             chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
                             chartPrices_5years);
                     break;
