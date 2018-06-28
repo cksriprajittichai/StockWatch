@@ -21,8 +21,15 @@
             android:layout_gravity="center"
             android:layout_marginTop="200dp" />
 
+        <TextView
+            android:id="@+id/textView_scrubTime_individual"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAppearance="?android:textAppearanceLarge"
+            android:textColor="@android:color/white" />
+
         <!--Init as GONE.-->
-        <com.robinhood.spark.SparkView
+        <c.chasesriprajittichai.stockwatch.CustomSparkView
             android:id="@+id/sparkView_individual"
             android:layout_width="match_parent"
             android:layout_height="200dp"

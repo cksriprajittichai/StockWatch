@@ -10,12 +10,15 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import com.robinhood.spark.SparkView;
 import com.wefika.horizontalpicker.HorizontalPicker;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -50,7 +53,7 @@ import static org.apache.commons.lang3.StringUtils.substringBetween;
 
 
 public final class IndividualStockActivity extends AppCompatActivity implements
-        DownloadIndividualStockTaskListener, HorizontalPicker.OnItemSelected {
+        DownloadIndividualStockTaskListener, HorizontalPicker.OnItemSelected, CustomScrubGestureDetector.ScrubIndexListener {
 
     private static final class DownloadStockDataTask extends AsyncTask<Void, Integer, AdvancedStock> {
 
@@ -72,10 +75,6 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         protected AdvancedStock doInBackground(final Void... params) {
             final AdvancedStock ret;
 
-            /* Some stocks have no chart data. If this is the case, chart_prices will be an
-             * empty array list. */
-            final ArrayList<Double> chartPrices_1day = new ArrayList<>();
-
             final Document multiDoc;
             try {
                 multiDoc = Jsoup.connect("https://www.marketwatch.com/investing/multi?tickers=" + mticker).get();
@@ -89,9 +88,15 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                         empty, empty, empty, empty, empty, empty);
             }
 
+            String name = mticker; // Init as ticker, should change to company name from JSON
+            /* Some stocks have no chart data. If this is the case, chart_prices will be an
+             * empty array list. */
+            final ArrayList<Double> chartPrices_1day = new ArrayList<>();
+
             final Element multiQuoteRoot = multiDoc.selectFirst("html > body > div#blanket > div[class*=multi] > div#maincontent > " +
                     "div[class^=block multiquote] > div[class^=quotedisplay] > div[class^=section activeQuote bgQuote]");
             final Element javascriptElmnt = multiQuoteRoot.selectFirst(":root > div.intradaychart > script[type=text/javascript]");
+            final String jsonString = substringBetween(javascriptElmnt.toString(), "var chartData = [", "];");
 
             /* If there is no chart data, javascriptElmnt element still exists in the HTML and
              * there is still some javascript code in javascriptElmnt.toString(). There is just no
@@ -100,33 +105,45 @@ public final class IndividualStockActivity extends AppCompatActivity implements
              * and close parameters (substringBetween() parameters) exists. */
             final String javascriptStr = substringBetween(javascriptElmnt.toString(), "Trades\":[", "]");
             if (javascriptStr != null) {
-                /* javascriptStr is in CSV format. Values in javascriptStr could be "null". Values
-                 * do not contain ','. */
-                final String[] chartPriceStrs = javascriptStr.split(",");
+                try {
+                    final JSONObject topObj = new JSONObject(jsonString);
+                    final JSONObject valueOuterObj = topObj.getJSONObject("Value");
+                    final JSONArray dataArr = valueOuterObj.getJSONArray("Data");
+                    final JSONObject valueInnerObj = dataArr.getJSONObject(0).getJSONObject("Value");
+                    name = valueInnerObj.getString("Name");
 
-                // Init prevPrice as first non-null value
-                double prevPrice = -1;
-                boolean priceFound = false;
-                for (int i = 1; i < chartPriceStrs.length; i++) {
-                    if (chartPriceStrs[i].equals("null") && !chartPriceStrs[i - 1].equals("null")) {
-                        prevPrice = parseDouble(chartPriceStrs[i - 1]);
-                        priceFound = true;
-                        break;
-                    }
-                }
+                    final JSONArray sessionsArr = valueInnerObj.getJSONArray("Sessions");
+                    final JSONObject sessionsNdxZero = sessionsArr.getJSONObject(0);
+                    final JSONArray tradesArr = sessionsNdxZero.getJSONArray("Trades");
+                    final int numPrices = tradesArr.length();
 
-                /* Fill chartPrices_1day. If null values are found, replace them with the last
-                 * non-null value (prevPrice). */
-                if (priceFound) {
-                    chartPrices_1day.ensureCapacity(chartPriceStrs.length);
-                    for (int i = 0; i < chartPriceStrs.length; i++) {
-                        if (!chartPriceStrs[i].equals("null")) {
-                            chartPrices_1day.add(i, parseDouble(chartPriceStrs[i]));
-                            prevPrice = chartPrices_1day.get(i); // Update prevPrice
-                        } else {
-                            chartPrices_1day.add(i, prevPrice);
+                    /* Init prevPrice as first non-null value. Null values do not
+                     * correlate to anything about the data. */
+                    double prevPrice = -1;
+                    boolean priceFound = false;
+                    for (int i = 1; i < numPrices; i++) {
+                        if (tradesArr.get(i).toString().equals("null") && !tradesArr.get(i - 1).toString().equals("null")) {
+                            prevPrice = parseDouble(tradesArr.get(i - 1).toString());
+                            priceFound = true;
+                            break;
                         }
                     }
+
+                    /* Fill chartPrices_1day. If null values are found, replace them
+                     * with the last non-null value (prevPrice). */
+                    if (priceFound) {
+                        chartPrices_1day.ensureCapacity(numPrices);
+                        for (int i = 0; i < numPrices; i++) {
+                            if (!tradesArr.get(i).toString().equals("null")) {
+                                chartPrices_1day.add(i, parseDouble(tradesArr.get(i).toString()));
+                                prevPrice = chartPrices_1day.get(i); // Update prevPrice
+                            } else {
+                                chartPrices_1day.add(i, prevPrice);
+                            }
+                        }
+                    }
+                } catch (final JSONException jsone) {
+                    Log.e("JSONException", jsone.getLocalizedMessage());
                 }
             }
 
@@ -153,7 +170,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             final LocalDate today = LocalDate.now();
             /* Deduct extra because it doesn't hurt at all, and ensures that the URL we create
              * doesn't incorrectly believe that there isn't enough data for the five year chart. */
-            final LocalDate fiveYearsAgo = today.minusYears(5).minusMonths(1);
+            final LocalDate fiveYearsAgo = today.minusYears(5).minusWeeks(2);
             final int period_5years = (int) ChronoUnit.DAYS.between(fiveYearsAgo, today);
 
             // Pad zeros on the left if necessary
@@ -199,9 +216,12 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                  * So the stock market is open for ~252 days a year. Use this value to approximate
                  * the number of data points that should be in each period. */
                 final int[] PERIODS = {1260, 252, 63, 21, 10};
-                /* Don't get too many data points for longer chart periods because it takes too long
-                 * and is unnecessary. Take no more than 200 data points max in a period. */
-                final int[] PERIOD_INCREMENTS = {8, 2, 1, 1, 1};
+                /* Don't get too many data points for long chart periods because it takes too long
+                 * and is unnecessary. Take no more than 150 data points max in a period. These
+                 * increments mean that for chartPrices for periods greater than 1 day, the list
+                 * will either be empty (not enough data), or have a constant size. The non-empty
+                 * sizes are: [5 year]=140, [1 year]=126, [3 month]=63, [1 month]=21, [2 weeks]=10. */
+                final int[] PERIOD_INCREMENTS = {9, 2, 1, 1, 1};
 
                 /* Charts use the closing price of each day. The closing price is the 5th column
                  * in each table row. */
@@ -235,10 +255,6 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
             /* Get non-chart data. */
             final Element quoteRoot = individualDoc.selectFirst(":root > body[role=document] > div[data-symbol=" + mticker + "]");
-
-            final Element nameElmnt = quoteRoot.selectFirst(":root > div.content-region.region--fixed > div > div.column.column--full.company div.row > h1.company__name");
-            final String name = nameElmnt.text();
-
             final Element intraday = quoteRoot.selectFirst(":root > div.content-region.region--fixed > div.template.template--aside > div > div.element.element--intraday");
             final Element intradayData = intraday.selectFirst(":root > div.intraday__data");
 
@@ -250,6 +266,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 case "premarket": // Individual stock page uses this
                     state = PREMARKET;
                     break;
+                case "countdown to close":
                 case "open":
                     state = OPEN;
                     break;
@@ -496,7 +513,8 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     }
 
     @BindView(R.id.progressBar_individual) ProgressBar mprogressBar;
-    @BindView(R.id.sparkView_individual) SparkView msparkView;
+    @BindView(R.id.textView_scrubTime_individual) TextView mscrubTime;
+    @BindView(R.id.sparkView_individual) CustomSparkView msparkView;
     @BindView(R.id.textView_scrubPrice_individual) TextView mscrubPrice;
     @BindView(R.id.textView_scrubChangePercent_individual) TextView mscrubChangePercent;
     @BindView(R.id.horizontalPicker_chartPeriod_individual) HorizontalPicker mchartPeriodPicker;
@@ -650,6 +668,41 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         mprogressBar.setVisibility(View.GONE);
     }
 
+    /* Called from CustomScrubGestureDetector.onScrubbed(). */
+    @Override
+    public void onScrubbed(final int index) {
+        // Calculate time corresponding to this scrubbing index and the current chart period
+        switch (msparkViewAdapter.getChartPeriod()) {
+            case ONE_DAY: { // Number of data points varies
+                /* There are 78 data points representing the open hours data (9:30am - 4:00pm ET). This
+                 * means that 78 data points represent 6.5 hours. Therefore, there is one data point for
+                 * every 5 minutes. Assume that this 5 minute scale is constant throughout all states. */
+                int minute = index * 5;
+                int hour = 9;
+                if (minute >= 60) {
+                    hour += minute / 60;
+                    minute %= 60;
+                }
+                final boolean isPm = hour >= 12;
+                if (hour > 12) {
+                    hour %= 12;
+                }
+                if (isPm) {
+                    mscrubTime.setText(getString(R.string.int_colon_int2dig_pm_ET, hour, minute));
+                } else {
+                    mscrubTime.setText(getString(R.string.int_colon_int2dig_am_ET, hour, minute));
+                }
+                break;
+            }
+        }
+    }
+
+    /* Called from CustomScrubGestureDetector.onScrubEnded(). */
+    @Override
+    public void onScrubEnded() {
+        mscrubTime.setText(getString(R.string.string, ""));
+    }
+
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -664,6 +717,9 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         mpreferences = PreferenceManager.getDefaultSharedPreferences(this);
         msparkViewAdapter = new SparkViewAdapter(new ArrayList<>()); // Init as empty
         msparkView.setAdapter(msparkViewAdapter);
+        final float touchSlop = ViewConfiguration.get(this).getScaledTouchSlop();
+        msparkView.setOnTouchListener(
+                new CustomScrubGestureDetector(msparkView, this, touchSlop));
         mchartPeriodPicker.setOnItemSelectedListener(this);
         misInFavorites = getIntent().getBooleanExtra("Is in favorites", false);
         mwasInFavoritesInitially = misInFavorites;
@@ -805,6 +861,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
         if (!tickerArr[0].isEmpty()) {
             final ArrayList<String> tickerList = new ArrayList<>(Arrays.asList(tickerArr));
+            Log.d("Data csv", mpreferences.getString("Data CSV", ""));
             final ArrayList<String> dataList = new ArrayList<>(Arrays.asList(
                     mpreferences.getString("Data CSV", "").split(",")));
 
@@ -820,4 +877,5 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             mpreferences.edit().putString("Data CSV", String.join(",", dataList)).apply();
         }
     }
+
 }

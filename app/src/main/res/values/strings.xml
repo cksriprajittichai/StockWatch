@@ -22,8 +22,11 @@
     </string-array>
 
     <string name="string">%1$s</string>
+    <string name="integer">%1$d</string>
     <string name="string_colon_string">%1$s: %2$s</string>
     <string name="double2dec">%1$.2f</string>
+    <string name="int_colon_int2dig_am_ET">%1$d:%2$02dam ET</string>
+    <string name="int_colon_int2dig_pm_ET">%1$d:%2$02dpm ET</string>
     <!--'%' escapes itself-->
     <string name="double2dec_percent">%1$.2f%%</string>
     <string name="dollarSign_double2dec">\u0024%1$.2f</string>

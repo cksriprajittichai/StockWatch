@@ -13,7 +13,7 @@ public final class SparkViewAdapter extends SparkAdapter {
     private AdvancedStock.ChartPeriod mchartPeriod = AdvancedStock.ChartPeriod.ONE_DAY; // Initial period
 
     SparkViewAdapter(final ArrayList<Double> yData) {
-        this.myData = yData;
+        myData = yData;
     }
 
     @Override
@@ -34,7 +34,7 @@ public final class SparkViewAdapter extends SparkAdapter {
 
     /* Does not call notifyDataSetChanged(). */
     public void setyData(final ArrayList<Double> yData) {
-        this.myData = yData;
+        myData = yData;
     }
 
     public AdvancedStock.ChartPeriod getChartPeriod() {
@@ -42,7 +42,7 @@ public final class SparkViewAdapter extends SparkAdapter {
     }
 
     public void setMchartPeriod(final AdvancedStock.ChartPeriod chartPeriod) {
-        this.mchartPeriod = chartPeriod;
+        mchartPeriod = chartPeriod;
     }
 
 }

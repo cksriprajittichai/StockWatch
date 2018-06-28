@@ -96,6 +96,7 @@ public final class MultiStockRequest extends Request<BasicStockList> {
                     curState = PREMARKET;
                     curDataShouldBeCloseData = true;
                     break;
+                case "countdown to close":
                 case "open":
                     curState = OPEN;
                     curDataShouldBeCloseData = false;
