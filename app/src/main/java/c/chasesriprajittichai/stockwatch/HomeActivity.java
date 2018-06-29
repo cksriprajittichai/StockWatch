@@ -29,13 +29,13 @@ import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import c.chasesriprajittichai.stockwatch.listeners.FindStockTaskListener;
-import c.chasesriprajittichai.stockwatch.listeners.StockSwipeLeftListener;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStockList;
 
@@ -47,7 +47,7 @@ import static java.lang.Double.parseDouble;
 
 
 public final class HomeActivity extends AppCompatActivity implements FindStockTaskListener,
-        StockSwipeLeftListener, Response.Listener<BasicStockList>, Response.ErrorListener {
+        Response.Listener<BasicStockList>, Response.ErrorListener {
 
     private static class FindStockTask extends AsyncTask<Void, Integer, Boolean> {
 
@@ -88,14 +88,15 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
     @BindView(R.id.recyclerView_home) RecyclerView mrecyclerView;
 
-    private final BasicStockList mstocks = new BasicStockList();
+    private BasicStockList mstocks;
+    private RecyclerAdapter mrecyclerAdapter;
     private SearchView msearchView;
     private Timer mtimer;
     private SharedPreferences mpreferences;
     private RequestQueue mrequestQueue;
 
-    // Maps tickers to indexes in mstocks.
-    private final HashMap<String, Integer> mtickerToIndexMap = new HashMap<>();
+    // Maps tickers to indexes in mstocks
+    private final Map<String, Integer> mtickerToIndexMap = new HashMap<>();
 
 
     /* Called from FindStockTask.onPostExecute(). */
@@ -114,27 +115,15 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
         }
     }
 
-    /* Called from StockSwipeLeftCallback.onSwipe(). */
-    @Override
-    public void onStockSwipedLeft(final int position) {
-        final RecyclerAdapter adapter = (RecyclerAdapter) mrecyclerView.getAdapter();
-        final String removeTicker = mstocks.get(position).getTicker();
-
-        mstocks.remove(position);
-        mtickerToIndexMap.remove(removeTicker);
-        updateTickerToIndexMap(position);
-
-        adapter.notifyItemRemoved(position);
-    }
-
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
         setTitle("Stock Watch");
         ButterKnife.bind(this);
-        mrequestQueue = Volley.newRequestQueue(this);
         mpreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        mrequestQueue = Volley.newRequestQueue(this);
+        mstocks = new BasicStockList();
 
         /* Starter kit */
 //        fillPreferencesWithRandomStocks(0);
@@ -182,17 +171,19 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
         mrecyclerView.setLayoutManager(new LinearLayoutManager(this));
         mrecyclerView.addItemDecoration(new RecyclerDivider(this));
-        mrecyclerView.setAdapter(new RecyclerAdapter(mstocks, basicStock -> {
+        mrecyclerAdapter = new RecyclerAdapter(mstocks, basicStock -> {
             // Go to individual stock activity
             final Intent intent = new Intent(this, IndividualStockActivity.class);
             intent.putExtra("Ticker", basicStock.getTicker());
             // Equivalent to checking if ticker is in mstocks
             intent.putExtra("Is in favorites", mtickerToIndexMap.containsKey(basicStock.getTicker()));
             startActivity(intent);
-        }));
+        });
+        mrecyclerView.setAdapter(mrecyclerAdapter);
         // Init swipe to delete for mrecyclerView.
-        final StockSwipeLeftCallback stockSwipeLeftCallback = new StockSwipeLeftCallback(this, this);
-        new ItemTouchHelper(stockSwipeLeftCallback).attachToRecyclerView(mrecyclerView);
+        final StockSwipeAndDragCallback stockSwipeAndDragCallback =
+                new StockSwipeAndDragCallback(this, mrecyclerAdapter, mstocks, mtickerToIndexMap);
+        new ItemTouchHelper(stockSwipeAndDragCallback).attachToRecyclerView(mrecyclerView);
     }
 
     @Override
@@ -288,11 +279,12 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
     @Override
     public void onResponse(final BasicStockList updatedStocks) {
         for (final BasicStock s : updatedStocks) {
+            /* Updating the recycler view while dragging disrupts the dragging, causing the
+             * currently dragged item to fall over whatever position is hovers. */
             /* The user could have swipe-deleted curStock in the time that the MultiStockRequest was
-             * executing. If so, mtickerToIndexMap does not contain curTicker, and get() will
-             * return null. */
-            if (mtickerToIndexMap.containsKey(s.getTicker())) {
-                mrecyclerView.getAdapter().notifyItemChanged(mtickerToIndexMap.get(s.getTicker()));
+             * executing. If so, mtickerToIndexMap does not contain curTicker. */
+            if (!mrecyclerAdapter.isDragging() && mtickerToIndexMap.containsKey(s.getTicker())) {
+                mrecyclerAdapter.notifyItemChanged(mtickerToIndexMap.get(s.getTicker()));
             }
         }
     }
@@ -349,14 +341,14 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
                 final Comparator<BasicStock> tickerComparator = Comparator.comparing(BasicStock::getTicker);
                 mstocks.sort(tickerComparator);
                 updateTickerToIndexMap();
-                mrecyclerView.getAdapter().notifyItemRangeChanged(0, mrecyclerView.getAdapter().getItemCount());
+                mrecyclerAdapter.notifyItemRangeChanged(0, mrecyclerAdapter.getItemCount());
                 return true;
             case R.id.menuItem_sortByPrice_home:
                 // Sort by decreasing price
                 final Comparator<BasicStock> descendingPriceComparator = Comparator.comparingDouble(BasicStock::getPrice).reversed();
                 mstocks.sort(descendingPriceComparator);
                 updateTickerToIndexMap();
-                mrecyclerView.getAdapter().notifyItemRangeChanged(0, mrecyclerView.getAdapter().getItemCount());
+                mrecyclerAdapter.notifyItemRangeChanged(0, mrecyclerAdapter.getItemCount());
                 return true;
             case R.id.menuItem_sortByChangePercent_home:
                 // Sort by decreasing magnitude of change percent
@@ -365,23 +357,23 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
                     return Double.compare(Math.abs(b.getChangePercent()), Math.abs(a.getChangePercent()));
                 });
                 updateTickerToIndexMap();
-                mrecyclerView.getAdapter().notifyItemRangeChanged(0, mrecyclerView.getAdapter().getItemCount());
+                mrecyclerAdapter.notifyItemRangeChanged(0, mrecyclerAdapter.getItemCount());
                 return true;
             case R.id.menuItem_sortByState_home:
                 final Comparator<BasicStock> stateComparator = Comparator.comparing(BasicStock::getState);
                 mstocks.sort(stateComparator);
                 updateTickerToIndexMap();
-                mrecyclerView.getAdapter().notifyItemRangeChanged(0, mrecyclerView.getAdapter().getItemCount());
+                mrecyclerAdapter.notifyItemRangeChanged(0, mrecyclerAdapter.getItemCount());
                 return true;
             case R.id.menuItem_shuffle_home:
                 Collections.shuffle(mstocks);
                 updateTickerToIndexMap();
-                mrecyclerView.getAdapter().notifyItemRangeChanged(0, mrecyclerView.getAdapter().getItemCount());
+                mrecyclerAdapter.notifyItemRangeChanged(0, mrecyclerAdapter.getItemCount());
                 return true;
             case R.id.menuItem_flipList_home:
                 Collections.reverse(mstocks);
                 updateTickerToIndexMap();
-                mrecyclerView.getAdapter().notifyItemRangeChanged(0, mrecyclerView.getAdapter().getItemCount());
+                mrecyclerAdapter.notifyItemRangeChanged(0, mrecyclerAdapter.getItemCount());
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -389,6 +381,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
     }
 
     /**
+     * UPDATE COMMENT?
      * This function should be called when a stock is removed by being swiped away. This function
      * updates the indexes in mstocks that a ticker in mtickerToIndexMap maps to. After a swipe
      * deletion, the stocks in range [index of stock removed, size of mstocks] of mstocks need to
@@ -397,7 +390,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
      *
      * @param lastRemovedIndex The index of stock most recently removed.
      */
-    private void updateTickerToIndexMap(final int lastRemovedIndex) {
+    public synchronized void updateTickerToIndexMap(final int lastRemovedIndex) {
         if (lastRemovedIndex >= mstocks.size()) {
             // If the last removed stock was the last stock in mstocks
             return;
@@ -409,12 +402,13 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
     }
 
     /**
+     * UPDATE COMMENT?
      * Updates the indexes in mstocks that a ticker in mtickerToIndexMap maps to. This function
      * clears mtickerToIndexMap and rebuilds it with the current stock indexing of mstocks. This
      * should be called anytime after the indexing of stocks in mstocks changes. This is equivalent
      * to calling updateTickerToIndexMap(0).
      */
-    private synchronized void updateTickerToIndexMap() {
+    public synchronized void updateTickerToIndexMap() {
         mtickerToIndexMap.clear();
         for (int i = 0; i < mstocks.size(); i++) {
             mtickerToIndexMap.put(mstocks.get(i).getTicker(), i);

@@ -2,17 +2,16 @@ package c.chasesriprajittichai.stockwatch;
 
 import com.robinhood.spark.SparkAdapter;
 
-import java.util.ArrayList;
+import java.util.List;
 
 import c.chasesriprajittichai.stockwatch.stocks.AdvancedStock;
 
 public final class SparkViewAdapter extends SparkAdapter {
 
-    private ArrayList<Double> myData;
-
+    private List<Double> myData;
     private AdvancedStock.ChartPeriod mchartPeriod = AdvancedStock.ChartPeriod.ONE_DAY; // Initial period
 
-    SparkViewAdapter(final ArrayList<Double> yData) {
+    SparkViewAdapter(final List<Double> yData) {
         myData = yData;
     }
 
@@ -33,7 +32,7 @@ public final class SparkViewAdapter extends SparkAdapter {
     }
 
     /* Does not call notifyDataSetChanged(). */
-    public void setyData(final ArrayList<Double> yData) {
+    public void setyData(final List<Double> yData) {
         myData = yData;
     }
 

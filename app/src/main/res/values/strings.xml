@@ -23,8 +23,9 @@
 
     <string name="string">%1$s</string>
     <string name="integer">%1$d</string>
-    <string name="string_colon_string">%1$s: %2$s</string>
     <string name="double2dec">%1$.2f</string>
+    <string name="string_colon_string">%1$s: %2$s</string>
+    <string name="string_decimal_20_int2dig">%1$s. 20%2$02d</string>
     <string name="int_colon_int2dig_am_ET">%1$d:%2$02dam ET</string>
     <string name="int_colon_int2dig_pm_ET">%1$d:%2$02dpm ET</string>
     <!--'%' escapes itself-->

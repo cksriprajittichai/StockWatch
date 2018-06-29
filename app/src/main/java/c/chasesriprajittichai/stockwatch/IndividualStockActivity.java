@@ -33,6 +33,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -80,12 +81,14 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 multiDoc = Jsoup.connect("https://www.marketwatch.com/investing/multi?tickers=" + mticker).get();
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
-                final ArrayList<Double> empty = new ArrayList<>();
+                final ArrayList<Double> emptyDouble = new ArrayList<>();
+                final ArrayList<String> emptyString = new ArrayList<>();
                 return new AdvancedStock(OPEN, "", "", -1, -1,
                         -1, -1, -1, -1,
                         -1, -1, "", -1,
                         -1, -1, -1, "", "",
-                        empty, empty, empty, empty, empty, empty);
+                        emptyDouble, emptyDouble, emptyDouble, emptyDouble, emptyDouble, emptyDouble,
+                        emptyString, emptyString, emptyString, emptyString, emptyString);
             }
 
             String name = mticker; // Init as ticker, should change to company name from JSON
@@ -153,12 +156,14 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 individualDoc = Jsoup.connect("https://www.marketwatch.com/investing/stock/" + mticker).get();
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
-                final ArrayList<Double> empty = new ArrayList<>();
+                final ArrayList<Double> emptyDouble = new ArrayList<>();
+                final ArrayList<String> emptyString = new ArrayList<>();
                 return new AdvancedStock(OPEN, "", "", -1, -1,
                         -1, -1, -1, -1,
                         -1, -1, "", -1,
                         -1, -1, -1, "", "",
-                        empty, empty, empty, empty, empty, empty);
+                        emptyDouble, emptyDouble, emptyDouble, emptyDouble, emptyDouble, emptyDouble,
+                        emptyString, emptyString, emptyString, emptyString, emptyString);
             }
 
             /* Get chart data for periods greater than one day from Wall Street Journal. */
@@ -191,13 +196,20 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     mticker, mticker, wsj_exchangeCountry, wsj_exchange, wsj_instrumentType,
                     period_5years, period_5years, wsj_5yearsAgoDateStr, wsj_todayDateStr);
 
-            final ArrayList<Double> chartPrices_5years = new ArrayList<>();
-            final ArrayList<Double> chartPrices_1year = new ArrayList<>();
-            final ArrayList<Double> chartPrices_3months = new ArrayList<>();
-            final ArrayList<Double> chartPrices_1month = new ArrayList<>();
-            final ArrayList<Double> chartPrices_2weeks = new ArrayList<>();
-            final List<ArrayList<Double>> chartPricesList = new ArrayList<>(Arrays.asList(
+            final List<Double> chartPrices_5years = new ArrayList<>();
+            final List<Double> chartPrices_1year = new ArrayList<>();
+            final List<Double> chartPrices_3months = new ArrayList<>();
+            final List<Double> chartPrices_1month = new ArrayList<>();
+            final List<Double> chartPrices_2weeks = new ArrayList<>();
+            final List<List<Double>> chartPricesList = new ArrayList<>(Arrays.asList(
                     chartPrices_5years, chartPrices_1year, chartPrices_3months, chartPrices_1month, chartPrices_2weeks));
+            final List<String> chartDates_5years = new ArrayList<>();
+            final List<String> chartDates_1year = new ArrayList<>();
+            final List<String> chartDates_3months = new ArrayList<>();
+            final List<String> chartDates_1month = new ArrayList<>();
+            final List<String> chartDates_2weeks = new ArrayList<>();
+            final List<List<String>> chartDatesList = new ArrayList<>(Arrays.asList(
+                    chartDates_5years, chartDates_1year, chartDates_3months, chartDates_1month, chartDates_2weeks));
 
             Document fiveYearDoc = null;
             // Loop and fill chart prices for each chart period
@@ -209,7 +221,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             }
 
             if (fiveYearDoc != null) {
-                int i, periodNdx;
+                int reverseNdx, periodNdx, i;
 
                 /* This is the number of data points needed for each period. The stock market is
                  * only open on weekdays, and there are 9 holidays that the stock market closes for.
@@ -223,30 +235,35 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                  * sizes are: [5 year]=140, [1 year]=126, [3 month]=63, [1 month]=21, [2 weeks]=10. */
                 final int[] PERIOD_INCREMENTS = {9, 2, 1, 1, 1};
 
-                /* Charts use the closing price of each day. The closing price is the 5th column
-                 * in each table row. */
-                final Elements priceElmnts = fiveYearDoc.select(":root > body > div > div#historical_data_table > div > table > tbody > tr > :eq(4)");
-                final int NUM_DATA_POINTS = priceElmnts.size() <= 1260 ? priceElmnts.size() : 1260;
-                final ArrayList<Double> allChartPrices = new ArrayList<>(NUM_DATA_POINTS);
+                final Elements rowElmnts = fiveYearDoc.select(":root > body > div > div#historical_data_table > div > table > tbody > tr");
+                final int NUM_DATA_POINTS = rowElmnts.size() <= 1260 ? rowElmnts.size() : 1260;
+                final double[] allChartPrices = new double[NUM_DATA_POINTS];
+                final String[] allChartDates = new String[NUM_DATA_POINTS];
 
-                /* The most recent prices are at the top of the WSJ page (top of tableRows), and
+                /* The most recent prices are at the top of the WSJ page (top of the HTML table), and
                  * the oldest prices are at the bottom. Fill allChartPrices starting with the last
                  * price elements so that the oldest prices are the front of allPrices and the
-                 * recent prices are at the end. */
-                for (i = NUM_DATA_POINTS - 1; i >= 0; i--) {
-                    allChartPrices.add(parseDouble(priceElmnts.get(i).text()));
+                 * recent prices are at the end. Do the same for allChartTimes. */
+                for (i = 0, reverseNdx = NUM_DATA_POINTS - 1; reverseNdx >= 0; i++, reverseNdx--) {
+                    /* Charts use the closing price of each day. The closing price is the 5th column
+                     * in each row. The date is the 1st column in each row. */
+                    allChartPrices[i] = parseDouble(rowElmnts.get(reverseNdx).selectFirst(":root > :eq(4)").text());
+                    allChartDates[i] = rowElmnts.get(reverseNdx).selectFirst(":root > :eq(0)").text();
                 }
 
-                /* Fill chartPrices for each period. If there is not enough data to represent a full
-                 * period, then leave that period's chartPrice empty. */
-                ArrayList<Double> curChartPrices;
+                /* Fill chartPrices and chartDates for each period. If there is not enough data to
+                 * represent a full period, then leave that period's chartPrices and chartDates empty. */
+                List<Double> curChartPrices;
+                List<String> curChartDates;
                 for (periodNdx = 0; periodNdx < chartPricesList.size(); periodNdx++) {
                     if (PERIODS[periodNdx] <= NUM_DATA_POINTS) {
                         // If there are enough data points to fill this period
 
                         curChartPrices = chartPricesList.get(periodNdx);
-                        for (i = NUM_DATA_POINTS - PERIODS[periodNdx]; i < NUM_DATA_POINTS; i += PERIOD_INCREMENTS[periodNdx]) {
-                            curChartPrices.add(allChartPrices.get(i));
+                        curChartDates = chartDatesList.get(periodNdx);
+                        for (reverseNdx = NUM_DATA_POINTS - PERIODS[periodNdx]; reverseNdx < NUM_DATA_POINTS; reverseNdx += PERIOD_INCREMENTS[periodNdx]) {
+                            curChartPrices.add(allChartPrices[reverseNdx]);
+                            curChartDates.add(allChartDates[reverseNdx]);
                         }
                     }
                 }
@@ -474,14 +491,16 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                             dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh, marketCap,
                             beta, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
                             chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
-                            chartPrices_5years);
+                            chartPrices_5years, chartDates_2weeks, chartDates_1month, chartDates_3months,
+                            chartDates_1year, chartDates_5years);
                     break;
                 case OPEN:
                     ret = new AdvancedStock(state, mticker, name, price, changePoint, changePercent,
                             openPrice, dayRangeLow, dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh,
                             marketCap, beta, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
                             chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
-                            chartPrices_5years);
+                            chartPrices_5years, chartDates_2weeks, chartDates_1month, chartDates_3months,
+                            chartDates_1year, chartDates_5years);
                     break;
                 case AFTER_HOURS:
                     ret = new AfterHoursStock(state, mticker, name, price, changePoint, changePercent,
@@ -489,14 +508,16 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                             dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh, marketCap,
                             beta, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
                             chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
-                            chartPrices_5years);
+                            chartPrices_5years, chartDates_2weeks, chartDates_1month, chartDates_3months,
+                            chartDates_1year, chartDates_5years);
                     break;
                 case CLOSED:
                     ret = new AdvancedStock(state, mticker, name, price, changePoint, changePercent,
                             openPrice, dayRangeLow, dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh,
                             marketCap, beta, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
                             chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
-                            chartPrices_5years);
+                            chartPrices_5years, chartDates_2weeks, chartDates_1month, chartDates_3months,
+                            chartDates_1year, chartDates_5years);
                     break;
                 default:
                     ret = null;
@@ -548,7 +569,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
     /* Called from DownloadStockDataTask.onPostExecute(). */
     @Override
-    public void onDownloadIndividualStockTaskCompleted(final AdvancedStock stock, final HashSet missingStats) {
+    public void onDownloadIndividualStockTaskCompleted(final AdvancedStock stock, final Set<String> missingStats) {
         mstock = stock;
 
         if (!getTitle().equals(mstock.getName())) {
@@ -673,10 +694,11 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     public void onScrubbed(final int index) {
         // Calculate time corresponding to this scrubbing index and the current chart period
         switch (msparkViewAdapter.getChartPeriod()) {
-            case ONE_DAY: { // Number of data points varies
+            case ONE_DAY: {
                 /* There are 78 data points representing the open hours data (9:30am - 4:00pm ET). This
                  * means that 78 data points represent 6.5 hours. Therefore, there is one data point for
-                 * every 5 minutes. Assume that this 5 minute scale is constant throughout all states. */
+                 * every 5 minutes. This 5 minute step size is constant throughout all states. The
+                 * number of data points is dependent on the time of day. */
                 int minute = index * 5;
                 int hour = 9;
                 if (minute >= 60) {
@@ -694,6 +716,21 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 }
                 break;
             }
+            case TWO_WEEKS:
+                mscrubTime.setText(getString(R.string.string, mstock.getDates_2weeks().get(index)));
+                break;
+            case ONE_MONTH:
+                mscrubTime.setText(getString(R.string.string, mstock.getDates_1month().get(index)));
+                break;
+            case THREE_MONTHS:
+                mscrubTime.setText(getString(R.string.string, mstock.getDates_3months().get(index)));
+                break;
+            case ONE_YEAR:
+                mscrubTime.setText(getString(R.string.string, mstock.getDates_1year().get(index)));
+                break;
+            case FIVE_YEARS:
+                mscrubTime.setText(getString(R.string.string, mstock.getDates_5years().get(index)));
+                break;
         }
     }
 

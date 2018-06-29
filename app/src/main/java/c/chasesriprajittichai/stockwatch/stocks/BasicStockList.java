@@ -14,7 +14,7 @@ public final class BasicStockList extends ArrayList<BasicStock> {
         super(initialCapacity);
     }
 
-    public BasicStockList(Collection<BasicStock> c) {
+    public BasicStockList(final Collection<BasicStock> c) {
         super(c);
     }
 
@@ -31,12 +31,12 @@ public final class BasicStockList extends ArrayList<BasicStock> {
      * @return A CSV string of the data of the stocks in mstocks.
      */
     public String getStockDataAsCSV() {
-        final ArrayList<BasicStock.State> states = getStockStates();
-        final ArrayList<Double> prices = getStockPrices();
-        final ArrayList<Double> changePoints = getStockChangePoints();
-        final ArrayList<Double> changePercents = getStockChangePercents();
+        final List<BasicStock.State> states = getStockStates();
+        final List<Double> prices = getStockPrices();
+        final List<Double> changePoints = getStockChangePoints();
+        final List<Double> changePercents = getStockChangePercents();
 
-        final ArrayList<String> data = new ArrayList<>(size());
+        final List<String> data = new ArrayList<>(size());
         for (int i = 0; i < size(); i++) {
             data.add(states.get(i).toString() + ',' + prices.get(i) + ',' +
                     changePoints.get(i) + ',' + changePercents.get(i));
@@ -45,40 +45,40 @@ public final class BasicStockList extends ArrayList<BasicStock> {
         return String.join(",", data);
     }
 
-    private ArrayList<BasicStock.State> getStockStates() {
-        final ArrayList<BasicStock.State> states = new ArrayList<>(size());
+    private List<BasicStock.State> getStockStates() {
+        final List<BasicStock.State> states = new ArrayList<>(size());
         for (final BasicStock s : this) {
             states.add(s.getState());
         }
         return states;
     }
 
-    public ArrayList<String> getStockTickers() {
-        final ArrayList<String> tickers = new ArrayList<>(size());
+    public List<String> getStockTickers() {
+        final List<String> tickers = new ArrayList<>(size());
         for (final BasicStock s : this) {
             tickers.add(s.getTicker());
         }
         return tickers;
     }
 
-    private ArrayList<Double> getStockPrices() {
-        final ArrayList<Double> prices = new ArrayList<>(size());
+    private List<Double> getStockPrices() {
+        final List<Double> prices = new ArrayList<>(size());
         for (final BasicStock s : this) {
             prices.add(s.getPrice());
         }
         return prices;
     }
 
-    private ArrayList<Double> getStockChangePoints() {
-        final ArrayList<Double> changePoints = new ArrayList<>(size());
+    private List<Double> getStockChangePoints() {
+        final List<Double> changePoints = new ArrayList<>(size());
         for (final BasicStock s : this) {
             changePoints.add(s.getChangePoint());
         }
         return changePoints;
     }
 
-    private ArrayList<Double> getStockChangePercents() {
-        final ArrayList<Double> changePercents = new ArrayList<>(size());
+    private List<Double> getStockChangePercents() {
+        final List<Double> changePercents = new ArrayList<>(size());
         for (final BasicStock s : this) {
             changePercents.add(s.getChangePercent());
         }

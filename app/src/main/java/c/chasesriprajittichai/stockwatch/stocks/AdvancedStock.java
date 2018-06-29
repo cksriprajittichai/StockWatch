@@ -1,6 +1,6 @@
 package c.chasesriprajittichai.stockwatch.stocks;
 
-import java.util.ArrayList;
+import java.util.List;
 
 public class AdvancedStock extends BasicStock {
 
@@ -19,12 +19,17 @@ public class AdvancedStock extends BasicStock {
     private final double myield;
     private final String mavgVolume;
     private final String mdescription;
-    private final ArrayList<Double> myData_1day;
-    private final ArrayList<Double> myData_2weeks;
-    private final ArrayList<Double> myData_1month;
-    private final ArrayList<Double> myData_3months;
-    private final ArrayList<Double> myData_1year;
-    private final ArrayList<Double> myData_5years;
+    private final List<Double> myData_1day;
+    private final List<Double> myData_2weeks;
+    private final List<Double> myData_1month;
+    private final List<Double> myData_3months;
+    private final List<Double> myData_1year;
+    private final List<Double> myData_5years;
+    private final List<String> mdates_2weeks;
+    private final List<String> mdates_1month;
+    private final List<String> mdates_3months;
+    private final List<String> mdates_1year;
+    private final List<String> mdates_5years;
 
     public AdvancedStock(final State state, final String ticker, final String name,
                          final double price, final double changePoint, final double changePercent,
@@ -32,10 +37,12 @@ public class AdvancedStock extends BasicStock {
                          final double fiftyTwoWeekRangeLow, final double fiftyTwoWeekRangeHigh,
                          final String marketCap, final double beta, final double peRatio,
                          final double eps, final double yield, final String averageVolume,
-                         final String description, final ArrayList<Double> yData_1day,
-                         final ArrayList<Double> yData_2weeks, final ArrayList<Double> yData_1month,
-                         final ArrayList<Double> yData_3months, final ArrayList<Double> yData_1year,
-                         final ArrayList<Double> yData_5years) {
+                         final String description, final List<Double> yData_1day,
+                         final List<Double> yData_2weeks, final List<Double> yData_1month,
+                         final List<Double> yData_3months, final List<Double> yData_1year,
+                         final List<Double> yData_5years, final List<String> dates_2weeks,
+                         final List<String> dates_1month, final List<String> dates_3months,
+                         final List<String> dates_1year, final List<String> dates_5years) {
         super(state, ticker, price, changePoint, changePercent);
         mname = name;
         mopenPrice = openPrice;
@@ -56,6 +63,11 @@ public class AdvancedStock extends BasicStock {
         myData_3months = yData_3months;
         myData_1year = yData_1year;
         myData_5years = yData_5years;
+        mdates_2weeks = dates_2weeks;
+        mdates_1month = dates_1month;
+        mdates_3months = dates_3months;
+        mdates_1year = dates_1year;
+        mdates_5years = dates_5years;
     }
 
     public String getName() {
@@ -110,28 +122,48 @@ public class AdvancedStock extends BasicStock {
         return mdescription;
     }
 
-    public ArrayList<Double> getYData_1day() {
+    public List<Double> getYData_1day() {
         return myData_1day;
     }
 
-    public ArrayList<Double> getYData_2weeks() {
+    public List<Double> getYData_2weeks() {
         return myData_2weeks;
     }
 
-    public ArrayList<Double> getYData_1month() {
+    public List<Double> getYData_1month() {
         return myData_1month;
     }
 
-    public ArrayList<Double> getYData_3months() {
+    public List<Double> getYData_3months() {
         return myData_3months;
     }
 
-    public ArrayList<Double> getYData_1year() {
+    public List<Double> getYData_1year() {
         return myData_1year;
     }
 
-    public ArrayList<Double> getYData_5years() {
+    public List<Double> getYData_5years() {
         return myData_5years;
+    }
+
+    public List<String> getDates_2weeks() {
+        return mdates_2weeks;
+    }
+
+    public List<String> getDates_1month() {
+        return mdates_1month;
+    }
+
+    public List<String> getDates_3months() {
+        return mdates_3months;
+    }
+
+    public List<String> getDates_1year() {
+        return mdates_1year;
+    }
+
+    public List<String> getDates_5years() {
+        return mdates_5years;
     }
 
 }

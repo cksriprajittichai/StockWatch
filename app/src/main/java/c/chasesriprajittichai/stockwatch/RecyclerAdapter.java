@@ -8,10 +8,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Locale;
 
 import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
+import c.chasesriprajittichai.stockwatch.stocks.BasicStockList;
 
 
 public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.ViewHolder> {
@@ -59,12 +60,24 @@ public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.
         }
     }
 
-    private ArrayList<BasicStock> mstocks;
-    private OnItemClickListener monItemClickListener;
+    private final BasicStockList mstocks;
+    private final OnItemClickListener monItemClickListener;
+    private boolean isDragging;
 
-    RecyclerAdapter(final ArrayList<BasicStock> stocks, final OnItemClickListener listener) {
-        this.mstocks = stocks;
-        this.monItemClickListener = listener;
+    RecyclerAdapter(final BasicStockList stocks, final OnItemClickListener listener) {
+        mstocks = stocks;
+        monItemClickListener = listener;
+        isDragging = false;
+    }
+
+    public void remove(final int position) {
+        mstocks.remove(position);
+        notifyItemRemoved(position);
+    }
+
+    public void swap(final int firstPosition, final int secondPosition) {
+        Collections.swap(mstocks, firstPosition, secondPosition);
+        notifyItemMoved(firstPosition, secondPosition);
     }
 
     @NonNull
@@ -85,6 +98,14 @@ public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.
     @Override
     public int getItemCount() {
         return mstocks.size();
+    }
+
+    public boolean isDragging() {
+        return isDragging;
+    }
+
+    public void setDragging(boolean dragging) {
+        isDragging = dragging;
     }
 
 }

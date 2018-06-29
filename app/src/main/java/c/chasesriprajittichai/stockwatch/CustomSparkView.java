@@ -14,19 +14,19 @@ import com.robinhood.spark.SparkView;
  */
 public final class CustomSparkView extends SparkView implements CustomScrubGestureDetector.ScrubListener {
 
-    public CustomSparkView(Context context) {
+    public CustomSparkView(final Context context) {
         super(context);
     }
 
-    public CustomSparkView(Context context, AttributeSet attrs) {
+    public CustomSparkView(final Context context, final AttributeSet attrs) {
         super(context, attrs);
     }
 
-    public CustomSparkView(Context context, AttributeSet attrs, int defStyleAttr) {
+    public CustomSparkView(final Context context, final AttributeSet attrs, final int defStyleAttr) {
         super(context, attrs, defStyleAttr);
     }
 
-    public CustomSparkView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
+    public CustomSparkView(final Context context, final AttributeSet attrs, final int defStyleAttr, final int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
     }
 
