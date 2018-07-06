@@ -1,4 +1,4 @@
-package c.chasesriprajittichai.stockwatch;
+package c.chasesriprajittichai.stockwatch.recyclerview;
 
 import android.graphics.Color;
 import android.support.annotation.NonNull;
@@ -11,6 +11,9 @@ import android.widget.TextView;
 import java.util.Collections;
 import java.util.Locale;
 
+import butterknife.BindView;
+import butterknife.ButterKnife;
+import c.chasesriprajittichai.stockwatch.R;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStockList;
 
@@ -31,10 +34,10 @@ public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.
         ViewHolder(final View v) {
             super(v);
 
-            mstateTextView = v.findViewById(R.id.textView_state_homeRecyclerItem);
-            mtickerTextView = v.findViewById(R.id.textView_ticker_homeRecyclerItem);
-            mpriceTextView = v.findViewById(R.id.textView_price_homeRecyclerItem);
-            mchangePercentTextView = v.findViewById(R.id.textView_changePercent_homeRecyclerItem);
+            mstateTextView = (TextView) v.findViewById(R.id.textView_state_homeRecyclerItem);
+            mtickerTextView = (TextView) v.findViewById(R.id.textView_ticker_homeRecyclerItem);
+            mpriceTextView = (TextView) v.findViewById(R.id.textView_price_homeRecyclerItem);
+            mchangePercentTextView = (TextView) v.findViewById(R.id.textView_changePercent_homeRecyclerItem);
         }
 
         void bind(final BasicStock stock, final OnItemClickListener listener) {
@@ -64,7 +67,7 @@ public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.
     private final OnItemClickListener monItemClickListener;
     private boolean isDragging;
 
-    RecyclerAdapter(final BasicStockList stocks, final OnItemClickListener listener) {
+    public RecyclerAdapter(final BasicStockList stocks, final OnItemClickListener listener) {
         mstocks = stocks;
         monItemClickListener = listener;
         isDragging = false;

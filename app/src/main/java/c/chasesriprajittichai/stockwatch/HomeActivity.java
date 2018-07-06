@@ -9,6 +9,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -36,6 +37,9 @@ import java.util.TimerTask;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import c.chasesriprajittichai.stockwatch.listeners.FindStockTaskListener;
+import c.chasesriprajittichai.stockwatch.recyclerview.RecyclerAdapter;
+import c.chasesriprajittichai.stockwatch.recyclerview.RecyclerDivider;
+import c.chasesriprajittichai.stockwatch.recyclerview.StockSwipeAndDragCallback;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStockList;
 
@@ -432,11 +436,11 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
         }
 
         if (usingMaxSize) {
-            mpreferences.edit().putString("Tickers CSV", String.join(",", tickerArr)).apply();
+            mpreferences.edit().putString("Tickers CSV", TextUtils.join(",", tickerArr)).apply();
         } else {
             final String[] subTickerArr = new String[size];
             System.arraycopy(tickerArr, 0, subTickerArr, 0, size);
-            mpreferences.edit().putString("Tickers CSV", String.join(",", subTickerArr)).apply();
+            mpreferences.edit().putString("Tickers CSV", TextUtils.join(",", subTickerArr)).apply();
         }
 
         final String[] dataArr = new String[4 * size];
@@ -446,7 +450,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
             dataArr[i + 2] = "-1";
             dataArr[i + 3] = "-1";
         }
-        mpreferences.edit().putString("Data CSV", String.join(",", dataArr)).apply();
+        mpreferences.edit().putString("Data CSV", TextUtils.join(",", dataArr)).apply();
     }
 
 }

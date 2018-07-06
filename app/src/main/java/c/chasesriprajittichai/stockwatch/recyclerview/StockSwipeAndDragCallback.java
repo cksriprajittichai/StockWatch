@@ -1,4 +1,4 @@
-package c.chasesriprajittichai.stockwatch;
+package c.chasesriprajittichai.stockwatch.recyclerview;
 
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -11,6 +11,9 @@ import android.view.View;
 
 import java.util.Map;
 
+import c.chasesriprajittichai.stockwatch.HomeActivity;
+import c.chasesriprajittichai.stockwatch.R;
+import c.chasesriprajittichai.stockwatch.recyclerview.RecyclerAdapter;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStockList;
 
 public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallback {
@@ -27,7 +30,7 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
     private final int garbageMargin;
     private final int whiteMarginSize = 4;
 
-    StockSwipeAndDragCallback(final HomeActivity homeActivity, final RecyclerAdapter recyclerAdapter,
+    public StockSwipeAndDragCallback(final HomeActivity homeActivity, final RecyclerAdapter recyclerAdapter,
                               final BasicStockList stocks, final Map<String, Integer> tickerToIndexMap) {
         super(0, ItemTouchHelper.LEFT | ItemTouchHelper.DOWN | ItemTouchHelper.UP);
         mhomeActivity = homeActivity;

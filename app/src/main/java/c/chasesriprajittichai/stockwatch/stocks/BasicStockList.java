@@ -1,5 +1,7 @@
 package c.chasesriprajittichai.stockwatch.stocks;
 
+import android.text.TextUtils;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -22,7 +24,7 @@ public final class BasicStockList extends ArrayList<BasicStock> {
      * @return A CSV string of the tickers of the stocks in mstocks.
      */
     public String getStockTickersAsCSV() {
-        return String.join(",", getStockTickers());
+        return TextUtils.join(",", getStockTickers());
     }
 
     /**
@@ -42,7 +44,7 @@ public final class BasicStockList extends ArrayList<BasicStock> {
                     changePoints.get(i) + ',' + changePercents.get(i));
         }
 
-        return String.join(",", data);
+        return TextUtils.join(",", data);
     }
 
     private List<BasicStock.State> getStockStates() {

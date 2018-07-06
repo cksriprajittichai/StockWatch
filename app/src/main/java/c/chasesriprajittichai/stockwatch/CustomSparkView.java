@@ -2,9 +2,10 @@ package c.chasesriprajittichai.stockwatch;
 
 import android.content.Context;
 import android.util.AttributeSet;
-import android.util.Log;
 
 import com.robinhood.spark.SparkView;
+
+import c.chasesriprajittichai.stockwatch.recyclerview.CustomScrubGestureDetector;
 
 /**
  * This is a wrapper class for com.robinhood.spark.SparkView that implements

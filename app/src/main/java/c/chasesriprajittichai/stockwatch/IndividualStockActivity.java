@@ -6,6 +6,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -14,6 +15,7 @@ import android.view.ViewConfiguration;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import com.jakewharton.threetenabp.AndroidThreeTen;
 import com.wefika.horizontalpicker.HorizontalPicker;
 
 import org.json.JSONArray;
@@ -23,11 +25,11 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.threeten.bp.LocalDate;
+import org.threeten.bp.temporal.ChronoUnit;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -38,6 +40,7 @@ import java.util.Set;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import c.chasesriprajittichai.stockwatch.listeners.DownloadIndividualStockTaskListener;
+import c.chasesriprajittichai.stockwatch.recyclerview.CustomScrubGestureDetector;
 import c.chasesriprajittichai.stockwatch.stocks.AdvancedStock;
 import c.chasesriprajittichai.stockwatch.stocks.AfterHoursStock;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
@@ -695,11 +698,11 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         // Calculate time corresponding to this scrubbing index and the current chart period
         switch (msparkViewAdapter.getChartPeriod()) {
             case ONE_DAY: {
-                /* There are 78 data points representing the open hours data (9:30am - 4:00pm ET). This
-                 * means that 78 data points represent 6.5 hours. Therefore, there is one data point for
-                 * every 5 minutes. This 5 minute step size is constant throughout all states. The
-                 * number of data points is dependent on the time of day. */
-                int minute = index * 5;
+                /* There are 78 data points representing the open hours data (9:30am - 4:00pm ET).
+                 * This means that 78 data points represent 6.5 hours. Therefore, there is one data
+                 * point for every 5 minutes. This 5 minute step size is constant throughout all
+                 * states. The number of data points is dependent on the time of day. */
+                int minute = 30 + (index * 5);
                 int hour = 9;
                 if (minute >= 60) {
                     hour += minute / 60;
@@ -751,6 +754,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         // Start task ASAP
         new DownloadStockDataTask(mticker, this).execute();
 
+        AndroidThreeTen.init(this); // Init, timezone not actually used
         mpreferences = PreferenceManager.getDefaultSharedPreferences(this);
         msparkViewAdapter = new SparkViewAdapter(new ArrayList<>()); // Init as empty
         msparkView.setAdapter(msparkViewAdapter);
@@ -904,14 +908,14 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
             final int tickerNdx = tickerList.indexOf(mstock.getTicker());
             tickerList.remove(tickerNdx);
-            mpreferences.edit().putString("Tickers CSV", String.join(",", tickerList)).apply();
+            mpreferences.edit().putString("Tickers CSV", TextUtils.join(",", tickerList)).apply();
 
             // 4 data elements per 1 ticker. DataNdx is the index of the first element to delete.
             final int dataNdx = tickerNdx * 4;
             for (int deleteCount = 1; deleteCount <= 4; deleteCount++) { // Delete 4 data elements
                 dataList.remove(dataNdx);
             }
-            mpreferences.edit().putString("Data CSV", String.join(",", dataList)).apply();
+            mpreferences.edit().putString("Data CSV", TextUtils.join(",", dataList)).apply();
         }
     }
 

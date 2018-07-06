@@ -1,4 +1,4 @@
-package c.chasesriprajittichai.stockwatch;
+package c.chasesriprajittichai.stockwatch.recyclerview;
 
 import android.os.Handler;
 import android.view.MotionEvent;
@@ -6,6 +6,8 @@ import android.view.View;
 
 import java.util.Collections;
 import java.util.List;
+
+import c.chasesriprajittichai.stockwatch.CustomSparkView;
 
 /**
  * This class is modeled after com.robinhood.spark.ScrubGestureDetector.
@@ -67,7 +69,7 @@ public final class CustomScrubGestureDetector implements View.OnTouchListener {
         }
     };
 
-    CustomScrubGestureDetector(final CustomSparkView customSparkView,
+    public CustomScrubGestureDetector(final CustomSparkView customSparkView,
                                final CustomScrubGestureDetector.ScrubIndexListener scrubIndexListener,
                                final float touchSlop) {
         msparkView = customSparkView;
@@ -149,13 +151,13 @@ public final class CustomScrubGestureDetector implements View.OnTouchListener {
         return index;
     }
 
-    interface ScrubListener {
+    public interface ScrubListener {
         void onScrubbed(final float x, final float y);
 
         void onScrubEnded();
     }
 
-    interface ScrubIndexListener {
+    public interface ScrubIndexListener {
         // Called at same time as ScrubListener.onScrubbed().
         void onScrubbed(final int index);
 
