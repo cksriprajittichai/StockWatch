@@ -63,9 +63,9 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
         private final String mticker;
 
-        /* It is quite common that a stock's stat is missing. If this is the case, "n/a" replaces
-         * the value that should be there, or in rarer cases, there is an empty string replacing
-         * the value that should be there. */
+        /* It is common that a stock's stat is missing. If this is the case, "n/a" replaces the
+         * value that should be there, or in rarer cases, there is an empty string replacing the
+         * value that should be there. */
         private final HashSet<String> missingStats = new HashSet<>();
 
         private final WeakReference<DownloadIndividualStockTaskListener> mcompletionListener;
@@ -123,28 +123,47 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     final JSONArray tradesArr = sessionsNdxZero.getJSONArray("Trades");
                     final int numPrices = tradesArr.length();
 
-                    /* Init prevPrice as first non-null value. Null values do not
-                     * correlate to anything about the data. */
-                    double prevPrice = -1;
-                    boolean priceFound = false;
-                    for (int i = 1; i < numPrices; i++) {
-                        if (tradesArr.get(i).toString().equals("null") && !tradesArr.get(i - 1).toString().equals("null")) {
-                            prevPrice = parseDouble(tradesArr.get(i - 1).toString());
-                            priceFound = true;
-                            break;
-                        }
-                    }
-
-                    /* Fill chartPrices_1day. If null values are found, replace them
-                     * with the last non-null value (prevPrice). */
-                    if (priceFound) {
+                    /* Fill chartPrices_1day. If null values are found, replace them with the last
+                     * non-null value. If the first value is null, replace it with the
+                     * first non-null value. */
+                    if (tradesArr.length() > 0) {
                         chartPrices_1day.ensureCapacity(numPrices);
-                        for (int i = 0; i < numPrices; i++) {
+
+                        /* Init as out of bounds. If firstNonNullNdx is never changed to an index in
+                         * bounds, then all values in tradesArr are null. */
+                        int firstNonNullNdx = numPrices;
+
+                        // Find firstNonNullNdx and fill chartPrices up through firstNonNullNdx
+                        /* After this if/else statement, chartPrices is filled with non-null values
+                         * up through firstNonNullNdx. */
+                        if (tradesArr.get(0).toString().equals("null")) {
+                            for (int i = 1; i < numPrices; i++) { // Redundant to check index 0
+                                if (!tradesArr.get(i).toString().equals("null")) {
+                                    firstNonNullNdx = i;
+
+                                    /* The first non-null value has been found. The indexes <
+                                     * firstNonNullNdx have null values and therefore should be
+                                     * replaced with the first non-null value (firstNonNullValue)
+                                     * which is at firstNonNullNdx. */
+                                    final double firstNonNullValue = parseDouble(tradesArr.get(firstNonNullNdx).toString());
+                                    while (i >= 0) {
+                                        chartPrices_1day.add(firstNonNullValue);
+                                        i--;
+                                    }
+                                    break;
+                                }
+                            }
+                        } else {
+                            firstNonNullNdx = 0;
+                            chartPrices_1day.add(parseDouble(tradesArr.get(0).toString()));
+                        }
+
+                        // Fill chartPrices for the indexes after firstNonNullNdx
+                        for (int i = firstNonNullNdx + 1; i < numPrices; i++) {
                             if (!tradesArr.get(i).toString().equals("null")) {
-                                chartPrices_1day.add(i, parseDouble(tradesArr.get(i).toString()));
-                                prevPrice = chartPrices_1day.get(i); // Update prevPrice
+                                chartPrices_1day.add(parseDouble(tradesArr.get(i).toString()));
                             } else {
-                                chartPrices_1day.add(i, prevPrice);
+                                chartPrices_1day.add(chartPrices_1day.get(i - 1));
                             }
                         }
                     }
