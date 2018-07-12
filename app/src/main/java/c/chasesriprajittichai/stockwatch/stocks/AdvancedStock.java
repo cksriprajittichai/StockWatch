@@ -1,10 +1,18 @@
 package c.chasesriprajittichai.stockwatch.stocks;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class AdvancedStock extends BasicStock {
 
     public enum ChartPeriod {ONE_DAY, TWO_WEEKS, ONE_MONTH, THREE_MONTHS, ONE_YEAR, FIVE_YEARS}
+
+    public static AdvancedStock ERROR_AdvancedStock = new AdvancedStock(State.ERROR, "",
+            "", 0, 0, 0, 0, 0, 0,
+            0, 0, "", 0, 0, 0,
+            0, "", "", new ArrayList<>(), new ArrayList<>(), new ArrayList<>(),
+            new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(),
+            new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
 
     private final String mname;
     private final double mopenPrice;

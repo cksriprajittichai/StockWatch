@@ -48,6 +48,7 @@ import c.chasesriprajittichai.stockwatch.stocks.PremarketStock;
 
 import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.AFTER_HOURS;
 import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.CLOSED;
+import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.ERROR;
 import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.OPEN;
 import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.PREMARKET;
 import static java.lang.Double.parseDouble;
@@ -84,14 +85,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 multiDoc = Jsoup.connect("https://www.marketwatch.com/investing/multi?tickers=" + mticker).get();
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
-                final ArrayList<Double> emptyDouble = new ArrayList<>();
-                final ArrayList<String> emptyString = new ArrayList<>();
-                return new AdvancedStock(OPEN, "", "", -1, -1,
-                        -1, -1, -1, -1,
-                        -1, -1, "", -1,
-                        -1, -1, -1, "", "",
-                        emptyDouble, emptyDouble, emptyDouble, emptyDouble, emptyDouble, emptyDouble,
-                        emptyString, emptyString, emptyString, emptyString, emptyString);
+                return AdvancedStock.ERROR_AdvancedStock;
             }
 
             String name = mticker; // Init as ticker, should change to company name from JSON
@@ -178,14 +172,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 individualDoc = Jsoup.connect("https://www.marketwatch.com/investing/stock/" + mticker).get();
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
-                final ArrayList<Double> emptyDouble = new ArrayList<>();
-                final ArrayList<String> emptyString = new ArrayList<>();
-                return new AdvancedStock(OPEN, "", "", -1, -1,
-                        -1, -1, -1, -1,
-                        -1, -1, "", -1,
-                        -1, -1, -1, "", "",
-                        emptyDouble, emptyDouble, emptyDouble, emptyDouble, emptyDouble, emptyDouble,
-                        emptyString, emptyString, emptyString, emptyString, emptyString);
+                return AdvancedStock.ERROR_AdvancedStock;
             }
 
             /* Get chart data for periods greater than one day from Wall Street Journal. */
@@ -317,7 +304,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     state = CLOSED;
                     break;
                 default:
-                    state = OPEN; /** Create error case (error state). */
+                    state = ERROR;
                     break;
             }
 
@@ -397,14 +384,9 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     close_changePercent = 0;
                     break;
                 }
-                default: { /** Create error state. */
-                    price = -1;
-                    changePoint = -1;
-                    changePercent = -1;
-                    close_price = -1;
-                    close_changePoint = -1;
-                    close_changePercent = -1;
-                }
+                case ERROR:
+                default:
+                    return AdvancedStock.ERROR_AdvancedStock;
             }
 
             final Element regionPrimary = quoteRoot.selectFirst(":root > div.content-region.region--primary");
@@ -541,9 +523,9 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                             chartPrices_5years, chartDates_2weeks, chartDates_1month, chartDates_3months,
                             chartDates_1year, chartDates_5years);
                     break;
+                case ERROR:
                 default:
-                    ret = null;
-                    break;
+                    return AdvancedStock.ERROR_AdvancedStock;
             }
 
             return ret;
@@ -921,7 +903,6 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
         if (!tickerArr[0].isEmpty()) {
             final ArrayList<String> tickerList = new ArrayList<>(Arrays.asList(tickerArr));
-            Log.d("Data csv", mpreferences.getString("Data CSV", ""));
             final ArrayList<String> dataList = new ArrayList<>(Arrays.asList(
                     mpreferences.getString("Data CSV", "").split(",")));
 

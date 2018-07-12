@@ -157,9 +157,14 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
                     case "CLOSED":
                         curState = CLOSED;
                         break;
+                    case "ERROR":
                     default:
-                        curState = OPEN; /** Create error case. */
-                        break;
+                        Log.e("ErrorStateInHomeActivity", String.format(
+                                "Stock with state equal to BasicStock.State.ERROR in HomeActivity.%n" +
+                                        "Ticker: %s", curTicker));
+                        // MultiStockRequest should never return stocks with the ERROR state
+                        // Do not add this error stock to mstocks or mtickerToIndexMap
+                        continue;
                 }
                 curPrice = parseDouble(data[dataNdx + 1]);
                 curChangePoint = parseDouble(data[dataNdx + 2]);

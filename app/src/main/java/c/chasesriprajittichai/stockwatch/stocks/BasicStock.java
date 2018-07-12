@@ -2,7 +2,7 @@ package c.chasesriprajittichai.stockwatch.stocks;
 
 public class BasicStock {
 
-    public enum State {PREMARKET, OPEN, AFTER_HOURS, CLOSED}
+    public enum State {ERROR, PREMARKET, OPEN, AFTER_HOURS, CLOSED}
 
     private State mstate;
     private final String mticker;

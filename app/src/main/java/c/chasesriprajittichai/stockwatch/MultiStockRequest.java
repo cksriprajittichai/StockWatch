@@ -1,5 +1,7 @@
 package c.chasesriprajittichai.stockwatch;
 
+import android.util.Log;
+
 import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
 import com.android.volley.Response;
@@ -111,9 +113,12 @@ public final class MultiStockRequest extends Request<BasicStockList> {
                     curDataShouldBeCloseData = false;
                     break;
                 default:
-                    curState = OPEN; /** Create error case. */
-                    curDataShouldBeCloseData = false;
-                    break;
+                    Log.e("UnrecognizedMarketWatchState", String.format(
+                            "Unrecognized state string from Market Watch multiple stock page.%n" +
+                                    "Unrecognized state string: %s%n" +
+                                    "Ticker: %s", states.get(i).text(), tickers.get(i)));
+                    // Do not add this error stock to the BasicStockList that will be returned
+                    continue;
             }
 
             // Remove ',' or '%' that could be in strings

@@ -55,7 +55,7 @@ public final class BasicStockList extends ArrayList<BasicStock> {
         return states;
     }
 
-    public List<String> getStockTickers() {
+    private List<String> getStockTickers() {
         final List<String> tickers = new ArrayList<>(size());
         for (final BasicStock s : this) {
             tickers.add(s.getTicker());
