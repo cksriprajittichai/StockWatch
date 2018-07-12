@@ -269,7 +269,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
             stocksToUpdateThisIteration = new BasicStockList(stocksToUpdate.subList(numStocksUpdated,
                     numStocksUpdated + numStocksToUpdateThisIteration));
 
-            // Append tickers for stocks that will be updated in this iteration.
+            // Append tickers for stocks that will be updated in this iteration
             for (BasicStock s : stocksToUpdateThisIteration) {
                 tickersPartUrl.append(s.getTicker());
                 tickersPartUrl.append(',');

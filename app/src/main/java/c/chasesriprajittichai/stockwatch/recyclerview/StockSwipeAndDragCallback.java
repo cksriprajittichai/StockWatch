@@ -13,7 +13,6 @@ import java.util.Map;
 
 import c.chasesriprajittichai.stockwatch.HomeActivity;
 import c.chasesriprajittichai.stockwatch.R;
-import c.chasesriprajittichai.stockwatch.recyclerview.RecyclerAdapter;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStockList;
 
 public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallback {

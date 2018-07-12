@@ -11,8 +11,6 @@ import android.widget.TextView;
 import java.util.Collections;
 import java.util.Locale;
 
-import butterknife.BindView;
-import butterknife.ButterKnife;
 import c.chasesriprajittichai.stockwatch.R;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStockList;
@@ -34,15 +32,15 @@ public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.
         ViewHolder(final View v) {
             super(v);
 
-            mstateTextView = (TextView) v.findViewById(R.id.textView_state_homeRecyclerItem);
-            mtickerTextView = (TextView) v.findViewById(R.id.textView_ticker_homeRecyclerItem);
-            mpriceTextView = (TextView) v.findViewById(R.id.textView_price_homeRecyclerItem);
-            mchangePercentTextView = (TextView) v.findViewById(R.id.textView_changePercent_homeRecyclerItem);
+            mstateTextView = v.findViewById(R.id.textView_state_homeRecyclerItem);
+            mtickerTextView = v.findViewById(R.id.textView_ticker_homeRecyclerItem);
+            mpriceTextView = v.findViewById(R.id.textView_price_homeRecyclerItem);
+            mchangePercentTextView = v.findViewById(R.id.textView_changePercent_homeRecyclerItem);
         }
 
         void bind(final BasicStock stock, final OnItemClickListener listener) {
             if (stock.getState() == BasicStock.State.AFTER_HOURS) {
-                // After hours state is the only state with an undesired character
+                // After hours state is the only state with an unwanted character in the enum name
                 mstateTextView.setText(String.format(Locale.US, "%s", "AFTER HOURS"));
             } else {
                 mstateTextView.setText(stock.getState().toString());

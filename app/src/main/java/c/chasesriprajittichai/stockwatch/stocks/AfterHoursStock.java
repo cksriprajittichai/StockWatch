@@ -2,7 +2,7 @@ package c.chasesriprajittichai.stockwatch.stocks;
 
 import java.util.List;
 
-public final class AfterHoursStock extends AdvancedStock {
+public final class AfterHoursStock extends AdvancedStock implements StockWithCloseValues {
 
     private double mclose_price;
     private double mclose_changePoint;

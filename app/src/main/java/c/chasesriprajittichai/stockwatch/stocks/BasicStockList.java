@@ -40,8 +40,10 @@ public final class BasicStockList extends ArrayList<BasicStock> {
 
         final List<String> data = new ArrayList<>(size());
         for (int i = 0; i < size(); i++) {
-            data.add(states.get(i).toString() + ',' + prices.get(i) + ',' +
-                    changePoints.get(i) + ',' + changePercents.get(i));
+            data.add(states.get(i).toString() + ',' +
+                    prices.get(i) + ',' +
+                    changePoints.get(i) + ',' +
+                    changePercents.get(i));
         }
 
         return TextUtils.join(",", data);

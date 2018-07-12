@@ -45,6 +45,7 @@ import c.chasesriprajittichai.stockwatch.stocks.AdvancedStock;
 import c.chasesriprajittichai.stockwatch.stocks.AfterHoursStock;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
 import c.chasesriprajittichai.stockwatch.stocks.PremarketStock;
+import c.chasesriprajittichai.stockwatch.stocks.StockWithCloseValues;
 
 import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.AFTER_HOURS;
 import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.CLOSED;
@@ -580,7 +581,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             setTitle(mstock.getName());
         }
 
-        if (mstock.getState() == OPEN || mstock.getState() == CLOSED) {
+        if (!(mstock instanceof StockWithCloseValues)) {
             mclose_price.setVisibility(View.GONE);
             mclose_changePoint.setVisibility(View.GONE);
             mclose_changePercent.setVisibility(View.GONE);
@@ -626,16 +627,11 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         mprice.setText(getString(R.string.string_colon_double2dec, "Price", mstock.getPrice()));
         mchangePoint.setText(getString(R.string.string_colon_double2dec, "Point Change", mstock.getChangePoint()));
         mchangePercent.setText(getString(R.string.string_colon_double2dec_percent, "Percent Change", mstock.getChangePercent()));
-        if (mstock.getState() == PREMARKET) {
-            final PremarketStock ahStock = (PremarketStock) mstock;
-            mclose_price.setText(getString(R.string.string_colon_double2dec, "Price at Close", ahStock.getClose_price()));
-            mclose_changePoint.setText(getString(R.string.string_colon_double2dec, "Point Change at Close", ahStock.getClose_changePoint()));
-            mclose_changePercent.setText(getString(R.string.string_colon_double2dec_percent, "Percent Change at Close", ahStock.getClose_changePercent()));
-        } else if (mstock.getState() == AFTER_HOURS) {
-            final AfterHoursStock ahStock = (AfterHoursStock) mstock;
-            mclose_price.setText(getString(R.string.string_colon_double2dec, "Price at Close", ahStock.getClose_price()));
-            mclose_changePoint.setText(getString(R.string.string_colon_double2dec, "Point Change at Close", ahStock.getClose_changePoint()));
-            mclose_changePercent.setText(getString(R.string.string_colon_double2dec_percent, "Percent Change at Close", ahStock.getClose_changePercent()));
+        if (mstock instanceof StockWithCloseValues) {
+            final StockWithCloseValues stockWithCloseValues = (StockWithCloseValues) mstock;
+            mclose_price.setText(getString(R.string.string_colon_double2dec, "Price at Close", stockWithCloseValues.getClose_price()));
+            mclose_changePoint.setText(getString(R.string.string_colon_double2dec, "Point Change at Close", stockWithCloseValues.getClose_changePoint()));
+            mclose_changePercent.setText(getString(R.string.string_colon_double2dec_percent, "Percent Change at Close", stockWithCloseValues.getClose_changePercent()));
         }
 
         if (!missingStats.contains("Price at Open")) {
@@ -874,21 +870,43 @@ public final class IndividualStockActivity extends AppCompatActivity implements
      * to Data CSV. mstock is added to the front of each preference string, meaning that mstock
      * is inserted at the top of the list of stocks. This function does not check if mstock is
      * already in mpreferences before adding mstock.
+     * <p>
+     * If mstock's state is ERROR, this function does nothing. Otherwise if mstock's state is
+     * not OPEN, then the data that is added to mpreferences is the price, change point, and
+     * change percent at the last day's close (data at the last close).
      */
     private void addStockToPreferences() {
+        if (mstock.getState() != BasicStock.State.ERROR) {
+            return;
+        }
+
         final String tickersCSV = mpreferences.getString("Tickers CSV", "");
         final String dataCSV = mpreferences.getString("Data CSV", "");
+
         final String dataStr;
+        // Create dataStr
+        switch (mstock.getState()) {
+            case OPEN:
+                dataStr = mstock.getState().toString() + ',' +
+                        mstock.getPrice() + ',' +
+                        mstock.getChangePoint() + ',' +
+                        mstock.getChangePercent();
+                break;
+            default:
+                final StockWithCloseValues stockWithCloseValues = (StockWithCloseValues) mstock;
+                dataStr = mstock.getState().toString() + ',' +
+                        stockWithCloseValues.getClose_price() + ',' +
+                        stockWithCloseValues.getClose_changePoint() + ',' +
+                        stockWithCloseValues.getClose_changePercent();
+        }
 
         if (!tickersCSV.isEmpty()) {
+            // There are other stocks in favorites
             mpreferences.edit().putString("Tickers CSV", mticker + ',' + tickersCSV).apply();
-            dataStr = mstock.getState().toString() + ',' + mstock.getPrice() + ',' +
-                    mstock.getChangePoint() + ',' + mstock.getChangePercent() + ',';
-            mpreferences.edit().putString("Data CSV", dataStr + dataCSV).apply();
+            mpreferences.edit().putString("Data CSV", dataStr + dataCSV + ',').apply();
         } else {
+            // There are no stocks in favorites, this will be the first
             mpreferences.edit().putString("Tickers CSV", mticker).apply();
-            dataStr = mstock.getState().toString() + ',' + mstock.getPrice() + ',' +
-                    mstock.getChangePoint() + ',' + mstock.getChangePercent();
             mpreferences.edit().putString("Data CSV", dataStr).apply();
         }
     }
