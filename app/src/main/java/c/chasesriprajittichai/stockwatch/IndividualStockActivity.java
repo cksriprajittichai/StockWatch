@@ -289,12 +289,12 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             final String stateStr = icon.nextSibling().toString();
             final BasicStock.State state;
             switch (stateStr.toLowerCase(Locale.US)) {
-                case "before the bell": // Multiple stock page uses this
-                case "premarket": // Individual stock page uses this
+                case "before the bell": // Multiple stock view site uses this
+                case "premarket": // Individual stock site uses this
                     state = PREMARKET;
                     break;
                 case "countdown to close":
-                case "open":
+                case "open": // Individual stock site uses this
                     state = OPEN;
                     break;
                 case "after hours":

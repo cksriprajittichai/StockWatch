@@ -85,7 +85,7 @@ public final class MultiStockRequest extends Request<BasicStockList> {
         final int numStocksToUpdate = tickers.size();
 
         /* curPrice will be displayed on mrecyclerView. If a stock's state is OPEN or CLOSED, then
-         * its display price should be the live price. If a stock's state is PREMARKET OR
+         * its display price should be the live price. If a stock's state is PREMARKET or
          * AFTER_HOURS, then its display price should be the last price that the stock closed at.
          * The same logic applies for curChangePoint and curChangePercent. */
         boolean curDataShouldBeCloseData;
@@ -93,13 +93,13 @@ public final class MultiStockRequest extends Request<BasicStockList> {
         // Iterate through mstocks that we're updating
         for (int i = 0; i < numStocksToUpdate; i++) {
             switch (states.get(i).text().toLowerCase(Locale.US)) {
-                case "premarket": // Individual stock site uses this
                 case "before the bell": // Multiple stock view site uses this
+                case "premarket": // Individual stock site uses this
                     curState = PREMARKET;
                     curDataShouldBeCloseData = true;
                     break;
                 case "countdown to close":
-                case "open":
+                case "market open": // Multiple stock view site uses this
                     curState = OPEN;
                     curDataShouldBeCloseData = false;
                     break;
@@ -116,7 +116,7 @@ public final class MultiStockRequest extends Request<BasicStockList> {
                     Log.e("UnrecognizedMarketWatchState", String.format(
                             "Unrecognized state string from Market Watch multiple stock page.%n" +
                                     "Unrecognized state string: %s%n" +
-                                    "Ticker: %s", states.get(i).text(), tickers.get(i)));
+                                    "Ticker: %s", states.get(i).text(), tickers.get(i).text()));
                     // Do not add this error stock to the BasicStockList that will be returned
                     continue;
             }
