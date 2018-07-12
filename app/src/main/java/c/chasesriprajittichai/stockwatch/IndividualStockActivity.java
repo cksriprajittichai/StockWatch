@@ -876,7 +876,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
      * change percent at the last day's close (data at the last close).
      */
     private void addStockToPreferences() {
-        if (mstock.getState() != BasicStock.State.ERROR) {
+        if (mstock.getState() == BasicStock.State.ERROR) {
             return;
         }
 
@@ -884,7 +884,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         final String dataCSV = mpreferences.getString("Data CSV", "");
 
         final String dataStr;
-        // Create dataStr
+        // Init dataStr
         switch (mstock.getState()) {
             case OPEN:
                 dataStr = mstock.getState().toString() + ',' +
@@ -903,7 +903,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         if (!tickersCSV.isEmpty()) {
             // There are other stocks in favorites
             mpreferences.edit().putString("Tickers CSV", mticker + ',' + tickersCSV).apply();
-            mpreferences.edit().putString("Data CSV", dataStr + dataCSV + ',').apply();
+            mpreferences.edit().putString("Data CSV", dataStr + ',' + dataCSV).apply();
         } else {
             // There are no stocks in favorites, this will be the first
             mpreferences.edit().putString("Tickers CSV", mticker).apply();
