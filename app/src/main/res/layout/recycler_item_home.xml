@@ -9,7 +9,7 @@
     android:paddingStart="0dp"
     android:paddingTop="0dp">
 
-    <!--Don't constrain to price TextView or change percent TextView so that values will be in a column.-->
+    <!--Don't constrain to price TextView or change percent TextView so that values will be in a column-->
     <TextView
         android:id="@+id/textView_ticker_homeRecyclerItem"
         android:layout_width="wrap_content"
@@ -41,7 +41,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!--Don't constrain to tickerTextView, so that values will be in a column.-->
+    <!--Don't constrain to tickerTextView, so that values will be in a column-->
     <TextView
         android:id="@+id/textView_price_homeRecyclerItem"
         android:layout_width="wrap_content"
@@ -57,7 +57,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!--Don't constrain to tickerTextView, so that values will be in a column.-->
+    <!--Don't constrain to tickerTextView, so that values will be in a column-->
     <TextView
         android:id="@+id/textView_changePercent_homeRecyclerItem"
         android:layout_width="wrap_content"

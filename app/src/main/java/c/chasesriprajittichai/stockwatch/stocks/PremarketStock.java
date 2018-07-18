@@ -12,8 +12,8 @@ public final class PremarketStock extends AdvancedStock implements StockWithClos
                           final double price, final double changePoint, final double changePercent,
                           final double close_price, final double close_changePoint,
                           final double close_changePercent, final double openPrice,
-                          final double dayRangeLow, final double dayRangeHigh,
-                          final double fiftyTwoWeekRangeLow, final double fiftyTwoWeekRangeHigh,
+                          final double todaysLow, final double todaysHigh,
+                          final double fiftyTwoWeekLow, final double fiftyTwoWeekHigh,
                           final String marketCap, final double beta, final double peRatio,
                           final double eps, final double yield, final String averageVolume,
                           final String description, final List<Double> yData_1day,
@@ -22,8 +22,8 @@ public final class PremarketStock extends AdvancedStock implements StockWithClos
                           final List<Double> yData_5years, final List<String> dates_2weeks,
                           final List<String> dates_1month, final List<String> dates_3months,
                           final List<String> dates_1year, final List<String> dates_5years) {
-        super(state, ticker, name, price, changePoint, changePercent, openPrice, dayRangeLow,
-                dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh, marketCap, beta, peRatio,
+        super(state, ticker, name, price, changePoint, changePercent, openPrice, todaysLow,
+                todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap, beta, peRatio,
                 eps, yield, averageVolume, description, yData_1day, yData_2weeks, yData_1month,
                 yData_3months, yData_1year, yData_5years, dates_2weeks, dates_1month, dates_3months,
                 dates_1year, dates_5years);

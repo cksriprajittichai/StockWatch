@@ -16,10 +16,10 @@ public class AdvancedStock extends BasicStock {
 
     private final String mname;
     private final double mopenPrice;
-    private double mdayRangeLow;
-    private double mdayRangeHigh;
-    private final double mfiftyTwoWeekRangeLow;
-    private final double mfiftyTwoWeekRangeHigh;
+    private double mtodaysLow;
+    private double mtodaysHigh;
+    private final double mfiftyTwoWeekLow;
+    private final double mfiftyTwoWeekHigh;
     private final String mmarketCap;
     private final double mbeta;
     private final double mpeRatio;
@@ -42,7 +42,7 @@ public class AdvancedStock extends BasicStock {
     public AdvancedStock(final State state, final String ticker, final String name,
                          final double price, final double changePoint, final double changePercent,
                          final double openPrice, final double dayRangeLow, final double dayRangeHigh,
-                         final double fiftyTwoWeekRangeLow, final double fiftyTwoWeekRangeHigh,
+                         final double fiftyTwoWeekLow, final double fiftyTwoWeekHigh,
                          final String marketCap, final double beta, final double peRatio,
                          final double eps, final double yield, final String averageVolume,
                          final String description, final List<Double> yData_1day,
@@ -54,10 +54,10 @@ public class AdvancedStock extends BasicStock {
         super(state, ticker, price, changePoint, changePercent);
         mname = name;
         mopenPrice = openPrice;
-        mdayRangeLow = dayRangeLow;
-        mdayRangeHigh = dayRangeHigh;
-        mfiftyTwoWeekRangeLow = fiftyTwoWeekRangeLow;
-        mfiftyTwoWeekRangeHigh = fiftyTwoWeekRangeHigh;
+        mtodaysLow = dayRangeLow;
+        mtodaysHigh = dayRangeHigh;
+        mfiftyTwoWeekLow = fiftyTwoWeekLow;
+        mfiftyTwoWeekHigh = fiftyTwoWeekHigh;
         mmarketCap = marketCap;
         mbeta = beta;
         mpeRatio = peRatio;
@@ -86,20 +86,20 @@ public class AdvancedStock extends BasicStock {
         return mopenPrice;
     }
 
-    public double getDayRangeLow() {
-        return mdayRangeLow;
+    public double getTodaysLow() {
+        return mtodaysLow;
     }
 
-    public double getDayRangeHigh() {
-        return mdayRangeHigh;
+    public double getTodaysHigh() {
+        return mtodaysHigh;
     }
 
-    public double getFiftyTwoWeekRangeLow() {
-        return mfiftyTwoWeekRangeLow;
+    public double getFiftyTwoWeekLow() {
+        return mfiftyTwoWeekLow;
     }
 
-    public double getFiftyTwoWeekRangeHigh() {
-        return mfiftyTwoWeekRangeHigh;
+    public double getFiftyTwoWeekHigh() {
+        return mfiftyTwoWeekHigh;
     }
 
     public String getMarketCap() {

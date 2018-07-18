@@ -183,16 +183,16 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             final String wsj_exchangeCountry = individualDoc.selectFirst(":root > head > meta[name=exchangeCountry]").attr("content");
 
             final LocalDate today = LocalDate.now();
-            /* Deduct extra because it doesn't hurt at all, and ensures that the URL we create
+            /* Deduct extra two weeks because it doesn't hurt and ensures that the URL we create
              * doesn't incorrectly believe that there isn't enough data for the five year chart. */
             final LocalDate fiveYearsAgo = today.minusYears(5).minusWeeks(2);
             final int period_5years = (int) ChronoUnit.DAYS.between(fiveYearsAgo, today);
 
             // Pad zeros on the left if necessary
-            final String wsj_todayDateStr = String.format(Locale.US, "%d/%d/%d", today.getMonthValue(),
-                    today.getDayOfMonth(), today.getYear());
-            final String wsj_5yearsAgoDateStr = String.format(Locale.US, "%d/%d/%d", fiveYearsAgo.getMonthValue(),
-                    fiveYearsAgo.getDayOfMonth(), fiveYearsAgo.getYear());
+            final String wsj_todayDateStr = String.format(Locale.US, "%d/%d/%d",
+                    today.getMonthValue(), today.getDayOfMonth(), today.getYear());
+            final String wsj_5yearsAgoDateStr = String.format(Locale.US, "%d/%d/%d",
+                    fiveYearsAgo.getMonthValue(), fiveYearsAgo.getDayOfMonth(), fiveYearsAgo.getYear());
 
             /* If the WSJ URL parameters (ie. start date) request data from dates that are prior to
              * a stock's existence, then the WSJ response delivers all historical data available for
@@ -205,6 +205,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                             "&exchange=%s&instrumentType=%s&num_rows=%d&range_days=%d&startDate=%s&endDate=%s",
                     mticker, mticker, wsj_exchangeCountry, wsj_exchange, wsj_instrumentType,
                     period_5years, period_5years, wsj_5yearsAgoDateStr, wsj_todayDateStr);
+
 
             final List<Double> chartPrices_5years = new ArrayList<>();
             final List<Double> chartPrices_1year = new ArrayList<>();
@@ -431,8 +432,9 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 missingStats.add("52 Week Range");
             }
             final String marketCap;
+            Log.d("test", marketCapElmnt.text());
             if (!marketCapElmnt.text().contains("n/a") && !marketCapElmnt.text().equalsIgnoreCase("Market Cap")) {
-                marketCap = substringAfter(marketCapElmnt.text(), "Market Cap").trim();
+                marketCap = substringAfter(marketCapElmnt.text(), "Market Cap $").trim();
             } else {
                 marketCap = "";
                 missingStats.add("Market Cap");
@@ -546,6 +548,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     @BindView(R.id.horizontalPicker_chartPeriod_individual) HorizontalPicker mchartPeriodPicker;
     @BindView(R.id.view_chartPeriodPickerUnderline_individual) View mchartPeriodPickerUnderline;
     @BindView(R.id.divider_sparkViewToStats_individual) View msparkViewToStatsDivider;
+    @BindView(R.id.textView_keyStatisticsHeader_individual) View mkeyStatisticsHeader;
     @BindView(R.id.textView_state_individual) TextView mstate;
     @BindView(R.id.textView_price_individual) TextView mprice;
     @BindView(R.id.textView_changePoint_individual) TextView mchangePoint;
@@ -554,8 +557,10 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     @BindView(R.id.textView_close_changePoint_individual) TextView mclose_changePoint;
     @BindView(R.id.textView_close_changePercent_individual) TextView mclose_changePercent;
     @BindView(R.id.textView_openPrice_individual) TextView mopenPrice;
-    @BindView(R.id.textView_dayRange_individual) TextView mdayRange;
-    @BindView(R.id.textView_fiftyTwoWeekRange_individual) TextView mfiftyTwoWeekRange;
+    @BindView(R.id.textView_todaysLow_individual) TextView mtodaysLow;
+    @BindView(R.id.textView_todaysHigh_individual) TextView mtodaysHigh;
+    @BindView(R.id.textView_fiftyTwoWeekLow_individual) TextView mfiftyTwoWeekLow;
+    @BindView(R.id.textView_fiftyTwoWeekHigh_individual) TextView mfiftyTwoWeekHigh;
     @BindView(R.id.textView_marketCap_individual) TextView mmarketCap;
     @BindView(R.id.textView_beta_individual) TextView mbeta;
     @BindView(R.id.textView_peRatio_individual) TextView mpeRatio;
@@ -590,12 +595,12 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         if (!mstock.getYData_1day().isEmpty()) { /** Change: check for available charts using missingStats. */
             msparkViewAdapter.setyData(mstock.getYData_1day());
             msparkViewAdapter.notifyDataSetChanged();
-            mscrubPrice.setText(getString(R.string.dollarSign_double2dec, mstock.getPrice())); // Init
+            mscrubPrice.setText(getString(R.string.dollar_double2dec, mstock.getPrice())); // Init
             mscrubChangePercent.setText(getString(R.string.double2dec_percent, mstock.getChangePercent())); // Init
             msparkView.setScrubListener((final Object valueObj) -> {
                 if (valueObj == null) {
                     // The user is not scrubbing
-                    mscrubPrice.setText(getString(R.string.dollarSign_double2dec, mstock.getPrice()));
+                    mscrubPrice.setText(getString(R.string.dollar_double2dec, mstock.getPrice()));
                     mscrubChangePercent.setText(getString(R.string.double2dec_percent, mstock.getChangePercent()));
                     final int deactivatedColor = getResources().getColor(R.color.colorAccentTransparent, getTheme());
                     mscrubPrice.setTextColor(deactivatedColor);
@@ -603,7 +608,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 } else {
                     // The user is scrubbing
                     // Calculate the percent change at this scrubbing location
-                    mscrubPrice.setText(getString(R.string.dollarSign_double2dec, (double) valueObj));
+                    mscrubPrice.setText(getString(R.string.dollar_double2dec, (double) valueObj));
                     final double realPrice = mstock.getPrice();
                     final double curPrice = (double) valueObj;
                     final double curChangePercent = 100 * ((curPrice - realPrice) / realPrice);
@@ -623,7 +628,9 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             mscrubChangePercent.setVisibility(View.GONE);
         }
 
-        mstate.setText(getString(R.string.string_colon_string, "State", mstock.getState().toString()));
+        // AFTER_HOURS is the only state with an unwanted character
+        mstate.setText(getString(R.string.string_colon_string, "State",
+                mstock.getState() == AFTER_HOURS ? "AFTER HOURS" : mstock.getState().toString()));
         mprice.setText(getString(R.string.string_colon_double2dec, "Price", mstock.getPrice()));
         mchangePoint.setText(getString(R.string.string_colon_double2dec, "Point Change", mstock.getChangePoint()));
         mchangePercent.setText(getString(R.string.string_colon_double2dec_percent, "Percent Change", mstock.getChangePercent()));
@@ -640,44 +647,48 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             mopenPrice.setVisibility(View.GONE);
         }
         if (!missingStats.contains("Day Range")) {
-            mdayRange.setText(getString(R.string.string_colon_double2dec_hyphen_double2dec, "Day Range", mstock.getDayRangeLow(), mstock.getDayRangeHigh()));
+            mtodaysLow.setText(getString(R.string.double2dec, mstock.getTodaysLow()));
+            mtodaysHigh.setText(getString(R.string.double2dec, mstock.getTodaysHigh()));
         } else {
-            mdayRange.setVisibility(View.GONE);
+            mtodaysLow.setText("N/A");
+            mtodaysHigh.setText("N/A");
         }
         if (!missingStats.contains("52 Week Range")) {
-            mfiftyTwoWeekRange.setText(getString(R.string.string_colon_double2dec_hyphen_double2dec, "52 Week Range", mstock.getFiftyTwoWeekRangeLow(), mstock.getFiftyTwoWeekRangeHigh()));
+            mfiftyTwoWeekLow.setText(getString(R.string.double2dec, mstock.getFiftyTwoWeekLow()));
+            mfiftyTwoWeekHigh.setText(getString(R.string.double2dec, mstock.getFiftyTwoWeekHigh()));
         } else {
-            mfiftyTwoWeekRange.setVisibility(View.GONE);
+            mfiftyTwoWeekLow.setText("N/A");
+            mfiftyTwoWeekHigh.setText("N/A");
         }
         if (!missingStats.contains("Market Cap")) {
-            mmarketCap.setText(getString(R.string.string_colon_string, "MarketCap", mstock.getMarketCap()));
+            mmarketCap.setText(getString(R.string.string, mstock.getMarketCap()));
         } else {
-            mmarketCap.setVisibility(View.GONE);
+            mmarketCap.setText(getString(R.string.string, "N/A"));
         }
         if (!missingStats.contains("Beta")) {
-            mbeta.setText(getString(R.string.string_colon_double2dec, "Beta", mstock.getBeta()));
+            mbeta.setText(getString(R.string.double2dec, mstock.getBeta()));
         } else {
-            mbeta.setVisibility(View.GONE);
+            mbeta.setText(getString(R.string.string, "N/A"));
         }
         if (!missingStats.contains("P/E Ratio")) {
-            mpeRatio.setText(getString(R.string.string_colon_double2dec, "P/E Ratio", mstock.getPeRatio()));
+            mpeRatio.setText(getString(R.string.double2dec, mstock.getPeRatio()));
         } else {
-            mpeRatio.setVisibility(View.GONE);
+            mpeRatio.setText(getString(R.string.string, "N/A"));
         }
         if (!missingStats.contains("EPS")) {
-            meps.setText(getString(R.string.string_colon_double2dec, "EPS", mstock.getEps()));
+            meps.setText(getString(R.string.double2dec, mstock.getEps()));
         } else {
-            meps.setVisibility(View.GONE);
+            meps.setText(getString(R.string.string, "N/A"));
         }
         if (!missingStats.contains("Yield")) {
-            myield.setText(getString(R.string.string_colon_double2dec, "Yield", mstock.getYield()));
+            myield.setText(getString(R.string.double2dec, mstock.getYield()));
         } else {
-            myield.setVisibility(View.GONE);
+            myield.setText(getString(R.string.string, "N/A"));
         }
         if (!missingStats.contains("Average Volume")) {
-            mavgVolume.setText(getString(R.string.string_colon_string, "Average Volume", mstock.getAverageVolume()));
+            mavgVolume.setText(getString(R.string.string, mstock.getAverageVolume()));
         } else {
-            mavgVolume.setVisibility(View.GONE);
+            mavgVolume.setText(getString(R.string.string, "N/A"));
         }
         if (!missingStats.contains("Description")) {
             mdescriptionTextView.setText(mstock.getDescription());
@@ -686,6 +697,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             mdescriptionTextView.setVisibility(View.GONE);
         }
 
+        mkeyStatisticsHeader.setVisibility(View.VISIBLE);
         mprogressBar.setVisibility(View.GONE);
     }
 

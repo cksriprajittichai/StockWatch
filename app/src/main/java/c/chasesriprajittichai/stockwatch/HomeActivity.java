@@ -95,9 +95,9 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
     private BasicStockList mstocks;
     private RecyclerAdapter mrecyclerAdapter;
     private SearchView msearchView;
-    private Timer mtimer;
     private SharedPreferences mpreferences;
     private RequestQueue mrequestQueue;
+    private Timer mtimer;
 
     // Maps tickers to indexes in mstocks
     private final Map<String, Integer> mtickerToIndexMap = new HashMap<>();
