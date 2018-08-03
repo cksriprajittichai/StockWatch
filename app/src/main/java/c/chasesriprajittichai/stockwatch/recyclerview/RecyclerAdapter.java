@@ -47,13 +47,15 @@ public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.
             }
             mtickerTextView.setText(stock.getTicker());
             mpriceTextView.setText(String.format(Locale.US, "%.2f", stock.getPrice()));
-            // Append '%' onto end of mprice change percent. First '%' is escape char for '%'.
-            mchangePercentTextView.setText(String.format(Locale.US, "%.2f%%", stock.getChangePercent()));
 
             // Assign green or red color to mprice change percent text
+            // Append '%' onto end of mprice change percent. First '%' is escape char for '%'.
             if (stock.getChangePercent() < 0) {
+                // '-' is already part of the number
+                mchangePercentTextView.setText(String.format(Locale.US, "%.2f%%", stock.getChangePercent()));
                 mchangePercentTextView.setTextColor(Color.RED);
             } else {
+                mchangePercentTextView.setText(String.format(Locale.US, "+%.2f%%", stock.getChangePercent()));
                 mchangePercentTextView.setTextColor(Color.GREEN);
             }
 

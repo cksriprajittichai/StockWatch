@@ -8,14 +8,15 @@ public class AdvancedStock extends BasicStock {
     public enum ChartPeriod {ONE_DAY, TWO_WEEKS, ONE_MONTH, THREE_MONTHS, ONE_YEAR, FIVE_YEARS}
 
     public static AdvancedStock ERROR_AdvancedStock = new AdvancedStock(State.ERROR, "",
-            "", 0, 0, 0, 0, 0, 0,
+            "", 0, 0, 0, 0, 0,
             0, 0, "", 0, 0, 0,
             0, "", "", new ArrayList<>(), new ArrayList<>(), new ArrayList<>(),
             new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(),
-            new ArrayList<>(), new ArrayList<>(), new ArrayList<>());
+            new ArrayList<>(), new ArrayList<>(), new ArrayList<>()) {
+    };
 
     private final String mname;
-    private final double mopenPrice;
+    private final double mpriceAtOpen;
     private double mtodaysLow;
     private double mtodaysHigh;
     private final double mfiftyTwoWeekLow;
@@ -41,7 +42,7 @@ public class AdvancedStock extends BasicStock {
 
     public AdvancedStock(final State state, final String ticker, final String name,
                          final double price, final double changePoint, final double changePercent,
-                         final double openPrice, final double dayRangeLow, final double dayRangeHigh,
+                         final double dayRangeLow, final double dayRangeHigh,
                          final double fiftyTwoWeekLow, final double fiftyTwoWeekHigh,
                          final String marketCap, final double beta, final double peRatio,
                          final double eps, final double yield, final String averageVolume,
@@ -53,7 +54,6 @@ public class AdvancedStock extends BasicStock {
                          final List<String> dates_1year, final List<String> dates_5years) {
         super(state, ticker, price, changePoint, changePercent);
         mname = name;
-        mopenPrice = openPrice;
         mtodaysLow = dayRangeLow;
         mtodaysHigh = dayRangeHigh;
         mfiftyTwoWeekLow = fiftyTwoWeekLow;
@@ -66,6 +66,7 @@ public class AdvancedStock extends BasicStock {
         mavgVolume = averageVolume;
         mdescription = description;
         myData_1day = yData_1day;
+        mpriceAtOpen = !myData_1day.isEmpty() ? myData_1day.get(0) : -1;
         myData_2weeks = yData_2weeks;
         myData_1month = yData_1month;
         myData_3months = yData_3months;
@@ -82,8 +83,20 @@ public class AdvancedStock extends BasicStock {
         return mname;
     }
 
-    public double getOpenPrice() {
-        return mopenPrice;
+    public double getLivePrice() {
+        return super.getPrice();
+    }
+
+    public double getLiveChangePoint() {
+        return super.getChangePoint();
+    }
+
+    public double getLiveChangePercent() {
+        return super.getChangePercent();
+    }
+
+    public double getPriceAtOpen() {
+        return mpriceAtOpen;
     }
 
     public double getTodaysLow() {

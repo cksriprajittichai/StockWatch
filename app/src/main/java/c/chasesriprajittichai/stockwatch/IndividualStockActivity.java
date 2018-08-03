@@ -12,8 +12,11 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.ViewFlipper;
 
 import com.jakewharton.threetenabp.AndroidThreeTen;
 import com.wefika.horizontalpicker.HorizontalPicker;
@@ -45,7 +48,7 @@ import c.chasesriprajittichai.stockwatch.stocks.AdvancedStock;
 import c.chasesriprajittichai.stockwatch.stocks.AfterHoursStock;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
 import c.chasesriprajittichai.stockwatch.stocks.PremarketStock;
-import c.chasesriprajittichai.stockwatch.stocks.StockWithCloseValues;
+import c.chasesriprajittichai.stockwatch.stocks.StockWithAfterHoursValues;
 
 import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.AFTER_HOURS;
 import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.CLOSED;
@@ -60,6 +63,488 @@ import static org.apache.commons.lang3.StringUtils.substringBetween;
 
 public final class IndividualStockActivity extends AppCompatActivity implements
         DownloadIndividualStockTaskListener, HorizontalPicker.OnItemSelected, CustomScrubGestureDetector.ScrubIndexListener {
+
+    @BindView(R.id.viewFlipper_individual) ViewFlipper mviewFlipper;
+    @BindView(R.id.progressBar_individual) ProgressBar mprogressBar;
+    @BindView(R.id.scrollView_allStockViews_individual) ScrollView mallStockViewsScrollView;
+    @BindView(R.id.textView_scrubPrice_individual) TextView mscrubPrice;
+    @BindView(R.id.textView_scrubChangePoint_individual) TextView mscrubChangePoint;
+    @BindView(R.id.textView_scrubChangePercent_individual) TextView mscrubChangePercent;
+    @BindView(R.id.linearLayout_afterHoursData_individual) LinearLayout mafterHoursLinearLayout;
+    @BindView(R.id.textView_afterHoursChangePoint_individual) TextView mafterHoursChangePoint;
+    @BindView(R.id.textView_afterHoursChangePercent_individual) TextView mafterHoursChangePercent;
+    @BindView(R.id.textView_afterHoursTime_individual) TextView mafterHoursTime;
+    @BindView(R.id.textView_scrubTime_individual) TextView mscrubTime;
+    @BindView(R.id.sparkView_individual) CustomSparkView msparkView;
+    @BindView(R.id.horizontalPicker_chartPeriod_individual) HorizontalPicker mchartPeriodPicker;
+    @BindView(R.id.view_chartPeriodPickerUnderline_individual) View mchartPeriodPickerUnderline;
+    @BindView(R.id.view_divider_sparkViewToStats_individual) View msparkViewToStatsDivider;
+    @BindView(R.id.textView_keyStatisticsHeader_individual) View mkeyStatisticsHeader;
+    @BindView(R.id.textView_todaysLow_individual) TextView mtodaysLow;
+    @BindView(R.id.textView_todaysHigh_individual) TextView mtodaysHigh;
+    @BindView(R.id.textView_fiftyTwoWeekLow_individual) TextView mfiftyTwoWeekLow;
+    @BindView(R.id.textView_fiftyTwoWeekHigh_individual) TextView mfiftyTwoWeekHigh;
+    @BindView(R.id.textView_marketCap_individual) TextView mmarketCap;
+    @BindView(R.id.textView_beta_individual) TextView mbeta;
+    @BindView(R.id.textView_peRatio_individual) TextView mpeRatio;
+    @BindView(R.id.textView_eps_individual) TextView meps;
+    @BindView(R.id.textView_yield_individual) TextView myield;
+    @BindView(R.id.textView_averageVolume_individual) TextView mavgVolume;
+    @BindView(R.id.view_divider_statisticsToDescription_individual) View mstatsToDescriptionDivider;
+    @BindView(R.id.textView_description_individual) TextView mdescriptionTextView;
+
+    private String mticker; // Needed to create mstock
+    private AdvancedStock mstock;
+    private boolean mstockHasBeenInitialized = false; // mstock is initialized in onDownloadIndividualStockTaskCompleted()
+    private AdvancedStock.ChartPeriod mcurChartPeriod = AdvancedStock.ChartPeriod.ONE_DAY;
+    private boolean mwasInFavoritesInitially;
+    private boolean misInFavorites;
+    private SparkViewAdapter msparkViewAdapter;
+    private SharedPreferences mpreferences;
+
+    /* Called from DownloadStockDataTask.onPostExecute(). */
+    @Override
+    public void onDownloadIndividualStockTaskCompleted(final AdvancedStock stock, final Set<String> missingStats) {
+        mstock = stock;
+        mstockHasBeenInitialized = true;
+
+        if (!getTitle().equals(mstock.getName())) {
+            setTitle(mstock.getName());
+        }
+
+        if (!mstock.getYData_1day().isEmpty()) { /** Change: check for available charts using missingStats. */
+            msparkViewAdapter.setyData(mstock.getYData_1day());
+            msparkViewAdapter.notifyDataSetChanged();
+
+            initScrubViews();
+        }
+
+        if (!missingStats.contains("Day Range")) {
+            mtodaysLow.setText(getString(R.string.double2dec, mstock.getTodaysLow()));
+            mtodaysHigh.setText(getString(R.string.double2dec, mstock.getTodaysHigh()));
+        } else {
+            mtodaysLow.setText("N/A");
+            mtodaysHigh.setText("N/A");
+        }
+        if (!missingStats.contains("52 Week Range")) {
+            mfiftyTwoWeekLow.setText(getString(R.string.double2dec, mstock.getFiftyTwoWeekLow()));
+            mfiftyTwoWeekHigh.setText(getString(R.string.double2dec, mstock.getFiftyTwoWeekHigh()));
+        } else {
+            mfiftyTwoWeekLow.setText("N/A");
+            mfiftyTwoWeekHigh.setText("N/A");
+        }
+        if (!missingStats.contains("Market Cap")) {
+            mmarketCap.setText(getString(R.string.string, mstock.getMarketCap()));
+        } else {
+            mmarketCap.setText(getString(R.string.string, "N/A"));
+        }
+        if (!missingStats.contains("Beta")) {
+            mbeta.setText(getString(R.string.double2dec, mstock.getBeta()));
+        } else {
+            mbeta.setText(getString(R.string.string, "N/A"));
+        }
+        if (!missingStats.contains("P/E Ratio")) {
+            mpeRatio.setText(getString(R.string.double2dec, mstock.getPeRatio()));
+        } else {
+            mpeRatio.setText(getString(R.string.string, "N/A"));
+        }
+        if (!missingStats.contains("EPS")) {
+            meps.setText(getString(R.string.double2dec, mstock.getEps()));
+        } else {
+            meps.setText(getString(R.string.string, "N/A"));
+        }
+        if (!missingStats.contains("Yield")) {
+            myield.setText(getString(R.string.double2dec, mstock.getYield()));
+        } else {
+            myield.setText(getString(R.string.string, "N/A"));
+        }
+        if (!missingStats.contains("Average Volume")) {
+            mavgVolume.setText(getString(R.string.string, mstock.getAverageVolume()));
+        } else {
+            mavgVolume.setText(getString(R.string.string, "N/A"));
+        }
+        if (!missingStats.contains("Description")) {
+            mdescriptionTextView.setText(mstock.getDescription());
+        } else {
+            mdescriptionTextView.setText(getString(R.string.string, "Description not found"));
+        }
+
+        mviewFlipper.showNext(); // Was showing layout with mprogressBar, now show mallStockViewScrollView
+    }
+
+    /**
+     * Initialize the views that are changed during scrubbing. This function should
+     * also be called to restore these views to their initial states.
+     */
+    private void initScrubViews() {
+        mscrubPrice.setText(getString(R.string.double2dec, mstock.getLivePrice()));
+        setScrubTime(mcurChartPeriod);
+
+        final double firstPriceOfPeriod = msparkViewAdapter.getY(0);
+        final double changePoint;
+        final double changePercent;
+
+        if (mcurChartPeriod == AdvancedStock.ChartPeriod.ONE_DAY) {
+            changePoint = mstock.getChangePoint();
+            changePercent = mstock.getChangePercent();
+
+            /* Init TextViews for after hours data in mafterHoursLinearLayout and init
+             * their visibility. */
+            if (mstock instanceof StockWithAfterHoursValues) {
+                if (mstock.getLiveChangePoint() < 0) {
+                    // '-' is already part of the number
+                    mafterHoursChangePoint.setText(getString(R.string.double2dec, mstock.getLiveChangePoint()));
+                    mafterHoursChangePercent.setText(getString(R.string.openParen_double2dec_percent_closeParen, mstock.getLiveChangePercent()));
+                } else {
+                    mafterHoursChangePoint.setText(getString(R.string.plus_double2dec, mstock.getLiveChangePoint()));
+                    mafterHoursChangePercent.setText(getString(R.string.openParen_plus_double2dec_percent_closeParen, mstock.getLiveChangePercent()));
+                }
+                mafterHoursLinearLayout.setVisibility(View.VISIBLE);
+            } else {
+                mafterHoursLinearLayout.setVisibility(View.INVISIBLE);
+            }
+        } else {
+            mafterHoursLinearLayout.setVisibility(View.INVISIBLE);
+
+            // Compare to price at last close if mstock instanceof StockWithAfterHoursValues
+            changePoint = mstock.getPrice() - firstPriceOfPeriod;
+            changePercent = (changePoint / firstPriceOfPeriod) * 100;
+        }
+
+        if (changePoint < 0) {
+            // '-' is already part of the number
+            mscrubChangePoint.setText(getString(R.string.double2dec, changePoint));
+            mscrubChangePercent.setText(getString(R.string.openParen_double2dec_percent_closeParen, changePercent));
+        } else {
+            mscrubChangePoint.setText(getString(R.string.plus_double2dec, changePoint));
+            mscrubChangePercent.setText(getString(R.string.openParen_plus_double2dec_percent_closeParen, changePercent));
+        }
+    }
+
+    /* Called from CustomScrubGestureDetector.onScrubbed(). */
+    @Override
+    public void onScrubbed(final int index) {
+        // Get scrubbing price from the chart data for the selected ChartPeriod
+        final double scrubPrice = msparkViewAdapter.getY(index);
+        mscrubPrice.setText(getString(R.string.double2dec, scrubPrice));
+
+        final double firstPriceOfSection;
+        final double changePoint;
+        final double changePercent;
+
+        if (mcurChartPeriod == AdvancedStock.ChartPeriod.ONE_DAY) {
+            /* After hours begins as soon as the open market closes. Therefore, the after
+             * hours section of the chart should begin at 4:00pm, which is at index 78.
+             * If the user is scrubbing in the after hours range of the chart, the change
+             * values should change so that they are relative to the price at close. */
+            if (index >= 78) {
+                /* Because mstock instanceof StockWithAfterHoursValues, mstock.getPrice()
+                 * returns the price at close. */
+                firstPriceOfSection = mstock.getPrice();
+
+                // "Hide" after hours change data, only show "After-Hours"
+                mafterHoursChangePoint.setText("");
+                mafterHoursChangePercent.setText("");
+                mafterHoursTime.setText(getString(R.string.afterHours));
+                mafterHoursLinearLayout.setVisibility(View.VISIBLE);
+            } else {
+                firstPriceOfSection = msparkViewAdapter.getY(0);
+
+                mafterHoursLinearLayout.setVisibility(View.INVISIBLE);
+            }
+
+            /* There are 78 data points representing the open hours data (9:30am - 4:00pm ET).
+             * This means that 78 data points represent 6.5 hours. Therefore, there is one data
+             * point for every 5 minutes. This 5 minute step size is constant throughout all
+             * states. The number of data points is dependent on the time of day. */
+            int minute = 30 + (index * 5);
+            int hour = 9;
+            if (minute >= 60) {
+                hour += minute / 60;
+                minute %= 60;
+            }
+            final boolean isPm = hour >= 12;
+            if (hour > 12) {
+                hour %= 12;
+            }
+            if (isPm) {
+                mscrubTime.setText(getString(R.string.int_colon_int2dig_pm_ET, hour, minute));
+            } else {
+                mscrubTime.setText(getString(R.string.int_colon_int2dig_am_ET, hour, minute));
+            }
+        } else {
+            firstPriceOfSection = msparkViewAdapter.getY(0);
+
+            // Get scrubbing date from the chart data for the selected ChartPeriod
+            mscrubTime.setText(getString(R.string.string, msparkViewAdapter.getDate(index)));
+        }
+
+        changePoint = scrubPrice - firstPriceOfSection;
+        changePercent = (changePoint / firstPriceOfSection) * 100;
+
+        if (changePoint < 0) {
+            // '-' is already part of the number
+            mscrubChangePoint.setText(getString(R.string.double2dec, changePoint));
+            mscrubChangePercent.setText(getString(R.string.openParen_double2dec_percent_closeParen, changePercent));
+        } else {
+            mscrubChangePoint.setText(getString(R.string.plus_double2dec, changePoint));
+            mscrubChangePercent.setText(getString(R.string.openParen_plus_double2dec_percent_closeParen, changePercent));
+        }
+    }
+
+    /* Called from CustomScrubGestureDetector.onScrubEnded(). */
+    @Override
+    public void onScrubEnded() {
+        initScrubViews(); // Restore views that were effected by scrubbing
+    }
+
+    @Override
+    protected void onCreate(final Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_individual_stock);
+        setTitle(""); // Show empty title now, company name will be shown (in onPostExecute())
+        ButterKnife.bind(this);
+        mticker = getIntent().getStringExtra("Ticker");
+
+        // Start task ASAP
+        new DownloadStockDataTask(mticker, this).execute();
+
+        AndroidThreeTen.init(this); // Init, timezone not actually used
+        mpreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        msparkViewAdapter = new SparkViewAdapter(); // Init as empty
+        msparkView.setAdapter(msparkViewAdapter);
+        /* SparkView needs its OnScrubListener member variable to non-null in order for
+         * the scrubbing line to work properly. The purpose of this line is to make the
+         * scrubbing line work. All the scrub listening is handled in onScrubbed(). */
+        msparkView.setScrubListener(value -> {
+        });
+        final float touchSlop = ViewConfiguration.get(this).getScaledTouchSlop();
+        msparkView.setOnTouchListener(
+                new CustomScrubGestureDetector(msparkView, this, touchSlop));
+        mchartPeriodPicker.setOnItemSelectedListener(this);
+        misInFavorites = getIntent().getBooleanExtra("Is in favorites", false);
+        mwasInFavoritesInitially = misInFavorites;
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (misInFavorites != mwasInFavoritesInitially) {
+            // If the star status (favorite status) has changed
+
+            if (mstockHasBeenInitialized) {
+                if (mwasInFavoritesInitially) {
+                    removeStockFromPreferences();
+                } else {
+                    addStockToPreferences();
+                }
+            } else {
+                if (mwasInFavoritesInitially) {
+                    removeStockFromPreferences();
+                } else {
+                    addStockToPreferences();
+                }
+            }
+
+            /* The activity has paused. Update the favorites status.
+             * The condition to be able to edit Tickers CSV and Data CSV are dependent on whether
+             * or not the favorites status has changed. */
+            mwasInFavoritesInitially = misInFavorites;
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        /* The parent (non-override) onBackPressed() does not create a new HomeActivity. So when we
+         * go back back to HomeActivity, the first function called is onResume(); onCreate() is not
+         * called. HomeActivity depends on Tickers CSV and Data CSV not being changed in between
+         * calls to HomeActivity.onPause() and HomeActivity.onResume() (where
+         * HomeActivity.onCreate() is not called in between HomeActivity.onPause() and
+         * HomeActivity.onResume()). Tickers CSV and Data CSV can be changed within this class.
+         * Therefore, if we don't start a new HomeActivity in this function, then it is possible
+         * that Tickers CSV and Data CSV are changed in between calls to HomeActivity.onResume()
+         * and HomeActivity.onPause(), which would cause HomeActivity to function incorrectly. */
+        final Intent intent = new Intent(this, HomeActivity.class);
+        startActivity(intent);
+    }
+
+    /* For mchartPeriodPicker. */
+    @Override
+    public void onItemSelected(final int index) {
+        mcurChartPeriod = AdvancedStock.ChartPeriod.values()[index]; // Update mcurChartPeriod
+
+        switch (index) {
+            case 0: // 1D
+                if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.ONE_DAY) {
+                    msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.ONE_DAY);
+                    msparkViewAdapter.setyData(mstock.getYData_1day());
+                    /* This activity shouldn't access msparkView's dates if the current
+                     * ChartPeriod is ONE_DAY. The updating of the dates to the UI are
+                     * managed in initScrubViews() and onScrubbed(). */
+                }
+                break;
+            case 1: // 2W
+                if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.TWO_WEEKS) {
+                    msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.TWO_WEEKS);
+                    msparkViewAdapter.setyData(mstock.getYData_2weeks());
+                    msparkViewAdapter.setDates(mstock.getDates_2weeks());
+                }
+                break;
+            case 2: // 1M
+                if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.ONE_MONTH) {
+                    msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.ONE_MONTH);
+                    msparkViewAdapter.setyData(mstock.getYData_1month());
+                    msparkViewAdapter.setDates(mstock.getDates_1month());
+                }
+                break;
+            case 3: // 3M
+                if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.THREE_MONTHS) {
+                    msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.THREE_MONTHS);
+                    msparkViewAdapter.setyData(mstock.getYData_3months());
+                    msparkViewAdapter.setDates(mstock.getDates_3months());
+                }
+                break;
+            case 4: // 1Y
+                if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.ONE_YEAR) {
+                    msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.ONE_YEAR);
+                    msparkViewAdapter.setyData(mstock.getYData_1year());
+                    msparkViewAdapter.setDates(mstock.getDates_1year());
+                }
+                break;
+            case 5: // 5Y
+                if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.FIVE_YEARS) {
+                    msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.FIVE_YEARS);
+                    msparkViewAdapter.setyData(mstock.getYData_5years());
+                    msparkViewAdapter.setDates(mstock.getDates_5years());
+                }
+                break;
+        }
+
+        msparkViewAdapter.notifyDataSetChanged();
+        initScrubViews();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(final Menu menu) {
+        getMenuInflater().inflate(R.menu.menu_stock_activity, menu);
+        final MenuItem starItem = menu.findItem(R.id.starMenuItem);
+        starItem.setIcon(misInFavorites ? R.drawable.star_on : R.drawable.star_off);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(final MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.starMenuItem:
+                misInFavorites = !misInFavorites; // Toggle
+                item.setIcon(misInFavorites ? R.drawable.star_on : R.drawable.star_off);
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+    /**
+     * Adds mstock to mpreferences: adds mstock's ticker to Tickers CSV and and adds
+     * mstock's data to Data CSV. mstock is added to the front of each preference
+     * string, meaning that mstock is inserted at the top of the list of stocks. This
+     * function does not check if mstock is already in mpreferences before adding mstock.
+     * <p>
+     * If mstock's state is ERROR, this function does nothing. If mstock's state is OPEN,
+     * If mstock's state is OPEN, the live data (i.e. mstock.getPrice()) is added to
+     * mpreferences. If mstock's state is not ERROR or OPEN (mstock instanceof
+     * StockWithAfterHoursValues), the data at the last close (i.e. still use
+     * mstock.getPrice()) is added to mpreferences.
+     * <p>
+     * Functionality changes depending on the value of mstockHasBeenInitialized.
+     * If mstock has not been initialized (mstockHasBeenInitialized), mticker (same
+     * value as what mstock.getTicker() once mstockHasBeenInitialized) is added to
+     * Tickers CSV, and the uninitialized data values of mstock are set to specific
+     * values that are then added to Data CSV. The state is set to CLOSED, because the
+     * OPEN and CLOSED states are the most limiting states (less functionality than
+     * PREMARKET state, for example). The change point and change percent values are set
+     * to 0.
+     */
+    private void addStockToPreferences() {
+        final String tickersCSV = mpreferences.getString("Tickers CSV", "");
+        final String dataCSV = mpreferences.getString("Data CSV", "");
+
+        final String dataStr;
+        if (!mstockHasBeenInitialized) {
+            dataStr = String.format(Locale.US, "%s,%d,%d,%d",
+                    OPEN.toString(), 0, 0, 0);
+        } else if (mstock.getState() == ERROR) {
+            return;
+        } else {
+            dataStr = String.format(Locale.US, "%s,%f,%f,%f",
+                    mstock.getState().toString(),
+                    mstock.getPrice(),
+                    mstock.getChangePoint(),
+                    mstock.getChangePercent());
+        }
+
+        if (!tickersCSV.isEmpty()) {
+            // There are other stocks in favorites
+            mpreferences.edit().putString("Tickers CSV", mticker + ',' + tickersCSV).apply();
+            mpreferences.edit().putString("Data CSV", dataStr + ',' + dataCSV).apply();
+        } else {
+            // There are no stocks in favorites, this will be the first
+            mpreferences.edit().putString("Tickers CSV", mticker).apply();
+            mpreferences.edit().putString("Data CSV", dataStr).apply();
+        }
+    }
+
+    /**
+     * Removes mstock from mpreferences; removes mstock's ticker from Tickers CSV and
+     * removes mStock's data from Data CSV.
+     * <p>
+     * Functionality does not change depending on the value of mstockHasBeenInitialized.
+     */
+    private void removeStockFromPreferences() {
+        final String tickersCSV = mpreferences.getString("Tickers CSV", "");
+        final String[] tickerArr = tickersCSV.split(","); // "".split(",") returns {""}
+
+        if (!tickerArr[0].isEmpty()) {
+            final ArrayList<String> tickerList = new ArrayList<>(Arrays.asList(tickerArr));
+            final ArrayList<String> dataList = new ArrayList<>(Arrays.asList(
+                    mpreferences.getString("Data CSV", "").split(",")));
+
+            final int tickerNdx = tickerList.indexOf(mticker);
+            tickerList.remove(tickerNdx);
+            mpreferences.edit().putString("Tickers CSV", TextUtils.join(",", tickerList)).apply();
+
+            // 4 data elements per 1 ticker. DataNdx is the index of the first element to delete.
+            final int dataNdx = tickerNdx * 4;
+            for (int deleteCount = 1; deleteCount <= 4; deleteCount++) { // Delete 4 data elements
+                dataList.remove(dataNdx);
+            }
+            mpreferences.edit().putString("Data CSV", TextUtils.join(",", dataList)).apply();
+        }
+    }
+
+    private void setScrubTime(final AdvancedStock.ChartPeriod chartPeriod) {
+        switch (chartPeriod) {
+            case ONE_DAY:
+                mscrubTime.setText(getString(R.string.today));
+                break;
+            case TWO_WEEKS:
+                mscrubTime.setText(getString(R.string.pastTwoWeeks));
+                break;
+            case ONE_MONTH:
+                mscrubTime.setText(getString(R.string.pastMonth));
+                break;
+            case THREE_MONTHS:
+                mscrubTime.setText(getString(R.string.pastThreeMonths));
+                break;
+            case ONE_YEAR:
+                mscrubTime.setText(getString(R.string.pastYear));
+                break;
+            case FIVE_YEARS:
+                mscrubTime.setText(getString(R.string.pastFiveYears));
+                break;
+        }
+    }
+
 
     private static final class DownloadStockDataTask extends AsyncTask<Void, Integer, AdvancedStock> {
 
@@ -310,11 +795,10 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     break;
             }
 
-            final Element priceElmnt, changePointElmnt, changePercentElmnt, close_priceElmnt,
-                    close_changePointElmnt, close_changePercentElmnt;
+            final Element priceElmnt, changePointElmnt, changePercentElmnt, close_priceElmnt, close_changePointElmnt, close_changePercentElmnt;
             final Elements close_tableCells;
-            final double price, changePoint, changePercent, close_price, close_changePoint, close_changePercent;
-            // Parsing of certain data varies depending on the state of the stock.
+            final double price, changePoint, changePercent, afterHoursPrice, afterHoursChangePoint, afterHoursChangePercent;
+            // Parsing of certain data varies depending on the state of the stock
             switch (state) {
                 case PREMARKET: {
                     priceElmnt = intradayData.selectFirst(":root > h3.intraday__price > bg-quote[class^=value]");
@@ -327,12 +811,13 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     close_changePercentElmnt = close_tableCells.get(2);
 
                     // Remove ',' or '%' that could be in strings
-                    price = parseDouble(priceElmnt.text().replaceAll("[^0-9.]+", ""));
-                    changePoint = parseDouble(changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
-                    changePercent = parseDouble(changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
-                    close_price = parseDouble(close_priceElmnt.text().replaceAll("[^0-9.]+", ""));
-                    close_changePoint = parseDouble(close_changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
-                    close_changePercent = parseDouble(close_changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
+                    afterHoursPrice = parseDouble(priceElmnt.text().replaceAll("[^0-9.]+", ""));
+                    afterHoursChangePoint = parseDouble(changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
+                    afterHoursChangePercent = parseDouble(changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
+                    // price, changePoint, and changePercent represent the values at close
+                    price = parseDouble(close_priceElmnt.text().replaceAll("[^0-9.]+", ""));
+                    changePoint = parseDouble(close_changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
+                    changePercent = parseDouble(close_changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
                     break;
                 }
                 case OPEN: {
@@ -346,9 +831,9 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     changePercent = parseDouble(changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
 
                     // Initialize unused data
-                    close_price = 0;
-                    close_changePoint = 0;
-                    close_changePercent = 0;
+                    afterHoursPrice = 0;
+                    afterHoursChangePoint = 0;
+                    afterHoursChangePercent = 0;
                     break;
                 }
                 case AFTER_HOURS: {
@@ -362,12 +847,13 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     close_changePercentElmnt = close_tableCells.get(2);
 
                     // Remove ',' or '%' that could be in strings
-                    price = parseDouble(priceElmnt.text().replaceAll("[^0-9.]+", ""));
-                    changePoint = parseDouble(changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
-                    changePercent = parseDouble(changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
-                    close_price = parseDouble(close_priceElmnt.text().replaceAll("[^0-9.]+", ""));
-                    close_changePoint = parseDouble(close_changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
-                    close_changePercent = parseDouble(close_changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
+                    afterHoursPrice = parseDouble(priceElmnt.text().replaceAll("[^0-9.]+", ""));
+                    afterHoursChangePoint = parseDouble(changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
+                    afterHoursChangePercent = parseDouble(changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
+                    // price, changePoint, and changePercent represent the values at close
+                    price = parseDouble(close_priceElmnt.text().replaceAll("[^0-9.]+", ""));
+                    changePoint = parseDouble(close_changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
+                    changePercent = parseDouble(close_changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
                     break;
                 }
                 case CLOSED: {
@@ -381,9 +867,9 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     changePercent = parseDouble(changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
 
                     // Initialize unused data
-                    close_price = 0;
-                    close_changePoint = 0;
-                    close_changePercent = 0;
+                    afterHoursPrice = 0;
+                    afterHoursChangePoint = 0;
+                    afterHoursChangePercent = 0;
                     break;
                 }
                 case ERROR:
@@ -391,11 +877,34 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     return AdvancedStock.ERROR_AdvancedStock;
             }
 
+
+            /* The 1 day data is gathered from the Market Watch multi stock page. The values
+             * given on that page can be slightly off by minutes. For example, the Market
+             * Watch multi stock page may correctly say that AAPL closed at $171.00, but the
+             * value used for the Market Watch graph (which is where we're getting the 1 day
+             * graph data) may say that the AAPL price at 4:00pm (time of close) is $171.21;
+             * this issue occurs if AAPL's is changing at the end of the open trading period
+             * and into the after hours period; for this example, it is likely that around
+             * the time of 4:00pm, AAPL's price moved toward $171.21 (or at least increased
+             * from its closing price). The largest problem that this small price difference
+             * causes is that a user could be scrubbing through the 1 day graph, and notice
+             * that the price at 4:00pm is different from the closing price - this also
+             * causes the change values at 4:00pm to be nonzero, which is incorrect.
+             * Fix this issue by manually setting the price at 4:00pm to the price at close
+             * for stocks that have 1 day chart data up to at least 4:00pm.
+             * Recall that in the 1 day chart, the prices are taken every 5 minutes, starting
+             * at 9:30am - the 4:00pm price is at index 78.
+             * Now that we have the price at close (price), fix the issue in the 1 day chart
+             * data. */
+            if (chartPrices_1day.size() >= 78) {
+                chartPrices_1day.set(78, price);
+            }
+
+
             final Element regionPrimary = quoteRoot.selectFirst(":root > div.content-region.region--primary");
             final Element keyDataElmnt = regionPrimary.selectFirst(":root > div.template.template--aside > div.column.column--full.left.clearfix > div.element.element--list > ul.list.list--kv.list--col50");
             final Elements keyDataItemElmnts = keyDataElmnt.select(":root > li");
 
-            final Element openPriceElmnt = keyDataItemElmnts.get(0);
             final Element dayRangeElmnt = keyDataItemElmnts.get(1);
             final Element fiftyTwoWeekRangeElmnt = keyDataItemElmnts.get(2);
             final Element marketCapElmnt = keyDataItemElmnts.get(3);
@@ -405,14 +914,6 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             final Element yieldElmnt = keyDataItemElmnts.get(10);
             final Element avgVolumeElmnt = keyDataItemElmnts.get(15);
 
-            final double openPrice;
-            // Remove ',' or '%' that could be in strings
-            if (!openPriceElmnt.text().contains("n/a") && !openPriceElmnt.text().equalsIgnoreCase("Open")) {
-                openPrice = parseDouble(openPriceElmnt.text().replaceAll("[^0-9.]+", ""));
-            } else {
-                openPrice = -1;
-                missingStats.add("Price at Open");
-            }
             final double dayRangeLow, dayRangeHigh;
             if (!dayRangeElmnt.text().contains("n/a") && !dayRangeElmnt.text().equalsIgnoreCase("Day Range")) {
                 dayRangeLow = parseDouble(substringBefore(dayRangeElmnt.text(), "-").replaceAll("[^0-9.]+", ""));
@@ -432,7 +933,6 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 missingStats.add("52 Week Range");
             }
             final String marketCap;
-            Log.d("test", marketCapElmnt.text());
             if (!marketCapElmnt.text().contains("n/a") && !marketCapElmnt.text().equalsIgnoreCase("Market Cap")) {
                 marketCap = substringAfter(marketCapElmnt.text(), "Market Cap $").trim();
             } else {
@@ -494,7 +994,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             switch (state) {
                 case PREMARKET:
                     ret = new PremarketStock(state, mticker, name, price, changePoint, changePercent,
-                            close_price, close_changePoint, close_changePercent, openPrice, dayRangeLow,
+                            afterHoursPrice, afterHoursChangePoint, afterHoursChangePercent, dayRangeLow,
                             dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh, marketCap,
                             beta, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
                             chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
@@ -503,15 +1003,14 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     break;
                 case OPEN:
                     ret = new AdvancedStock(state, mticker, name, price, changePoint, changePercent,
-                            openPrice, dayRangeLow, dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh,
+                            dayRangeLow, dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh,
                             marketCap, beta, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
                             chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
-                            chartPrices_5years, chartDates_2weeks, chartDates_1month, chartDates_3months,
-                            chartDates_1year, chartDates_5years);
+                            chartPrices_5years, chartDates_2weeks, chartDates_1month, chartDates_3months, chartDates_1year, chartDates_5years);
                     break;
                 case AFTER_HOURS:
                     ret = new AfterHoursStock(state, mticker, name, price, changePoint, changePercent,
-                            close_price, close_changePoint, close_changePercent, openPrice, dayRangeLow,
+                            afterHoursPrice, afterHoursChangePoint, afterHoursChangePercent, dayRangeLow,
                             dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh, marketCap,
                             beta, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
                             chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
@@ -520,7 +1019,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     break;
                 case CLOSED:
                     ret = new AdvancedStock(state, mticker, name, price, changePoint, changePercent,
-                            openPrice, dayRangeLow, dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh,
+                            dayRangeLow, dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh,
                             marketCap, beta, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
                             chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
                             chartPrices_5years, chartDates_2weeks, chartDates_1month, chartDates_3months,
@@ -538,415 +1037,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         protected void onPostExecute(final AdvancedStock stock) {
             mcompletionListener.get().onDownloadIndividualStockTaskCompleted(stock, missingStats);
         }
-    }
 
-    @BindView(R.id.progressBar_individual) ProgressBar mprogressBar;
-    @BindView(R.id.textView_scrubTime_individual) TextView mscrubTime;
-    @BindView(R.id.sparkView_individual) CustomSparkView msparkView;
-    @BindView(R.id.textView_scrubPrice_individual) TextView mscrubPrice;
-    @BindView(R.id.textView_scrubChangePercent_individual) TextView mscrubChangePercent;
-    @BindView(R.id.horizontalPicker_chartPeriod_individual) HorizontalPicker mchartPeriodPicker;
-    @BindView(R.id.view_chartPeriodPickerUnderline_individual) View mchartPeriodPickerUnderline;
-    @BindView(R.id.divider_sparkViewToStats_individual) View msparkViewToStatsDivider;
-    @BindView(R.id.textView_keyStatisticsHeader_individual) View mkeyStatisticsHeader;
-    @BindView(R.id.textView_state_individual) TextView mstate;
-    @BindView(R.id.textView_price_individual) TextView mprice;
-    @BindView(R.id.textView_changePoint_individual) TextView mchangePoint;
-    @BindView(R.id.textView_changePercent_individual) TextView mchangePercent;
-    @BindView(R.id.textView_close_price_individual) TextView mclose_price;
-    @BindView(R.id.textView_close_changePoint_individual) TextView mclose_changePoint;
-    @BindView(R.id.textView_close_changePercent_individual) TextView mclose_changePercent;
-    @BindView(R.id.textView_openPrice_individual) TextView mopenPrice;
-    @BindView(R.id.textView_todaysLow_individual) TextView mtodaysLow;
-    @BindView(R.id.textView_todaysHigh_individual) TextView mtodaysHigh;
-    @BindView(R.id.textView_fiftyTwoWeekLow_individual) TextView mfiftyTwoWeekLow;
-    @BindView(R.id.textView_fiftyTwoWeekHigh_individual) TextView mfiftyTwoWeekHigh;
-    @BindView(R.id.textView_marketCap_individual) TextView mmarketCap;
-    @BindView(R.id.textView_beta_individual) TextView mbeta;
-    @BindView(R.id.textView_peRatio_individual) TextView mpeRatio;
-    @BindView(R.id.textView_eps_individual) TextView meps;
-    @BindView(R.id.textView_yield_individual) TextView myield;
-    @BindView(R.id.textView_averageVolume_individual) TextView mavgVolume;
-    @BindView(R.id.divider_statisticsToDescription_individual) View mstatsToDescriptionDivider;
-    @BindView(R.id.textView_description_individual) TextView mdescriptionTextView;
-
-    private String mticker; // Needed to create mstock
-    private AdvancedStock mstock;
-    private boolean mwasInFavoritesInitially;
-    private boolean misInFavorites;
-    private SparkViewAdapter msparkViewAdapter;
-    private SharedPreferences mpreferences;
-
-    /* Called from DownloadStockDataTask.onPostExecute(). */
-    @Override
-    public void onDownloadIndividualStockTaskCompleted(final AdvancedStock stock, final Set<String> missingStats) {
-        mstock = stock;
-
-        if (!getTitle().equals(mstock.getName())) {
-            setTitle(mstock.getName());
-        }
-
-        if (!(mstock instanceof StockWithCloseValues)) {
-            mclose_price.setVisibility(View.GONE);
-            mclose_changePoint.setVisibility(View.GONE);
-            mclose_changePercent.setVisibility(View.GONE);
-        }
-
-        if (!mstock.getYData_1day().isEmpty()) { /** Change: check for available charts using missingStats. */
-            msparkViewAdapter.setyData(mstock.getYData_1day());
-            msparkViewAdapter.notifyDataSetChanged();
-            mscrubPrice.setText(getString(R.string.dollar_double2dec, mstock.getPrice())); // Init
-            mscrubChangePercent.setText(getString(R.string.double2dec_percent, mstock.getChangePercent())); // Init
-            msparkView.setScrubListener((final Object valueObj) -> {
-                if (valueObj == null) {
-                    // The user is not scrubbing
-                    mscrubPrice.setText(getString(R.string.dollar_double2dec, mstock.getPrice()));
-                    mscrubChangePercent.setText(getString(R.string.double2dec_percent, mstock.getChangePercent()));
-                    final int deactivatedColor = getResources().getColor(R.color.colorAccentTransparent, getTheme());
-                    mscrubPrice.setTextColor(deactivatedColor);
-                    mscrubChangePercent.setTextColor(deactivatedColor);
-                } else {
-                    // The user is scrubbing
-                    // Calculate the percent change at this scrubbing location
-                    mscrubPrice.setText(getString(R.string.dollar_double2dec, (double) valueObj));
-                    final double realPrice = mstock.getPrice();
-                    final double curPrice = (double) valueObj;
-                    final double curChangePercent = 100 * ((curPrice - realPrice) / realPrice);
-                    mscrubChangePercent.setText(getString(R.string.double2dec_percent, curChangePercent));
-                    final int activatedColor = getResources().getColor(R.color.colorAccent, getTheme());
-                    mscrubPrice.setTextColor(activatedColor);
-                    mscrubChangePercent.setTextColor(activatedColor);
-                }
-            });
-
-            msparkView.setVisibility(View.VISIBLE);
-            mchartPeriodPicker.setVisibility(View.VISIBLE);
-            mchartPeriodPickerUnderline.setVisibility(View.VISIBLE);
-            msparkViewToStatsDivider.setVisibility(View.VISIBLE);
-        } else {
-            mscrubPrice.setVisibility(View.GONE);
-            mscrubChangePercent.setVisibility(View.GONE);
-        }
-
-        // AFTER_HOURS is the only state with an unwanted character
-        mstate.setText(getString(R.string.string_colon_string, "State",
-                mstock.getState() == AFTER_HOURS ? "AFTER HOURS" : mstock.getState().toString()));
-        mprice.setText(getString(R.string.string_colon_double2dec, "Price", mstock.getPrice()));
-        mchangePoint.setText(getString(R.string.string_colon_double2dec, "Point Change", mstock.getChangePoint()));
-        mchangePercent.setText(getString(R.string.string_colon_double2dec_percent, "Percent Change", mstock.getChangePercent()));
-        if (mstock instanceof StockWithCloseValues) {
-            final StockWithCloseValues stockWithCloseValues = (StockWithCloseValues) mstock;
-            mclose_price.setText(getString(R.string.string_colon_double2dec, "Price at Close", stockWithCloseValues.getClose_price()));
-            mclose_changePoint.setText(getString(R.string.string_colon_double2dec, "Point Change at Close", stockWithCloseValues.getClose_changePoint()));
-            mclose_changePercent.setText(getString(R.string.string_colon_double2dec_percent, "Percent Change at Close", stockWithCloseValues.getClose_changePercent()));
-        }
-
-        if (!missingStats.contains("Price at Open")) {
-            mopenPrice.setText(getString(R.string.string_colon_double2dec, "Price at Open", mstock.getOpenPrice()));
-        } else {
-            mopenPrice.setVisibility(View.GONE);
-        }
-        if (!missingStats.contains("Day Range")) {
-            mtodaysLow.setText(getString(R.string.double2dec, mstock.getTodaysLow()));
-            mtodaysHigh.setText(getString(R.string.double2dec, mstock.getTodaysHigh()));
-        } else {
-            mtodaysLow.setText("N/A");
-            mtodaysHigh.setText("N/A");
-        }
-        if (!missingStats.contains("52 Week Range")) {
-            mfiftyTwoWeekLow.setText(getString(R.string.double2dec, mstock.getFiftyTwoWeekLow()));
-            mfiftyTwoWeekHigh.setText(getString(R.string.double2dec, mstock.getFiftyTwoWeekHigh()));
-        } else {
-            mfiftyTwoWeekLow.setText("N/A");
-            mfiftyTwoWeekHigh.setText("N/A");
-        }
-        if (!missingStats.contains("Market Cap")) {
-            mmarketCap.setText(getString(R.string.string, mstock.getMarketCap()));
-        } else {
-            mmarketCap.setText(getString(R.string.string, "N/A"));
-        }
-        if (!missingStats.contains("Beta")) {
-            mbeta.setText(getString(R.string.double2dec, mstock.getBeta()));
-        } else {
-            mbeta.setText(getString(R.string.string, "N/A"));
-        }
-        if (!missingStats.contains("P/E Ratio")) {
-            mpeRatio.setText(getString(R.string.double2dec, mstock.getPeRatio()));
-        } else {
-            mpeRatio.setText(getString(R.string.string, "N/A"));
-        }
-        if (!missingStats.contains("EPS")) {
-            meps.setText(getString(R.string.double2dec, mstock.getEps()));
-        } else {
-            meps.setText(getString(R.string.string, "N/A"));
-        }
-        if (!missingStats.contains("Yield")) {
-            myield.setText(getString(R.string.double2dec, mstock.getYield()));
-        } else {
-            myield.setText(getString(R.string.string, "N/A"));
-        }
-        if (!missingStats.contains("Average Volume")) {
-            mavgVolume.setText(getString(R.string.string, mstock.getAverageVolume()));
-        } else {
-            mavgVolume.setText(getString(R.string.string, "N/A"));
-        }
-        if (!missingStats.contains("Description")) {
-            mdescriptionTextView.setText(mstock.getDescription());
-            mstatsToDescriptionDivider.setVisibility(View.VISIBLE);
-        } else {
-            mdescriptionTextView.setVisibility(View.GONE);
-        }
-
-        mkeyStatisticsHeader.setVisibility(View.VISIBLE);
-        mprogressBar.setVisibility(View.GONE);
-    }
-
-    /* Called from CustomScrubGestureDetector.onScrubbed(). */
-    @Override
-    public void onScrubbed(final int index) {
-        // Calculate time corresponding to this scrubbing index and the current chart period
-        switch (msparkViewAdapter.getChartPeriod()) {
-            case ONE_DAY: {
-                /* There are 78 data points representing the open hours data (9:30am - 4:00pm ET).
-                 * This means that 78 data points represent 6.5 hours. Therefore, there is one data
-                 * point for every 5 minutes. This 5 minute step size is constant throughout all
-                 * states. The number of data points is dependent on the time of day. */
-                int minute = 30 + (index * 5);
-                int hour = 9;
-                if (minute >= 60) {
-                    hour += minute / 60;
-                    minute %= 60;
-                }
-                final boolean isPm = hour >= 12;
-                if (hour > 12) {
-                    hour %= 12;
-                }
-                if (isPm) {
-                    mscrubTime.setText(getString(R.string.int_colon_int2dig_pm_ET, hour, minute));
-                } else {
-                    mscrubTime.setText(getString(R.string.int_colon_int2dig_am_ET, hour, minute));
-                }
-                break;
-            }
-            case TWO_WEEKS:
-                mscrubTime.setText(getString(R.string.string, mstock.getDates_2weeks().get(index)));
-                break;
-            case ONE_MONTH:
-                mscrubTime.setText(getString(R.string.string, mstock.getDates_1month().get(index)));
-                break;
-            case THREE_MONTHS:
-                mscrubTime.setText(getString(R.string.string, mstock.getDates_3months().get(index)));
-                break;
-            case ONE_YEAR:
-                mscrubTime.setText(getString(R.string.string, mstock.getDates_1year().get(index)));
-                break;
-            case FIVE_YEARS:
-                mscrubTime.setText(getString(R.string.string, mstock.getDates_5years().get(index)));
-                break;
-        }
-    }
-
-    /* Called from CustomScrubGestureDetector.onScrubEnded(). */
-    @Override
-    public void onScrubEnded() {
-        mscrubTime.setText(getString(R.string.string, ""));
-    }
-
-    @Override
-    protected void onCreate(final Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_individual_stock);
-        setTitle(""); // Show empty title now, company name will be shown (in onPostExecute())
-        ButterKnife.bind(this);
-        mticker = getIntent().getStringExtra("Ticker");
-
-        // Start task ASAP
-        new DownloadStockDataTask(mticker, this).execute();
-
-        AndroidThreeTen.init(this); // Init, timezone not actually used
-        mpreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        msparkViewAdapter = new SparkViewAdapter(new ArrayList<>()); // Init as empty
-        msparkView.setAdapter(msparkViewAdapter);
-        final float touchSlop = ViewConfiguration.get(this).getScaledTouchSlop();
-        msparkView.setOnTouchListener(
-                new CustomScrubGestureDetector(msparkView, this, touchSlop));
-        mchartPeriodPicker.setOnItemSelectedListener(this);
-        misInFavorites = getIntent().getBooleanExtra("Is in favorites", false);
-        mwasInFavoritesInitially = misInFavorites;
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        if (misInFavorites != mwasInFavoritesInitially) {
-            // If the star status (favorite status) has changed
-            if (mwasInFavoritesInitially) {
-                removeStockFromPreferences();
-            } else {
-                addStockToPreferences();
-            }
-
-            /* The activity has paused. Update the favorites status.
-             * The condition to be able to edit Tickers CSV and Data CSV are dependent on whether
-             * or not the favorites status has changed. */
-            mwasInFavoritesInitially = misInFavorites;
-        }
-    }
-
-    @Override
-    public void onBackPressed() {
-        /* The parent (non-override) onBackPressed() does not create a new HomeActivity. So when we
-         * go back back to HomeActivity, the first function called is onResume(); onCreate() is not
-         * called. HomeActivity depends on the property that Tickers CSV and Data CSV are not
-         * changed in between calls to HomeActivity.onPause() and HomeActivity.onResume(). Tickers
-         * CSV and Data CSV can be changed within this class. Therefore, if we don't start a new
-         * HomeActivity in this function, then it is possible that Tickers CSV and Data CSV are
-         * changed in between calls to HomeActivity.onResume() and HomeActivity.onPause(). */
-        final Intent intent = new Intent(this, HomeActivity.class);
-        startActivity(intent);
-    }
-
-    /* For mchartPeriodPicker. */
-    @Override
-    public void onItemSelected(final int index) {
-        if (mstock != null) { // In case user selects something before mstock is initialized.
-            switch (index) {
-                case 0: // 1D
-                    if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.ONE_DAY) {
-                        msparkViewAdapter.setyData(mstock.getYData_1day());
-                        msparkViewAdapter.notifyDataSetChanged();
-                        msparkViewAdapter.setMchartPeriod(AdvancedStock.ChartPeriod.ONE_DAY);
-                    }
-                    break;
-                case 1: // 2W
-                    if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.TWO_WEEKS) {
-                        msparkViewAdapter.setyData(mstock.getYData_2weeks());
-                        msparkViewAdapter.notifyDataSetChanged();
-                        msparkViewAdapter.setMchartPeriod(AdvancedStock.ChartPeriod.TWO_WEEKS);
-                    }
-                    break;
-                case 2: // 1M
-                    if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.ONE_MONTH) {
-                        msparkViewAdapter.setyData(mstock.getYData_1month());
-                        msparkViewAdapter.notifyDataSetChanged();
-                        msparkViewAdapter.setMchartPeriod(AdvancedStock.ChartPeriod.ONE_MONTH);
-                    }
-                    break;
-                case 3: // 3M
-                    if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.THREE_MONTHS) {
-                        msparkViewAdapter.setyData(mstock.getYData_3months());
-                        msparkViewAdapter.notifyDataSetChanged();
-                        msparkViewAdapter.setMchartPeriod(AdvancedStock.ChartPeriod.THREE_MONTHS);
-                    }
-                    break;
-                case 4: // 1Y
-                    if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.ONE_YEAR) {
-                        msparkViewAdapter.setyData(mstock.getYData_1year());
-                        msparkViewAdapter.notifyDataSetChanged();
-                        msparkViewAdapter.setMchartPeriod(AdvancedStock.ChartPeriod.ONE_YEAR);
-                    }
-                    break;
-                case 5: // 5Y
-                    if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.FIVE_YEARS) {
-                        msparkViewAdapter.setyData(mstock.getYData_5years());
-                        msparkViewAdapter.notifyDataSetChanged();
-                        msparkViewAdapter.setMchartPeriod(AdvancedStock.ChartPeriod.FIVE_YEARS);
-                    }
-                    break;
-            }
-        }
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(final Menu menu) {
-        getMenuInflater().inflate(R.menu.menu_stock_activity, menu);
-        final MenuItem starItem = menu.findItem(R.id.starMenuItem);
-        starItem.setIcon(misInFavorites ? R.drawable.star_on : R.drawable.star_off);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(final MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.starMenuItem:
-                misInFavorites = !misInFavorites; // Toggle
-                item.setIcon(misInFavorites ? R.drawable.star_on : R.drawable.star_off);
-                return true;
-            default:
-                return super.onOptionsItemSelected(item);
-        }
-    }
-
-    /**
-     * Adds mstock to mpreferences; adds mstock's ticker to Tickers CSV and and adds mstock's data
-     * to Data CSV. mstock is added to the front of each preference string, meaning that mstock
-     * is inserted at the top of the list of stocks. This function does not check if mstock is
-     * already in mpreferences before adding mstock.
-     * <p>
-     * If mstock's state is ERROR, this function does nothing. Otherwise if mstock's state is
-     * not OPEN, then the data that is added to mpreferences is the price, change point, and
-     * change percent at the last day's close (data at the last close).
-     */
-    private void addStockToPreferences() {
-        if (mstock.getState() == BasicStock.State.ERROR) {
-            return;
-        }
-
-        final String tickersCSV = mpreferences.getString("Tickers CSV", "");
-        final String dataCSV = mpreferences.getString("Data CSV", "");
-
-        final String dataStr;
-        // Init dataStr
-        switch (mstock.getState()) {
-            case OPEN:
-                dataStr = mstock.getState().toString() + ',' +
-                        mstock.getPrice() + ',' +
-                        mstock.getChangePoint() + ',' +
-                        mstock.getChangePercent();
-                break;
-            default:
-                final StockWithCloseValues stockWithCloseValues = (StockWithCloseValues) mstock;
-                dataStr = mstock.getState().toString() + ',' +
-                        stockWithCloseValues.getClose_price() + ',' +
-                        stockWithCloseValues.getClose_changePoint() + ',' +
-                        stockWithCloseValues.getClose_changePercent();
-        }
-
-        if (!tickersCSV.isEmpty()) {
-            // There are other stocks in favorites
-            mpreferences.edit().putString("Tickers CSV", mticker + ',' + tickersCSV).apply();
-            mpreferences.edit().putString("Data CSV", dataStr + ',' + dataCSV).apply();
-        } else {
-            // There are no stocks in favorites, this will be the first
-            mpreferences.edit().putString("Tickers CSV", mticker).apply();
-            mpreferences.edit().putString("Data CSV", dataStr).apply();
-        }
-    }
-
-    /**
-     * Removes mstock from mpreferences; removes mstock's ticker from Tickers CSV and removes
-     * mStock's data from Data CSV.
-     */
-    private void removeStockFromPreferences() {
-        final String tickersCSV = mpreferences.getString("Tickers CSV", "");
-        final String[] tickerArr = tickersCSV.split(","); // "".split(",") returns {""}
-
-        if (!tickerArr[0].isEmpty()) {
-            final ArrayList<String> tickerList = new ArrayList<>(Arrays.asList(tickerArr));
-            final ArrayList<String> dataList = new ArrayList<>(Arrays.asList(
-                    mpreferences.getString("Data CSV", "").split(",")));
-
-            final int tickerNdx = tickerList.indexOf(mstock.getTicker());
-            tickerList.remove(tickerNdx);
-            mpreferences.edit().putString("Tickers CSV", TextUtils.join(",", tickerList)).apply();
-
-            // 4 data elements per 1 ticker. DataNdx is the index of the first element to delete.
-            final int dataNdx = tickerNdx * 4;
-            for (int deleteCount = 1; deleteCount <= 4; deleteCount++) { // Delete 4 data elements
-                dataList.remove(dataNdx);
-            }
-            mpreferences.edit().putString("Data CSV", TextUtils.join(",", dataList)).apply();
-        }
     }
 
 }

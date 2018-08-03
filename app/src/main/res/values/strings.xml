@@ -1,6 +1,8 @@
 <resources>
     <string name="app_name">Stock Watch</string>
 
+    <string name="hockeyAppID">7a66f7ec251949d88f47aaa4931f20cc</string>
+
     <!--HomeActivity menu item titles-->
     <string name="searchMenuItem">Search</string>
     <string name="sortAlphabeticallyMenuItem">Sort Alphabetically</string>
@@ -12,9 +14,16 @@
 
     <!--Strings in IndividualStockActivity-->
     <string name="starMenuItem">Star</string>
-    <string name="keyStatistics">KEY STATISTICS</string>
-    <string name="state">STATE</string>
-    <string name="price">PRICE</string>
+    <string name="today">Today</string>
+    <string name="afterHours">After-Hours</string>
+    <string name="pastTwoWeeks">Past 2W</string>
+    <string name="pastMonth">Past Month</string>
+    <string name="pastThreeMonths">Past 3M</string>
+    <string name="pastYear">Past Year</string>
+    <string name="pastFiveYears">Past 5Y</string>
+    <string name="keyStatistics">Key Statistics</string>
+    <string name="price">Price</string>
+    <string name="state">State</string>
     <string name="todaysLow">Today\'s Low</string>
     <string name="todaysHigh">Today\'s High</string>
     <string name="fiftyTwoWeekLow">52 Week Low</string>
@@ -37,13 +46,14 @@
 
     <string name="string">%1$s</string>
     <string name="double2dec">%1$.2f</string>
+    <string name="plus_double2dec">+%1$.2f</string>
     <string name="string_colon_string">%1$s: %2$s</string>
-    <string name="string_decimal_20_int2dig">%1$s. 20%2$02d</string>
     <string name="int_colon_int2dig_am_ET">%1$d:%2$02dam ET</string>
     <string name="int_colon_int2dig_pm_ET">%1$d:%2$02dpm ET</string>
     <!--'%' escapes itself-->
-    <string name="double2dec_percent">%1$.2f%%</string>
-    <string name="dollar_double2dec">\u0024%1$.2f</string>
+    <!--\u0024 is the dollar sign-->
+    <string name="openParen_double2dec_percent_closeParen">(%1$.2f%%)</string>
+    <string name="openParen_plus_double2dec_percent_closeParen">(+%1$.2f%%)</string>
     <string name="string_colon_double2dec">%1$s: %2$.2f</string>
     <string name="string_colon_double2dec_percent">%1$s: %2$.2f%%</string>
 

@@ -70,8 +70,8 @@ public final class CustomScrubGestureDetector implements View.OnTouchListener {
     };
 
     public CustomScrubGestureDetector(final CustomSparkView customSparkView,
-                               final CustomScrubGestureDetector.ScrubIndexListener scrubIndexListener,
-                               final float touchSlop) {
+                                      final CustomScrubGestureDetector.ScrubIndexListener scrubIndexListener,
+                                      final float touchSlop) {
         msparkView = customSparkView;
         mscrubListener = customSparkView;
         mscrubIndexListener = scrubIndexListener;

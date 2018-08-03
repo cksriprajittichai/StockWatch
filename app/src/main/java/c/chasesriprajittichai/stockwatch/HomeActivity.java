@@ -21,6 +21,9 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.Volley;
 
+import net.hockeyapp.android.CrashManager;
+import net.hockeyapp.android.UpdateManager;
+
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -101,7 +104,6 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
     // Maps tickers to indexes in mstocks
     private final Map<String, Integer> mtickerToIndexMap = new HashMap<>();
-
 
     /* Called from FindStockTask.onPostExecute(). */
     @Override
@@ -193,6 +195,8 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
         final StockSwipeAndDragCallback stockSwipeAndDragCallback =
                 new StockSwipeAndDragCallback(this, mrecyclerAdapter, mstocks, mtickerToIndexMap);
         new ItemTouchHelper(stockSwipeAndDragCallback).attachToRecyclerView(mrecyclerView);
+
+        checkForUpdates();
     }
 
     @Override
@@ -211,6 +215,8 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
         };
         // Run every 10 seconds, starting immediately
         mtimer.schedule(timerTask, 0, 10000);
+
+        checkForCrashes();
     }
 
     @Override
@@ -223,6 +229,16 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
         mpreferences.edit().putString("Tickers CSV", mstocks.getStockTickersAsCSV()).apply();
         mpreferences.edit().putString("Data CSV", mstocks.getStockDataAsCSV()).apply();
+
+        unregisterManagers();
+    }
+
+    @Override
+    public void onBackPressed() {
+        final Intent homeIntent = new Intent(Intent.ACTION_MAIN);
+        homeIntent.addCategory(Intent.CATEGORY_HOME);
+        homeIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(homeIntent);
     }
 
     @Override
@@ -456,6 +472,26 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
             dataArr[i + 3] = "-1";
         }
         mpreferences.edit().putString("Data CSV", TextUtils.join(",", dataArr)).apply();
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        
+        unregisterManagers();
+    }
+
+    private void checkForCrashes() {
+        CrashManager.register(this);
+    }
+
+    private void checkForUpdates() {
+        // Remove this for store builds!
+        UpdateManager.register(this);
+    }
+
+    private void unregisterManagers() {
+        UpdateManager.unregister();
     }
 
 }
