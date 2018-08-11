@@ -68,19 +68,18 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
         @Override
         protected Boolean doInBackground(final Void... params) {
-            final String baseUrl = "https://www.marketwatch.com/tools/quotes/lookup.asp?lookup=";
-            final String url = baseUrl + mticker;
+            final String URL = "https://quotes.wsj.com/" + mticker;
 
             boolean stockExists = false;
             try {
-                final Document doc = Jsoup.connect(url).get();
+                final Document doc = Jsoup.connect(URL).get();
 
-                // This element exists if the stock's individual page is found on MarketWatch
-                final Element foundElement = doc.selectFirst("html > body[role=document][class~=page--quote symbol--(Stock|AmericanDepositoryReceiptStock|PreferredStock) page--Index]");
+                // If the stock's page is found on WSJ, this element does not exist
+                final Element flagElmnt = doc.selectFirst(
+                        "html > body > div.pageFrame > div.contentFrame div[class$=notfound_header module]");
 
-                stockExists = (foundElement != null);
+                stockExists = (flagElmnt == null);
             } catch (final IOException ioe) {
-                /* Show "No internet connection", or something. */
                 Log.e("IOException", ioe.getLocalizedMessage());
             }
 

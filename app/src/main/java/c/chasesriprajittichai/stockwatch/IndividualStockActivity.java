@@ -807,6 +807,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             final Elements diffs = mainData.select(":root > li[class$=diff] > span > span");
             final double changePoint = parseDouble(diffs.get(0).ownText().replaceAll("[^0-9.-]+", ""));
             final double changePercent = parseDouble(diffs.get(1).ownText().replaceAll("[^0-9.-]+", ""));
+            /** Not sure what HTML looks like when prevClose doesn't exist */
             final double prevClose = parseDouble(module2.selectFirst(":root > div > div[id$=divId] > div[class$=compare] > " +
                     "div[class$=compare_data] > ul > li:eq(1) > span.data_data").ownText().replaceAll("[^0-9.]+", ""));
 
@@ -854,32 +855,111 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             }
 
 
+            String strBuff;
+            final String NA = "N/A";
+
+
+            /* Values in the table (keyData1) can be either a real value (i.e. "310,540 -
+             * 313,799"), or something else (i.e. empty string). It is difficult to find
+             * examples of irregular values in this table. All the values are numeric and
+             * positive, and some of the values could start with a decimal, so check if
+             * the first char in the value is a digit or '.'. */
             final Elements keyData1 = module2.select("ul[class$=charts_info] > li > div > span.data_data");
-            final String avgVolume = keyData1.get(1).ownText();
-            // " - " is between low and high values
-            final String[] todaysRange = keyData1.get(2).ownText().split("\\s-\\s");
-            final double todaysLow = parseDouble(todaysRange[0].replaceAll("[^0-9.]+", ""));
-            final double todaysHigh = parseDouble(todaysRange[1].replaceAll("[^0-9.]+", ""));
-            final String[] fiftyTwoWeekRange = keyData1.get(3).ownText().split("\\s-\\s");
-            final double fiftyTwoWeekLow = parseDouble(fiftyTwoWeekRange[0].replaceAll("[^0-9.]+", ""));
-            final double fiftyTwoWeekHigh = parseDouble(fiftyTwoWeekRange[1].replaceAll("[^0-9.]+", ""));
+
+            final String avgVolume;
+            strBuff = keyData1.get(1).ownText();
+            if (isDigitOrDec(strBuff.charAt(0))) {
+                avgVolume = strBuff;
+            } else {
+                avgVolume = NA;
+                missingStats.add(Stat.AVG_VOLUME);
+            }
+
+            final double todaysLow, todaysHigh;
+            strBuff = keyData1.get(2).ownText();
+            if (isDigitOrDec(strBuff.charAt(0))) {
+                // " - " is between low and high values
+                final String[] todaysRange = strBuff.split("\\s-\\s");
+                todaysLow = parseDouble(todaysRange[0].replaceAll("[^0-9.]+", ""));
+                todaysHigh = parseDouble(todaysRange[1].replaceAll("[^0-9.]+", ""));
+            } else {
+                todaysLow = -1;
+                todaysHigh = -1;
+                missingStats.add(Stat.TODAYS_RANGE);
+            }
+
+            final double fiftyTwoWeekLow, fiftyTwoWeekHigh;
+            strBuff = keyData1.get(3).ownText();
+            if (isDigitOrDec(strBuff.charAt(0))) {
+                // " - " is between low and high values
+                final String[] todaysRange = strBuff.split("\\s-\\s");
+                fiftyTwoWeekLow = parseDouble(todaysRange[0].replaceAll("[^0-9.]+", ""));
+                fiftyTwoWeekHigh = parseDouble(todaysRange[1].replaceAll("[^0-9.]+", ""));
+            } else {
+                fiftyTwoWeekLow = -1;
+                fiftyTwoWeekHigh = -1;
+                missingStats.add(Stat.FIFTY_TWO_WEEK_RANGE);
+            }
 
 
+            /* Values in the table (keyData2) can be either a real value (i.e. "366,452"),
+             * a missing value (i.e. "N/A"), or something else (i.e. "BRK.A has not issued
+             * dividends in more than 1 year"). All the values are numeric, and some values
+             * could be negative, or start with a decimal, so check if the first char in
+             * the value is a digit, '.', or '-'. */
             final Element module6 = contentFrame.selectFirst(":root > section[class$=section_2] > " +
                     "div#contentCol > div:eq(1) > div.zonedModule[data-module-id=6]");
             final Elements keyData2 = module6.select("div > div[class$=keystock_drawer] > " +
                     "div > ul > li > div > span.data_data");
-            // Remove ',' that could be in P/E ratio or EPS strings
-            // P/E ratio, EPS, and yield can be negative
-            final double peRatio = parseDouble(keyData2.get(0).ownText().replaceAll("[^0-9.-]+", ""));
-            final double eps = parseDouble(keyData2.get(1).ownText().replaceAll("[^0-9.-]+", ""));
-            final String marketCap = keyData2.get(2).ownText();
-            final double yield = parseDouble(keyData2.get(5).ownText().replaceAll("[^0-9.-]+", ""));
 
+            final double peRatio; // P/E ratio can be negative
+            strBuff = keyData2.get(0).ownText();
+            if (isDigitOrDecOrMinus(strBuff.charAt(0))) {
+                peRatio = parseDouble(strBuff.replaceAll("[^0-9.-]+", ""));
+            } else {
+                peRatio = -1;
+                missingStats.add(Stat.PE_RATIO);
+            }
 
-            final String description = contentFrame.selectFirst(":root > section[class$=section_2] > " +
+            final double eps; // EPS can be negative
+            strBuff = keyData2.get(1).ownText();
+            if (isDigitOrDecOrMinus(strBuff.charAt(0))) {
+                eps = parseDouble(strBuff.replaceAll("[^0-9.-]+", ""));
+            } else {
+                eps = -1;
+                missingStats.add(Stat.EPS);
+            }
+
+            final String marketCap;
+            // Example market cap value: "1.4 T"
+            strBuff = keyData2.get(2).ownText();
+            if (isDigitOrDec(strBuff.charAt(0))) {
+                marketCap = strBuff;
+            } else {
+                marketCap = NA;
+                missingStats.add(Stat.MARKET_CAP);
+            }
+
+            final double yield; // Yield can be negative
+            strBuff = keyData2.get(5).ownText();
+            if (isDigitOrDecOrMinus(strBuff.charAt(0))) {
+                yield = parseDouble(strBuff.replaceAll("[^0-9.-]+", ""));
+            } else {
+                yield = -1;
+                missingStats.add(Stat.YIELD);
+            }
+
+            final String description;
+            strBuff = contentFrame.selectFirst(":root > section[class$=section_2] > " +
                     "div#contentCol + div > div:eq(1) > div.zonedModule[data-module-id=11] > div > " +
-                    "div[class$=data] p.txtBody").ownText();
+                    "div[class$=data] > div[class$=description] > p.txtBody").ownText();
+            // If there is no description, the element (p.txtBody) doesn't exist
+            if (strBuff != null) {
+                description = strBuff;
+            } else {
+                description = NA;
+                missingStats.add(Stat.DESCRIPTION);
+            }
 
 
             switch (state) {
@@ -927,6 +1007,14 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         @Override
         protected void onPostExecute(final AdvancedStock stock) {
             mcompletionListener.get().onDownloadIndividualStockTaskCompleted(stock, missingStats);
+        }
+
+        private boolean isDigitOrDec(final char c) {
+            return Character.isDigit(c) || c == '.';
+        }
+
+        private boolean isDigitOrDecOrMinus(final char c) {
+            return Character.isDigit(c) || c == '.' || c == '-';
         }
 
     }
