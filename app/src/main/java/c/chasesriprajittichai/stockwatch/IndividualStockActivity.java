@@ -56,13 +56,16 @@ import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.ERROR;
 import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.OPEN;
 import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.PREMARKET;
 import static java.lang.Double.parseDouble;
-import static org.apache.commons.lang3.StringUtils.substringAfter;
-import static org.apache.commons.lang3.StringUtils.substringBefore;
 import static org.apache.commons.lang3.StringUtils.substringBetween;
 
 
 public final class IndividualStockActivity extends AppCompatActivity implements
         DownloadIndividualStockTaskListener, HorizontalPicker.OnItemSelected, CustomScrubGestureDetector.ScrubIndexListener {
+
+    public enum Stat {
+        TODAYS_RANGE, FIFTY_TWO_WEEK_RANGE, MARKET_CAP, PREV_CLOSE, PE_RATIO, EPS, YIELD, AVG_VOLUME,
+        DESCRIPTION, CHART_1D, CHART_2W, CHART_1M, CHART_3M, CHART_1Y, CHART_5Y
+    }
 
     @BindView(R.id.viewFlipper_individual) ViewFlipper mviewFlipper;
     @BindView(R.id.progressBar_individual) ProgressBar mprogressBar;
@@ -85,7 +88,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     @BindView(R.id.textView_fiftyTwoWeekLow_individual) TextView mfiftyTwoWeekLow;
     @BindView(R.id.textView_fiftyTwoWeekHigh_individual) TextView mfiftyTwoWeekHigh;
     @BindView(R.id.textView_marketCap_individual) TextView mmarketCap;
-    @BindView(R.id.textView_beta_individual) TextView mbeta;
+    @BindView(R.id.textView_prevClose_individual) TextView mprevClose;
     @BindView(R.id.textView_peRatio_individual) TextView mpeRatio;
     @BindView(R.id.textView_eps_individual) TextView meps;
     @BindView(R.id.textView_yield_individual) TextView myield;
@@ -104,7 +107,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
     /* Called from DownloadStockDataTask.onPostExecute(). */
     @Override
-    public void onDownloadIndividualStockTaskCompleted(final AdvancedStock stock, final Set<String> missingStats) {
+    public void onDownloadIndividualStockTaskCompleted(final AdvancedStock stock, final Set<Stat> missingStats) {
         mstock = stock;
         mstockHasBeenInitialized = true;
 
@@ -119,51 +122,51 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             initScrubViews();
         }
 
-        if (!missingStats.contains("Day Range")) {
+        if (!missingStats.contains(Stat.TODAYS_RANGE)) {
             mtodaysLow.setText(getString(R.string.double2dec, mstock.getTodaysLow()));
             mtodaysHigh.setText(getString(R.string.double2dec, mstock.getTodaysHigh()));
         } else {
             mtodaysLow.setText("N/A");
             mtodaysHigh.setText("N/A");
         }
-        if (!missingStats.contains("52 Week Range")) {
+        if (!missingStats.contains(Stat.FIFTY_TWO_WEEK_RANGE)) {
             mfiftyTwoWeekLow.setText(getString(R.string.double2dec, mstock.getFiftyTwoWeekLow()));
             mfiftyTwoWeekHigh.setText(getString(R.string.double2dec, mstock.getFiftyTwoWeekHigh()));
         } else {
             mfiftyTwoWeekLow.setText("N/A");
             mfiftyTwoWeekHigh.setText("N/A");
         }
-        if (!missingStats.contains("Market Cap")) {
+        if (!missingStats.contains(Stat.MARKET_CAP)) {
             mmarketCap.setText(getString(R.string.string, mstock.getMarketCap()));
         } else {
             mmarketCap.setText(getString(R.string.string, "N/A"));
         }
-        if (!missingStats.contains("Beta")) {
-            mbeta.setText(getString(R.string.double2dec, mstock.getBeta()));
+        if (!missingStats.contains(Stat.PREV_CLOSE)) {
+            mprevClose.setText(getString(R.string.double2dec, mstock.getPrevClose()));
         } else {
-            mbeta.setText(getString(R.string.string, "N/A"));
+            mprevClose.setText(getString(R.string.string, "N/A"));
         }
-        if (!missingStats.contains("P/E Ratio")) {
+        if (!missingStats.contains(Stat.PE_RATIO)) {
             mpeRatio.setText(getString(R.string.double2dec, mstock.getPeRatio()));
         } else {
             mpeRatio.setText(getString(R.string.string, "N/A"));
         }
-        if (!missingStats.contains("EPS")) {
+        if (!missingStats.contains(Stat.EPS)) {
             meps.setText(getString(R.string.double2dec, mstock.getEps()));
         } else {
             meps.setText(getString(R.string.string, "N/A"));
         }
-        if (!missingStats.contains("Yield")) {
+        if (!missingStats.contains(Stat.YIELD)) {
             myield.setText(getString(R.string.double2dec, mstock.getYield()));
         } else {
             myield.setText(getString(R.string.string, "N/A"));
         }
-        if (!missingStats.contains("Average Volume")) {
+        if (!missingStats.contains(Stat.AVG_VOLUME)) {
             mavgVolume.setText(getString(R.string.string, mstock.getAverageVolume()));
         } else {
             mavgVolume.setText(getString(R.string.string, "N/A"));
         }
-        if (!missingStats.contains("Description")) {
+        if (!missingStats.contains(Stat.DESCRIPTION)) {
             mdescriptionTextView.setText(mstock.getDescription());
         } else {
             mdescriptionTextView.setText(getString(R.string.string, "Description not found"));
@@ -505,8 +508,8 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         final String[] tickerArr = tickersCSV.split(","); // "".split(",") returns {""}
 
         if (!tickerArr[0].isEmpty()) {
-            final ArrayList<String> tickerList = new ArrayList<>(Arrays.asList(tickerArr));
-            final ArrayList<String> dataList = new ArrayList<>(Arrays.asList(
+            final List<String> tickerList = new ArrayList<>(Arrays.asList(tickerArr));
+            final List<String> dataList = new ArrayList<>(Arrays.asList(
                     mpreferences.getString("Data CSV", "").split(",")));
 
             final int tickerNdx = tickerList.indexOf(mticker);
@@ -553,7 +556,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         /* It is common that a stock's stat is missing. If this is the case, "n/a" replaces the
          * value that should be there, or in rarer cases, there is an empty string replacing the
          * value that should be there. */
-        private final HashSet<String> missingStats = new HashSet<>();
+        private final Set<Stat> missingStats = new HashSet<>();
 
         private final WeakReference<DownloadIndividualStockTaskListener> mcompletionListener;
 
@@ -574,15 +577,40 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 return AdvancedStock.ERROR_AdvancedStock;
             }
 
-            String name = mticker; // Init as ticker, should change to company name from JSON
+            String name = mticker; // Init as ticker, should change to company name found in JSON
             /* Some stocks have no chart data. If this is the case, chart_prices will be an
              * empty array list. */
+            final BasicStock.State state;
             final ArrayList<Double> chartPrices_1day = new ArrayList<>();
 
-            final Element multiQuoteRoot = multiDoc.selectFirst("html > body > div#blanket > div[class*=multi] > div#maincontent > " +
-                    "div[class^=block multiquote] > div[class^=quotedisplay] > div[class^=section activeQuote bgQuote]");
-            final Element javascriptElmnt = multiQuoteRoot.selectFirst(":root > div.intradaychart > script[type=text/javascript]");
+            final Element multiQuoteValueRoot = multiDoc.selectFirst("html > body > div#blanket > " +
+                    "div[class*=multi] > div#maincontent > div[class^=block multiquote] > " +
+                    "div[class^=quotedisplay] > div[class^=section activeQuote bgQuote]");
+            final Element javascriptElmnt = multiQuoteValueRoot.selectFirst(":root > div.intradaychart > script[type=text/javascript]");
             final String jsonString = substringBetween(javascriptElmnt.toString(), "var chartData = [", "];");
+
+            final String stateStr = multiQuoteValueRoot.selectFirst(":root > div.marketheader > p.column.marketstate").ownText();
+            switch (stateStr.toLowerCase(Locale.US)) {
+                case "before the bell":
+                    state = PREMARKET;
+                    break;
+                case "market open":
+                case "countdown to close":
+                    state = OPEN;
+                    break;
+                case "after hours":
+                    state = AFTER_HOURS;
+                    break;
+                case "market closed":
+                    state = CLOSED;
+                    break;
+                default:
+                    Log.e("UnrecognizedMarketWatchState", String.format(
+                            "Unrecognized state string from Market Watch multiple stock page.%n" +
+                                    "Unrecognized state string: %s%n" +
+                                    "Ticker: %s", stateStr, mticker));
+                    return AdvancedStock.ERROR_AdvancedStock;
+            }
 
             /* If there is no chart data, javascriptElmnt element still exists in the HTML and
              * there is still some javascript code in javascriptElmnt.toString(). There is just no
@@ -655,17 +683,21 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
             final Document individualDoc;
             try {
-                individualDoc = Jsoup.connect("https://www.marketwatch.com/investing/stock/" + mticker).get();
+                individualDoc = Jsoup.connect("https://quotes.wsj.com/" + mticker).get();
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
                 return AdvancedStock.ERROR_AdvancedStock;
             }
 
-            /* Get chart data for periods greater than one day from Wall Street Journal. */
-            // Certain values from Market Watch's individual-stock-site are needed in the WSJ url
-            final String wsj_instrumentType = individualDoc.selectFirst(":root > head > meta[name=instrumentType]").attr("content");
-            final String wsj_exchange = individualDoc.selectFirst(":root > head > meta[name=exchangeIso]").attr("content");
-            final String wsj_exchangeCountry = individualDoc.selectFirst(":root > head > meta[name=exchangeCountry]").attr("content");
+            /* Get chart data for periods greater than one day from Wall Street Journal.
+             * Certain values from WSJ page are needed for the URL of the WSJ database of
+             * historical prices. */
+            final Element contentFrame = individualDoc.selectFirst(":root > body > div[class^=pageFrame] > div.contentFrame");
+            final Element module2 = contentFrame.selectFirst(":root > section[class$=section_1] > div.zonedModule[data-module-id=2]");
+
+            final String countryCode = module2.selectFirst(":root > input#quote_country_code").ownText();
+            final String exchangeCode = module2.selectFirst(":root > input#quote_exchange_code").ownText();
+            final String quoteType = module2.selectFirst(":root > input#quote_type").ownText();
 
             final LocalDate today = LocalDate.now();
             /* Deduct extra two weeks because it doesn't hurt and ensures that the URL we create
@@ -688,7 +720,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             final String wsj_url_5years = String.format(Locale.US,
                     "https://quotes.wsj.com/ajax/historicalprices/4/%s?MOD_VIEW=page&ticker=%s&country=%s" +
                             "&exchange=%s&instrumentType=%s&num_rows=%d&range_days=%d&startDate=%s&endDate=%s",
-                    mticker, mticker, wsj_exchangeCountry, wsj_exchange, wsj_instrumentType,
+                    mticker, mticker, countryCode, exchangeCode, quoteType,
                     period_5years, period_5years, wsj_5yearsAgoDateStr, wsj_todayDateStr);
 
 
@@ -731,7 +763,8 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                  * sizes are: [5 year]=140, [1 year]=126, [3 month]=63, [1 month]=21, [2 weeks]=10. */
                 final int[] PERIOD_INCREMENTS = {9, 2, 1, 1, 1};
 
-                final Elements rowElmnts = fiveYearDoc.select(":root > body > div > div#historical_data_table > div > table > tbody > tr");
+                final Elements rowElmnts = fiveYearDoc.select(":root > body > div > " +
+                        "div#historical_data_table > div > table > tbody > tr");
                 final int NUM_DATA_POINTS = rowElmnts.size() <= 1260 ? rowElmnts.size() : 1260;
                 final double[] allChartPrices = new double[NUM_DATA_POINTS];
                 final String[] allChartDates = new String[NUM_DATA_POINTS];
@@ -767,115 +800,15 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
 
             /* Get non-chart data. */
-            final Element quoteRoot = individualDoc.selectFirst(":root > body[role=document] > div[data-symbol=" + mticker + "]");
-            final Element intraday = quoteRoot.selectFirst(":root > div.content-region.region--fixed > div.template.template--aside > div > div.element.element--intraday");
-            final Element intradayData = intraday.selectFirst(":root > div.intraday__data");
-
-            final Element icon = intraday.selectFirst(":root > small[class~=intraday__status status--(before|open|after|closed)] > i[class^=icon]");
-            final String stateStr = icon.nextSibling().toString();
-            final BasicStock.State state;
-            switch (stateStr.toLowerCase(Locale.US)) {
-                case "before the bell": // Multiple stock view site uses this
-                case "premarket": // Individual stock site uses this
-                    state = PREMARKET;
-                    break;
-                case "countdown to close":
-                case "open": // Individual stock site uses this
-                    state = OPEN;
-                    break;
-                case "after hours":
-                    state = AFTER_HOURS;
-                    break;
-                case "market closed": // Multiple stock view site uses this
-                case "closed":
-                    state = CLOSED;
-                    break;
-                default:
-                    state = ERROR;
-                    break;
-            }
-
-            final Element priceElmnt, changePointElmnt, changePercentElmnt, close_priceElmnt, close_changePointElmnt, close_changePercentElmnt;
-            final Elements close_tableCells;
-            final double price, changePoint, changePercent, afterHoursPrice, afterHoursChangePoint, afterHoursChangePercent;
-            // Parsing of certain data varies depending on the state of the stock
-            switch (state) {
-                case PREMARKET: {
-                    priceElmnt = intradayData.selectFirst(":root > h3.intraday__price > bg-quote[class^=value]");
-                    changePointElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--point--q > bg-quote[field=change]");
-                    changePercentElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--percent--q > bg-quote[field=percentchange]");
-
-                    close_tableCells = intraday.select(":root > div.intraday__close > table > tbody > tr.table__row > td[class^=table__cell]");
-                    close_priceElmnt = close_tableCells.get(0);
-                    close_changePointElmnt = close_tableCells.get(1);
-                    close_changePercentElmnt = close_tableCells.get(2);
-
-                    // Remove ',' or '%' that could be in strings
-                    afterHoursPrice = parseDouble(priceElmnt.text().replaceAll("[^0-9.]+", ""));
-                    afterHoursChangePoint = parseDouble(changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
-                    afterHoursChangePercent = parseDouble(changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
-                    // price, changePoint, and changePercent represent the values at close
-                    price = parseDouble(close_priceElmnt.text().replaceAll("[^0-9.]+", ""));
-                    changePoint = parseDouble(close_changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
-                    changePercent = parseDouble(close_changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
-                    break;
-                }
-                case OPEN: {
-                    priceElmnt = intradayData.selectFirst(":root > h3.intraday__price > bg-quote[class^=value]");
-                    changePointElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--point--q > bg-quote[field=change]");
-                    changePercentElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--percent--q > bg-quote[field=percentchange]");
-
-                    // Remove ',' or '%' that could be in strings
-                    price = parseDouble(priceElmnt.text().replaceAll("[^0-9.]+", ""));
-                    changePoint = parseDouble(changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
-                    changePercent = parseDouble(changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
-
-                    // Initialize unused data
-                    afterHoursPrice = 0;
-                    afterHoursChangePoint = 0;
-                    afterHoursChangePercent = 0;
-                    break;
-                }
-                case AFTER_HOURS: {
-                    priceElmnt = intradayData.selectFirst(":root > h3.intraday__price > bg-quote[class^=value]");
-                    changePointElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--point--q > bg-quote[field=change]");
-                    changePercentElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--percent--q > bg-quote[field=percentchange]");
-
-                    close_tableCells = intraday.select(":root > div.intraday__close > table > tbody > tr.table__row > td");
-                    close_priceElmnt = close_tableCells.get(0);
-                    close_changePointElmnt = close_tableCells.get(1);
-                    close_changePercentElmnt = close_tableCells.get(2);
-
-                    // Remove ',' or '%' that could be in strings
-                    afterHoursPrice = parseDouble(priceElmnt.text().replaceAll("[^0-9.]+", ""));
-                    afterHoursChangePoint = parseDouble(changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
-                    afterHoursChangePercent = parseDouble(changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
-                    // price, changePoint, and changePercent represent the values at close
-                    price = parseDouble(close_priceElmnt.text().replaceAll("[^0-9.]+", ""));
-                    changePoint = parseDouble(close_changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
-                    changePercent = parseDouble(close_changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
-                    break;
-                }
-                case CLOSED: {
-                    priceElmnt = intradayData.selectFirst(":root > h3.intraday__price > span.value");
-                    changePointElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--point--q");
-                    changePercentElmnt = intradayData.selectFirst(":root > bg-quote[class^=intraday__change] > span.change--percent--q");
-
-                    // Remove ',' or '%' that could be in strings
-                    price = parseDouble(priceElmnt.text().replaceAll("[^0-9.]+", ""));
-                    changePoint = parseDouble(changePointElmnt.text().replaceAll("[^0-9.-]+", ""));
-                    changePercent = parseDouble(changePercentElmnt.text().replaceAll("[^0-9.-]+", ""));
-
-                    // Initialize unused data
-                    afterHoursPrice = 0;
-                    afterHoursChangePoint = 0;
-                    afterHoursChangePercent = 0;
-                    break;
-                }
-                case ERROR:
-                default:
-                    return AdvancedStock.ERROR_AdvancedStock;
-            }
+            final Element mainData = module2.selectFirst("ul[class$=info_main]");
+            // Remove ',' or '%' that could be in strings
+            final double price = parseDouble(mainData.selectFirst(":root > li[class$=quote] > " +
+                    "span.curr_price > span > span#quote_val").ownText().replaceAll("[^0-9.]+", ""));
+            final Elements diffs = mainData.select(":root > li[class$=diff] > span > span");
+            final double changePoint = parseDouble(diffs.get(0).ownText().replaceAll("[^0-9.-]+", ""));
+            final double changePercent = parseDouble(diffs.get(1).ownText().replaceAll("[^0-9.-]+", ""));
+            final double prevClose = parseDouble(module2.selectFirst(":root > div > div[id$=divId] > div[class$=compare] > " +
+                    "div[class$=compare_data] > ul > li:eq(1) > span.data_data").ownText().replaceAll("[^0-9.]+", ""));
 
 
             /* The 1 day data is gathered from the Market Watch multi stock page. The values
@@ -901,126 +834,84 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             }
 
 
-            final Element regionPrimary = quoteRoot.selectFirst(":root > div.content-region.region--primary");
-            final Element keyDataElmnt = regionPrimary.selectFirst(":root > div.template.template--aside > div.column.column--full.left.clearfix > div.element.element--list > ul.list.list--kv.list--col50");
-            final Elements keyDataItemElmnts = keyDataElmnt.select(":root > li");
-
-            final Element dayRangeElmnt = keyDataItemElmnts.get(1);
-            final Element fiftyTwoWeekRangeElmnt = keyDataItemElmnts.get(2);
-            final Element marketCapElmnt = keyDataItemElmnts.get(3);
-            final Element betaElmnt = keyDataItemElmnts.get(6);
-            final Element peRatioElmnt = keyDataItemElmnts.get(8);
-            final Element epsElmnt = keyDataItemElmnts.get(9);
-            final Element yieldElmnt = keyDataItemElmnts.get(10);
-            final Element avgVolumeElmnt = keyDataItemElmnts.get(15);
-
-            final double dayRangeLow, dayRangeHigh;
-            if (!dayRangeElmnt.text().contains("n/a") && !dayRangeElmnt.text().equalsIgnoreCase("Day Range")) {
-                dayRangeLow = parseDouble(substringBefore(dayRangeElmnt.text(), "-").replaceAll("[^0-9.]+", ""));
-                dayRangeHigh = parseDouble(substringAfter(dayRangeElmnt.text(), "-").replaceAll("[^0-9.]+", ""));
+            final double ah_price;
+            final double ah_changePoint;
+            final double ah_changePercent;
+            if (state == BasicStock.State.PREMARKET || state == BasicStock.State.AFTER_HOURS) {
+                // Equivalent to checking if this stock instanceof StockWithAfterHoursValues
+                // After hours values are live values, and regular values are values at close
+                final Element subData = module2.selectFirst("ul[class$=info_sub] > li[class]");
+                // Remove ',' or '%' that could be in strings
+                ah_price = parseDouble(subData.selectFirst("span#ms_quote_val").ownText().replaceAll("[^0-9.]+", ""));
+                final Elements ah_diffs = subData.select("span[id] > span");
+                ah_changePoint = parseDouble(ah_diffs.get(0).ownText().replaceAll("[^0-9.-]+", ""));
+                ah_changePercent = parseDouble(ah_diffs.get(1).ownText().replaceAll("[^0-9.-]+", ""));
             } else {
-                dayRangeLow = -1;
-                dayRangeHigh = -1;
-                missingStats.add("Day Range");
-            }
-            final double fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh;
-            if (!fiftyTwoWeekRangeElmnt.text().contains("n/a") && !fiftyTwoWeekRangeElmnt.text().equalsIgnoreCase("52 Week Range")) {
-                fiftyTwoWeekRangeLow = parseDouble(substringBetween(fiftyTwoWeekRangeElmnt.text(), "52 Week Range", "-").replaceAll("[^0-9.]+", ""));
-                fiftyTwoWeekRangeHigh = parseDouble(substringAfter(fiftyTwoWeekRangeElmnt.text(), "-").replaceAll("[^0-9.]+", ""));
-            } else {
-                fiftyTwoWeekRangeLow = -1;
-                fiftyTwoWeekRangeHigh = -1;
-                missingStats.add("52 Week Range");
-            }
-            final String marketCap;
-            if (!marketCapElmnt.text().contains("n/a") && !marketCapElmnt.text().equalsIgnoreCase("Market Cap")) {
-                marketCap = substringAfter(marketCapElmnt.text(), "Market Cap $").trim();
-            } else {
-                marketCap = "";
-                missingStats.add("Market Cap");
-            }
-            final double beta;
-            if (!betaElmnt.text().contains("n/a") && !betaElmnt.text().equalsIgnoreCase("Beta")) {
-                beta = parseDouble(betaElmnt.text().replaceAll("[^0-9.]+", ""));
-            } else {
-                beta = -1;
-                missingStats.add("Beta");
-            }
-            final double peRatio;
-            if (!peRatioElmnt.text().contains("n/a") && !peRatioElmnt.text().equalsIgnoreCase("P/E Ratio")) {
-                peRatio = parseDouble(peRatioElmnt.text().replaceAll("[^0-9.]+", ""));
-            } else {
-                peRatio = -1;
-                missingStats.add("P/E Ratio");
-            }
-            final double eps;
-            if (!epsElmnt.text().contains("n/a") && !epsElmnt.text().equalsIgnoreCase("EPS")) {
-                eps = parseDouble(epsElmnt.text().replaceAll("[^0-9.]+", ""));
-            } else {
-                eps = -1;
-                missingStats.add("EPS");
-            }
-            final double yield;
-            if (!yieldElmnt.text().contains("n/a") && !yieldElmnt.text().equalsIgnoreCase("Yield")) {
-                yield = parseDouble(yieldElmnt.text().replaceAll("[^0-9.]+", ""));
-            } else {
-                yield = -1;
-                missingStats.add("Yield");
-            }
-            final String avgVolume;
-            if (!avgVolumeElmnt.text().contains("n/a") && !avgVolumeElmnt.text().equalsIgnoreCase("Average Volume")) {
-                avgVolume = substringAfter(avgVolumeElmnt.text(), "Average Volume").trim();
-            } else {
-                avgVolume = "";
-                missingStats.add("Average Volume");
+                // Initialize unused data
+                ah_price = -1;
+                ah_changePoint = -1;
+                ah_changePercent = -1;
             }
 
 
-            /* Some stocks don't have a description. If there is no description, then
-             * descriptionElmnt does not exist. */
-            final Element descriptionElmnt = regionPrimary.selectFirst(":root > div.template.template--primary > div.column.column--full > div[class*=description] > p.description__text");
-            final String description;
-            if (descriptionElmnt != null) {
-                /* There is a button at the bottom of the description that is a link to the profile
-                 * tab of the individual stock site. The button's title shows up as part of the
-                 * text - remove it. */
-                description = substringBefore(descriptionElmnt.text(), " (See Full Profile)");
-            } else {
-                description = "";
-                missingStats.add("Description");
-            }
+            final Elements keyData1 = module2.select("ul[class$=charts_info] > li > div > span.data_data");
+            final String avgVolume = keyData1.get(1).ownText();
+            // " - " is between low and high values
+            final String[] todaysRange = keyData1.get(2).ownText().split("\\s-\\s");
+            final double todaysLow = parseDouble(todaysRange[0].replaceAll("[^0-9.]+", ""));
+            final double todaysHigh = parseDouble(todaysRange[1].replaceAll("[^0-9.]+", ""));
+            final String[] fiftyTwoWeekRange = keyData1.get(3).ownText().split("\\s-\\s");
+            final double fiftyTwoWeekLow = parseDouble(fiftyTwoWeekRange[0].replaceAll("[^0-9.]+", ""));
+            final double fiftyTwoWeekHigh = parseDouble(fiftyTwoWeekRange[1].replaceAll("[^0-9.]+", ""));
+
+
+            final Element module6 = contentFrame.selectFirst(":root > section[class$=section_2] > " +
+                    "div#contentCol > div:eq(1) > div.zonedModule[data-module-id=6]");
+            final Elements keyData2 = module6.select("div > div[class$=keystock_drawer] > " +
+                    "div > ul > li > div > span.data_data");
+            // Remove ',' that could be in P/E ratio or EPS strings
+            // P/E ratio, EPS, and yield can be negative
+            final double peRatio = parseDouble(keyData2.get(0).ownText().replaceAll("[^0-9.-]+", ""));
+            final double eps = parseDouble(keyData2.get(1).ownText().replaceAll("[^0-9.-]+", ""));
+            final String marketCap = keyData2.get(2).ownText();
+            final double yield = parseDouble(keyData2.get(5).ownText().replaceAll("[^0-9.-]+", ""));
+
+
+            final String description = contentFrame.selectFirst(":root > section[class$=section_2] > " +
+                    "div#contentCol + div > div:eq(1) > div.zonedModule[data-module-id=11] > div > " +
+                    "div[class$=data] p.txtBody").ownText();
 
 
             switch (state) {
                 case PREMARKET:
                     ret = new PremarketStock(state, mticker, name, price, changePoint, changePercent,
-                            afterHoursPrice, afterHoursChangePoint, afterHoursChangePercent, dayRangeLow,
-                            dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh, marketCap,
-                            beta, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
+                            ah_price, ah_changePoint, ah_changePercent, todaysLow,
+                            todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap,
+                            prevClose, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
                             chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
                             chartPrices_5years, chartDates_2weeks, chartDates_1month, chartDates_3months,
                             chartDates_1year, chartDates_5years);
                     break;
                 case OPEN:
                     ret = new AdvancedStock(state, mticker, name, price, changePoint, changePercent,
-                            dayRangeLow, dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh,
-                            marketCap, beta, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
+                            todaysLow, todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh,
+                            marketCap, prevClose, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
                             chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
                             chartPrices_5years, chartDates_2weeks, chartDates_1month, chartDates_3months, chartDates_1year, chartDates_5years);
                     break;
                 case AFTER_HOURS:
                     ret = new AfterHoursStock(state, mticker, name, price, changePoint, changePercent,
-                            afterHoursPrice, afterHoursChangePoint, afterHoursChangePercent, dayRangeLow,
-                            dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh, marketCap,
-                            beta, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
+                            ah_price, ah_changePoint, ah_changePercent, todaysLow,
+                            todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap,
+                            prevClose, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
                             chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
                             chartPrices_5years, chartDates_2weeks, chartDates_1month, chartDates_3months,
                             chartDates_1year, chartDates_5years);
                     break;
                 case CLOSED:
                     ret = new AdvancedStock(state, mticker, name, price, changePoint, changePercent,
-                            dayRangeLow, dayRangeHigh, fiftyTwoWeekRangeLow, fiftyTwoWeekRangeHigh,
-                            marketCap, beta, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
+                            todaysLow, todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh,
+                            marketCap, prevClose, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
                             chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
                             chartPrices_5years, chartDates_2weeks, chartDates_1month, chartDates_3months,
                             chartDates_1year, chartDates_5years);

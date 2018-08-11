@@ -93,6 +93,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
         }
     }
 
+
     @BindView(R.id.recyclerView_home) RecyclerView mrecyclerView;
 
     private BasicStockList mstocks;
@@ -316,7 +317,11 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
     @Override
     public void onErrorResponse(final VolleyError error) {
-        Log.e("VolleyError", error.getLocalizedMessage());
+        if (error != null) {
+            Log.e("VolleyError", error.getLocalizedMessage());
+        } else {
+            Log.e("NullVolleyError", "VolleyError thrown, but error is null.");
+        }
     }
 
     @Override
@@ -477,7 +482,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
     @Override
     public void onDestroy() {
         super.onDestroy();
-        
+
         unregisterManagers();
     }
 

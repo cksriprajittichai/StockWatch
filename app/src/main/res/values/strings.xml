@@ -29,7 +29,7 @@
     <string name="fiftyTwoWeekLow">52 Week Low</string>
     <string name="fiftyTwoWeekHigh">52 Week High</string>
     <string name="marketCap">Market Cap</string>
-    <string name="beta">Beta</string>
+    <string name="previousClose">Previous Close</string>
     <string name="peRatio">P/E Ratio</string>
     <string name="eps">EPS</string>
     <string name="yield">Yield</string>

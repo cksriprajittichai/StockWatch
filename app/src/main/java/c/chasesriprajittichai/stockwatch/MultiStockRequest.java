@@ -66,7 +66,8 @@ public final class MultiStockRequest extends Request<BasicStockList> {
          * stock's current price, after hours change point, and after hours change percent. */
 
         final Document doc = Jsoup.parse(new String(response.data));
-        quoteRoots = doc.select(":root > body > div[id=blanket] > div[class*=multi] > div[id=maincontent] > div[class^=block multiquote] > div[class^=quotedisplay]");
+        quoteRoots = doc.select(":root > body > div[id=blanket] > div[class*=multi] > " +
+                "div[id=maincontent] > div[class^=block multiquote] > div[class^=quotedisplay]");
 
         live_valueRoots = quoteRoots.select(":root > div[class^=section activeQuote bgQuote]");
         tickers = live_valueRoots.select(":root > div.ticker > a[href][title]");
@@ -93,13 +94,12 @@ public final class MultiStockRequest extends Request<BasicStockList> {
         // Iterate through mstocks that we're updating
         for (int i = 0; i < numStocksToUpdate; i++) {
             switch (states.get(i).text().toLowerCase(Locale.US)) {
-                case "before the bell": // Multiple stock view site uses this
-                case "premarket": // Individual stock site uses this
+                case "before the bell":
                     curState = PREMARKET;
                     curDataShouldBeCloseData = true;
                     break;
+                case "market open":
                 case "countdown to close":
-                case "market open": // Multiple stock view site uses this
                     curState = OPEN;
                     curDataShouldBeCloseData = false;
                     break;
@@ -107,8 +107,7 @@ public final class MultiStockRequest extends Request<BasicStockList> {
                     curState = AFTER_HOURS;
                     curDataShouldBeCloseData = true;
                     break;
-                case "market closed": // Multiple stock view site uses this
-                case "closed":
+                case "market closed":
                     curState = CLOSED;
                     curDataShouldBeCloseData = false;
                     break;

@@ -22,7 +22,7 @@ public final class AfterHoursStock extends AdvancedStock implements StockWithAft
                            final double afterHoursChangePoint, final double afterHoursChangePercent,
                            final double todaysLow, final double todaysHigh,
                            final double fiftyTwoWeekLow, final double fiftyTwoWeekHigh,
-                           final String marketCap, final double beta, final double peRatio,
+                           final String marketCap, final double prevClose, final double peRatio,
                            final double eps, final double yield, final String averageVolume,
                            final String description, final List<Double> yData_1day,
                            final List<Double> yData_2weeks, final List<Double> yData_1month,
@@ -31,7 +31,7 @@ public final class AfterHoursStock extends AdvancedStock implements StockWithAft
                            final List<String> dates_1month, final List<String> dates_3months,
                            final List<String> dates_1year, final List<String> dates_5years) {
         super(state, ticker, name, priceAtClose, changePointAtClose, changePercentAtClose, todaysLow,
-                todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap, beta, peRatio,
+                todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap, prevClose, peRatio,
                 eps, yield, averageVolume, description, yData_1day, yData_2weeks, yData_1month,
                 yData_3months, yData_1year, yData_5years, dates_2weeks, dates_1month, dates_3months,
                 dates_1year, dates_5years);

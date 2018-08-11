@@ -336,12 +336,12 @@ the stock (all contained in the ScrollView) are shown.
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:includeFontPadding="false"
-                        android:text="@string/beta"
+                        android:text="@string/previousClose"
                         android:textAppearance="?android:textAppearanceSmall"
                         android:textColor="@android:color/darker_gray" />
 
                     <TextView
-                        android:id="@+id/textView_beta_individual"
+                        android:id="@+id/textView_prevClose_individual"
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:includeFontPadding="false"

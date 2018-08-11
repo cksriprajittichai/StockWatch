@@ -22,7 +22,7 @@ public class AdvancedStock extends BasicStock {
     private final double mfiftyTwoWeekLow;
     private final double mfiftyTwoWeekHigh;
     private final String mmarketCap;
-    private final double mbeta;
+    private final double mprevClose;
     private final double mpeRatio;
     private final double meps;
     private final double myield;
@@ -42,9 +42,9 @@ public class AdvancedStock extends BasicStock {
 
     public AdvancedStock(final State state, final String ticker, final String name,
                          final double price, final double changePoint, final double changePercent,
-                         final double dayRangeLow, final double dayRangeHigh,
+                         final double todaysLow, final double todaysHigh,
                          final double fiftyTwoWeekLow, final double fiftyTwoWeekHigh,
-                         final String marketCap, final double beta, final double peRatio,
+                         final String marketCap, final double prevClose, final double peRatio,
                          final double eps, final double yield, final String averageVolume,
                          final String description, final List<Double> yData_1day,
                          final List<Double> yData_2weeks, final List<Double> yData_1month,
@@ -54,12 +54,12 @@ public class AdvancedStock extends BasicStock {
                          final List<String> dates_1year, final List<String> dates_5years) {
         super(state, ticker, price, changePoint, changePercent);
         mname = name;
-        mtodaysLow = dayRangeLow;
-        mtodaysHigh = dayRangeHigh;
+        mtodaysLow = todaysLow;
+        mtodaysHigh = todaysHigh;
         mfiftyTwoWeekLow = fiftyTwoWeekLow;
         mfiftyTwoWeekHigh = fiftyTwoWeekHigh;
         mmarketCap = marketCap;
-        mbeta = beta;
+        mprevClose = prevClose;
         mpeRatio = peRatio;
         meps = eps;
         myield = yield;
@@ -119,8 +119,8 @@ public class AdvancedStock extends BasicStock {
         return mmarketCap;
     }
 
-    public double getBeta() {
-        return mbeta;
+    public double getPrevClose() {
+        return mprevClose;
     }
 
     public double getPeRatio() {
