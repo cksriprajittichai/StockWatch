@@ -8,6 +8,7 @@ import c.chasesriprajittichai.stockwatch.stocks.AdvancedStock;
 public interface DownloadIndividualStockTaskListener {
 
     void onDownloadIndividualStockTaskCompleted(final AdvancedStock stock,
-                                                final Set<IndividualStockActivity.Stat> missingStats);
+                                                final Set<IndividualStockActivity.Stat> missingStats,
+                                                final Set<AdvancedStock.ChartPeriod> missingChartPeriods);
 
 }

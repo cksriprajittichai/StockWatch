@@ -410,12 +410,12 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
     }
 
     /**
-     * UPDATE COMMENT?
-     * This function should be called when a stock is removed by being swiped away. This function
-     * updates the indexes in mstocks that a ticker in mtickerToIndexMap maps to. After a swipe
-     * deletion, the stocks in range [index of stock removed, size of mstocks] of mstocks need to
-     * be updated. The stocks in this range are now at their previous index - 1. This function does
-     * not remove any mappings from mtickerToIndexMap.
+     * This function should be called when a stock is removed by being swiped away.
+     * This function updates the indexes in mstocks that a ticker in mtickerToIndexMap
+     * maps to. After a swipe deletion, the stocks in range [index of stock removed,
+     * size of mstocks] of mstocks need to be updated. The stocks in this range are
+     * now at their previous index - 1 in mstocks. This function does not remove any
+     * mappings from mtickerToIndexMap.
      *
      * @param lastRemovedIndex The index of stock most recently removed.
      */
@@ -431,11 +431,11 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
     }
 
     /**
-     * UPDATE COMMENT?
-     * Updates the indexes in mstocks that a ticker in mtickerToIndexMap maps to. This function
-     * clears mtickerToIndexMap and rebuilds it with the current stock indexing of mstocks. This
-     * should be called anytime after the indexing of stocks in mstocks changes. This is equivalent
-     * to calling updateTickerToIndexMap(0).
+     * Updates the indexes in mstocks that a ticker in mtickerToIndexMap maps to. This
+     * function clears mtickerToIndexMap and reconstructs it with the current stock
+     * indexing of mstocks. This should be called anytime after the indexing of stocks
+     * in mstocks changes. This is equivalent to calling
+     * {@link #updateTickerToIndexMap(int)} and passing in 0.
      */
     public synchronized void updateTickerToIndexMap() {
         mtickerToIndexMap.clear();

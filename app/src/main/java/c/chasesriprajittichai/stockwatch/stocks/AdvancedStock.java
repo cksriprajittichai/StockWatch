@@ -143,6 +143,63 @@ public class AdvancedStock extends BasicStock {
         return mdescription;
     }
 
+    public List<Double> getYData(final ChartPeriod chartPeriod) {
+        final List<Double> ret;
+
+        switch (chartPeriod) {
+            case ONE_DAY:
+                ret = myData_1day;
+                break;
+            case TWO_WEEKS:
+                ret = myData_2weeks;
+                break;
+            case ONE_MONTH:
+                ret = myData_1month;
+                break;
+            case THREE_MONTHS:
+                ret = myData_3months;
+                break;
+            case ONE_YEAR:
+                ret = myData_1year;
+                break;
+            case FIVE_YEARS:
+                ret = myData_5years;
+                break;
+            default:
+                ret = new ArrayList<>();
+                break;
+        }
+
+        return ret;
+    }
+
+    public List<String> getDates(final ChartPeriod chartPeriod) {
+        final List<String> ret;
+
+        switch (chartPeriod) {
+            case TWO_WEEKS:
+                ret = mdates_2weeks;
+                break;
+            case ONE_MONTH:
+                ret = mdates_1month;
+                break;
+            case THREE_MONTHS:
+                ret = mdates_3months;
+                break;
+            case ONE_YEAR:
+                ret = mdates_1year;
+                break;
+            case FIVE_YEARS:
+                ret = mdates_5years;
+                break;
+            default:
+                ret = new ArrayList<>();
+                break;
+        }
+
+        return ret;
+    }
+
     public List<Double> getYData_1day() {
         return myData_1day;
     }

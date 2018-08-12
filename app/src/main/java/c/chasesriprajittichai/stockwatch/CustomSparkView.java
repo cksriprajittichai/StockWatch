@@ -5,13 +5,12 @@ import android.util.AttributeSet;
 
 import com.robinhood.spark.SparkView;
 
-import c.chasesriprajittichai.stockwatch.recyclerview.CustomScrubGestureDetector;
-
 /**
- * This is a wrapper class for com.robinhood.spark.SparkView that implements
- * CustomScrubGestureDetector.ScrubListener.
+ * This is a wrapper class for {@link com.robinhood.spark.SparkView} that implements
+ * {@link CustomScrubGestureDetector.ScrubListener}.
  * <p>
- * For more background information on this class, look at CustomScrubGestureDetector.
+ * For more background information on this class, look at
+ * {@link CustomScrubGestureDetector}.
  */
 public final class CustomSparkView extends SparkView implements CustomScrubGestureDetector.ScrubListener {
 

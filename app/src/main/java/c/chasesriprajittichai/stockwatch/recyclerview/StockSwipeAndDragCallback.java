@@ -30,7 +30,7 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
     private final int whiteMarginSize = 4;
 
     public StockSwipeAndDragCallback(final HomeActivity homeActivity, final RecyclerAdapter recyclerAdapter,
-                              final BasicStockList stocks, final Map<String, Integer> tickerToIndexMap) {
+                                     final BasicStockList stocks, final Map<String, Integer> tickerToIndexMap) {
         super(0, ItemTouchHelper.LEFT | ItemTouchHelper.DOWN | ItemTouchHelper.UP);
         mhomeActivity = homeActivity;
         mrecyclerAdapter = recyclerAdapter;

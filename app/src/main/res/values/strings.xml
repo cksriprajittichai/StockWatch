@@ -35,6 +35,8 @@
     <string name="yield">Yield</string>
     <string name="avgVolume">Average Volume</string>
 
+    <string name="chartsUnavailable">Charts Unavailable</string>
+
     <string-array name="chartPeriods">
         <item>1D</item>
         <item>2W</item>

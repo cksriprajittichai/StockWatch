@@ -1,4 +1,4 @@
-package c.chasesriprajittichai.stockwatch.recyclerview;
+package c.chasesriprajittichai.stockwatch;
 
 import android.os.Handler;
 import android.view.MotionEvent;
@@ -6,8 +6,6 @@ import android.view.View;
 
 import java.util.Collections;
 import java.util.List;
-
-import c.chasesriprajittichai.stockwatch.CustomSparkView;
 
 /**
  * This class is modeled after com.robinhood.spark.ScrubGestureDetector.

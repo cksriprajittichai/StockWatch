@@ -24,7 +24,7 @@ import static java.lang.Double.parseDouble;
 
 
 /**
- * Modeled after com.android.volley.toolbox.StringRequest.
+ * Modeled after {@link com.android.volley.toolbox.StringRequest}.
  */
 public final class MultiStockRequest extends Request<BasicStockList> {
 

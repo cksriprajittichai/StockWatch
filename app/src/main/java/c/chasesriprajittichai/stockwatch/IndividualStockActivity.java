@@ -39,11 +39,11 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import c.chasesriprajittichai.stockwatch.listeners.DownloadIndividualStockTaskListener;
-import c.chasesriprajittichai.stockwatch.recyclerview.CustomScrubGestureDetector;
 import c.chasesriprajittichai.stockwatch.stocks.AdvancedStock;
 import c.chasesriprajittichai.stockwatch.stocks.AfterHoursStock;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
@@ -63,9 +63,16 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         DownloadIndividualStockTaskListener, HorizontalPicker.OnItemSelected, CustomScrubGestureDetector.ScrubIndexListener {
 
     public enum Stat {
-        TODAYS_RANGE, FIFTY_TWO_WEEK_RANGE, MARKET_CAP, PREV_CLOSE, PE_RATIO, EPS, YIELD, AVG_VOLUME,
-        DESCRIPTION, CHART_1D, CHART_2W, CHART_1M, CHART_3M, CHART_1Y, CHART_5Y
+        TODAYS_RANGE, FIFTY_TWO_WEEK_RANGE, MARKET_CAP, PREV_CLOSE, PE_RATIO, EPS, YIELD,
+        AVG_VOLUME, DESCRIPTION
     }
+
+    // Big ChartPeriods excludes CHART_1D
+    final static AdvancedStock.ChartPeriod[] BIG_CHART_PERIODS = {
+            AdvancedStock.ChartPeriod.FIVE_YEARS, AdvancedStock.ChartPeriod.ONE_YEAR,
+            AdvancedStock.ChartPeriod.THREE_MONTHS, AdvancedStock.ChartPeriod.ONE_MONTH,
+            AdvancedStock.ChartPeriod.TWO_WEEKS
+    };
 
     @BindView(R.id.viewFlipper_individual) ViewFlipper mviewFlipper;
     @BindView(R.id.progressBar_individual) ProgressBar mprogressBar;
@@ -79,6 +86,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     @BindView(R.id.textView_afterHoursTime_individual) TextView mafterHoursTime;
     @BindView(R.id.textView_scrubTime_individual) TextView mscrubTime;
     @BindView(R.id.sparkView_individual) CustomSparkView msparkView;
+    @BindView(R.id.textView_chartsUnavailable) TextView mchartsUnavailable;
     @BindView(R.id.horizontalPicker_chartPeriod_individual) HorizontalPicker mchartPeriodPicker;
     @BindView(R.id.view_chartPeriodPickerUnderline_individual) View mchartPeriodPickerUnderline;
     @BindView(R.id.view_divider_sparkViewToStats_individual) View msparkViewToStatsDivider;
@@ -99,7 +107,6 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     private String mticker; // Needed to create mstock
     private AdvancedStock mstock;
     private boolean mstockHasBeenInitialized = false; // mstock is initialized in onDownloadIndividualStockTaskCompleted()
-    private AdvancedStock.ChartPeriod mcurChartPeriod = AdvancedStock.ChartPeriod.ONE_DAY;
     private boolean mwasInFavoritesInitially;
     private boolean misInFavorites;
     private SparkViewAdapter msparkViewAdapter;
@@ -107,7 +114,8 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
     /* Called from DownloadStockDataTask.onPostExecute(). */
     @Override
-    public void onDownloadIndividualStockTaskCompleted(final AdvancedStock stock, final Set<Stat> missingStats) {
+    public void onDownloadIndividualStockTaskCompleted(final AdvancedStock stock, final Set<Stat> missingStats,
+                                                       final Set<AdvancedStock.ChartPeriod> missingChartPeriods) {
         mstock = stock;
         mstockHasBeenInitialized = true;
 
@@ -115,12 +123,61 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             setTitle(mstock.getName());
         }
 
-        if (!mstock.getYData_1day().isEmpty()) { /** Change: check for available charts using missingStats. */
-            msparkViewAdapter.setyData(mstock.getYData_1day());
-            msparkViewAdapter.notifyDataSetChanged();
 
-            initScrubViews();
+        // ChartPeriods from string-array resource are in increasing order (1D -> 5Y)
+        final List<CharSequence> displayChartPeriods = Arrays.stream(
+                getResources().getStringArray(R.array.chartPeriods)).collect(Collectors.toList());
+
+        if (!missingChartPeriods.contains(AdvancedStock.ChartPeriod.ONE_DAY)) {
+            msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.ONE_DAY);
+            msparkViewAdapter.setyData(mstock.getYData_1day());
+            // Don't set dates for msparkViewAdapter for 1D
+            msparkViewAdapter.notifyDataSetChanged();
+        } else {
+            displayChartPeriods.remove(0); // 1D is at index 0 of chartPeriods
         }
+
+        for (final AdvancedStock.ChartPeriod p : BIG_CHART_PERIODS) {
+            if (missingChartPeriods.contains(p)) {
+                /* Always remove last node because displayChartPeriods is in increasing
+                 * order (1D -> 5Y), unlike BIG_CHART_PERIODS which is in decreasing order. */
+                displayChartPeriods.remove(displayChartPeriods.size() - 1);
+            } else {
+                if (missingChartPeriods.contains(AdvancedStock.ChartPeriod.ONE_DAY)) {
+                    /* If the 1D chart is filled, the current ChartPeriod will be set to
+                     * ONE_DAY. Otherwise, if the 1D chart is not filled, the initially
+                     * selected ChartPeriod should be the smallest big ChartPeriod
+                     * (TWO_WEEKS). By the way that we're filling the charts, if a
+                     * single big ChartPeriod is filled, that guarantees that the 2W
+                     * chart will be filled. */
+                    msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.TWO_WEEKS);
+                    msparkViewAdapter.setyData(mstock.getYData_2weeks());
+                    msparkViewAdapter.setDates(mstock.getDates_2weeks());
+                    msparkViewAdapter.notifyDataSetChanged();
+                }
+
+                /* Smaller charts (shorter ChartPeriods) take their data from the
+                 * largest chart that is filled. So once a filled chart is found,
+                 * there is no need to check if the smaller charts are filled. */
+                break;
+            }
+        }
+
+        if (missingChartPeriods.size() == AdvancedStock.ChartPeriod.values().length) {
+            // If there are no filled charts
+            initTopViewsStatic();
+            msparkView.setVisibility(View.GONE);
+            mchartPeriodPickerUnderline.setVisibility(View.GONE);
+        } else {
+            // If there is at least 1 filled chart
+            initTopViewsDynamic();
+            mchartsUnavailable.setVisibility(View.GONE);
+        }
+
+        final CharSequence[] chartPeriodsArr = new CharSequence[displayChartPeriods.size()];
+        displayChartPeriods.toArray(chartPeriodsArr);
+        mchartPeriodPicker.setValues(chartPeriodsArr);
+
 
         if (!missingStats.contains(Stat.TODAYS_RANGE)) {
             mtodaysLow.setText(getString(R.string.double2dec, mstock.getTodaysLow()));
@@ -176,18 +233,25 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     }
 
     /**
-     * Initialize the views that are changed during scrubbing. This function should
-     * also be called to restore these views to their initial states.
+     * Initialize the top TextViews that are changed during scrubbing. These TextViews
+     * include the live price (large), the live change point, live change percent, the
+     * change point at close, the change percent at close, and the two TextViews that
+     * show details related to time.
+     * <p>
+     * This function contrasts {@link #initTopViewsStatic()} because this function
+     * displays the time of the selected ChartPeriod when the user is not scrubbing.
+     * <p>
+     * This function can also be called to restore these views to their initial states.
      */
-    private void initScrubViews() {
+    private void initTopViewsDynamic() {
         mscrubPrice.setText(getString(R.string.double2dec, mstock.getLivePrice()));
-        setScrubTime(mcurChartPeriod);
+        setScrubTime(msparkViewAdapter.getChartPeriod());
 
         final double firstPriceOfPeriod = msparkViewAdapter.getY(0);
         final double changePoint;
         final double changePercent;
 
-        if (mcurChartPeriod == AdvancedStock.ChartPeriod.ONE_DAY) {
+        if (msparkViewAdapter.getChartPeriod() == AdvancedStock.ChartPeriod.ONE_DAY) {
             changePoint = mstock.getChangePoint();
             changePercent = mstock.getChangePercent();
 
@@ -224,6 +288,49 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         }
     }
 
+    /**
+     * Initialize the top TextViews that are changed during scrubbing. These TextViews
+     * include the live price (large), the live change point, live change percent, the
+     * change point at close, the change percent at close, and the two TextViews that
+     * show details related to time.
+     * <p>
+     * This function should be used instead of {@link #initTopViewsDynamic()} when no
+     * charts are filled with data. This function differs from
+     * {@link #initTopViewsDynamic()} because it initializes the non-after-hours time
+     * TextView to always show {@literal Today}.
+     * <p>
+     * This function can also be called to restore these views to their initial states.
+     */
+    private void initTopViewsStatic() {
+        mscrubPrice.setText(getString(R.string.double2dec, mstock.getLivePrice()));
+        setScrubTime(AdvancedStock.ChartPeriod.ONE_DAY);
+
+        /* Init TextViews for after hours data in mafterHoursLinearLayout and init
+         * their visibility. */
+        if (mstock instanceof StockWithAfterHoursValues) {
+            if (mstock.getLiveChangePoint() < 0) {
+                // '-' is already part of the number
+                mafterHoursChangePoint.setText(getString(R.string.double2dec, mstock.getLiveChangePoint()));
+                mafterHoursChangePercent.setText(getString(R.string.openParen_double2dec_percent_closeParen, mstock.getLiveChangePercent()));
+            } else {
+                mafterHoursChangePoint.setText(getString(R.string.plus_double2dec, mstock.getLiveChangePoint()));
+                mafterHoursChangePercent.setText(getString(R.string.openParen_plus_double2dec_percent_closeParen, mstock.getLiveChangePercent()));
+            }
+            mafterHoursLinearLayout.setVisibility(View.VISIBLE);
+        } else {
+            mafterHoursLinearLayout.setVisibility(View.INVISIBLE);
+        }
+
+        if (mstock.getChangePoint() < 0) {
+            // '-' is already part of the number
+            mscrubChangePoint.setText(getString(R.string.double2dec, mstock.getChangePoint()));
+            mscrubChangePercent.setText(getString(R.string.openParen_double2dec_percent_closeParen, mstock.getChangePercent()));
+        } else {
+            mscrubChangePoint.setText(getString(R.string.plus_double2dec, mstock.getChangePoint()));
+            mscrubChangePercent.setText(getString(R.string.openParen_plus_double2dec_percent_closeParen, mstock.getChangePercent()));
+        }
+    }
+
     /* Called from CustomScrubGestureDetector.onScrubbed(). */
     @Override
     public void onScrubbed(final int index) {
@@ -235,7 +342,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         final double changePoint;
         final double changePercent;
 
-        if (mcurChartPeriod == AdvancedStock.ChartPeriod.ONE_DAY) {
+        if (msparkViewAdapter.getChartPeriod() == AdvancedStock.ChartPeriod.ONE_DAY) {
             /* After hours begins as soon as the open market closes. Therefore, the after
              * hours section of the chart should begin at 4:00pm, which is at index 78.
              * If the user is scrubbing in the after hours range of the chart, the change
@@ -298,7 +405,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     /* Called from CustomScrubGestureDetector.onScrubEnded(). */
     @Override
     public void onScrubEnded() {
-        initScrubViews(); // Restore views that were effected by scrubbing
+        initTopViewsDynamic(); // Restore views that were effected by scrubbing
     }
 
     @Override
@@ -374,47 +481,48 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     /* For mchartPeriodPicker. */
     @Override
     public void onItemSelected(final int index) {
-        mcurChartPeriod = AdvancedStock.ChartPeriod.values()[index]; // Update mcurChartPeriod
+        // mchartPeriodPicker's values come from chartPeriods string-array resource
+        final String chartPeriodStr = mchartPeriodPicker.getValues()[index].toString();
 
-        switch (index) {
-            case 0: // 1D
+        switch (chartPeriodStr.toLowerCase(Locale.US)) {
+            case "1d":
                 if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.ONE_DAY) {
                     msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.ONE_DAY);
                     msparkViewAdapter.setyData(mstock.getYData_1day());
                     /* This activity shouldn't access msparkView's dates if the current
                      * ChartPeriod is ONE_DAY. The updating of the dates to the UI are
-                     * managed in initScrubViews() and onScrubbed(). */
+                     * managed in initTopViewsDynamic() and onScrubbed(). */
                 }
                 break;
-            case 1: // 2W
+            case "2w":
                 if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.TWO_WEEKS) {
                     msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.TWO_WEEKS);
                     msparkViewAdapter.setyData(mstock.getYData_2weeks());
                     msparkViewAdapter.setDates(mstock.getDates_2weeks());
                 }
                 break;
-            case 2: // 1M
+            case "1m":
                 if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.ONE_MONTH) {
                     msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.ONE_MONTH);
                     msparkViewAdapter.setyData(mstock.getYData_1month());
                     msparkViewAdapter.setDates(mstock.getDates_1month());
                 }
                 break;
-            case 3: // 3M
+            case "3m":
                 if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.THREE_MONTHS) {
                     msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.THREE_MONTHS);
                     msparkViewAdapter.setyData(mstock.getYData_3months());
                     msparkViewAdapter.setDates(mstock.getDates_3months());
                 }
                 break;
-            case 4: // 1Y
+            case "1y":
                 if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.ONE_YEAR) {
                     msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.ONE_YEAR);
                     msparkViewAdapter.setyData(mstock.getYData_1year());
                     msparkViewAdapter.setDates(mstock.getDates_1year());
                 }
                 break;
-            case 5: // 5Y
+            case "5y":
                 if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.FIVE_YEARS) {
                     msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.FIVE_YEARS);
                     msparkViewAdapter.setyData(mstock.getYData_5years());
@@ -424,7 +532,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         }
 
         msparkViewAdapter.notifyDataSetChanged();
-        initScrubViews();
+        initTopViewsDynamic();
     }
 
     @Override
@@ -460,13 +568,12 @@ public final class IndividualStockActivity extends AppCompatActivity implements
      * mstock.getPrice()) is added to mpreferences.
      * <p>
      * Functionality changes depending on the value of mstockHasBeenInitialized.
-     * If mstock has not been initialized (mstockHasBeenInitialized), mticker (same
-     * value as what mstock.getTicker() once mstockHasBeenInitialized) is added to
-     * Tickers CSV, and the uninitialized data values of mstock are set to specific
-     * values that are then added to Data CSV. The state is set to CLOSED, because the
-     * OPEN and CLOSED states are the most limiting states (less functionality than
-     * PREMARKET state, for example). The change point and change percent values are set
-     * to 0.
+     * If mstock has not been initialized, mticker (same value as what
+     * mstock.getTicker() once mstockHasBeenInitialized) is added to Tickers CSV, and
+     * the uninitialized data values of mstock are set to specific values that are then
+     * added to Data CSV. The state is set to CLOSED, because the OPEN and CLOSED states
+     * are the most limiting states (less functionality than PREMARKET state, for example).
+     * The change point and change percent values are set to 0.
      */
     private void addStockToPreferences() {
         final String tickersCSV = mpreferences.getString("Tickers CSV", "");
@@ -552,12 +659,8 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     private static final class DownloadStockDataTask extends AsyncTask<Void, Integer, AdvancedStock> {
 
         private final String mticker;
-
-        /* It is common that a stock's stat is missing. If this is the case, "n/a" replaces the
-         * value that should be there, or in rarer cases, there is an empty string replacing the
-         * value that should be there. */
         private final Set<Stat> missingStats = new HashSet<>();
-
+        private final Set<AdvancedStock.ChartPeriod> missingChartPeriods = new HashSet<>();
         private final WeakReference<DownloadIndividualStockTaskListener> mcompletionListener;
 
         private DownloadStockDataTask(final String ticker, final DownloadIndividualStockTaskListener completionListener) {
@@ -612,11 +715,12 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     return AdvancedStock.ERROR_AdvancedStock;
             }
 
-            /* If there is no chart data, javascriptElmnt element still exists in the HTML and
-             * there is still some javascript code in javascriptElmnt.toString(). There is just no
-             * chart data embedded in the javascript. This means that the call to substringBetween()
-             * on javascriptElmnt.toString() will return null, because no substring between the open
-             * and close parameters (substringBetween() parameters) exists. */
+            /* If there is no chart data, javascriptElmnt element still exists in the
+             * HTML and there is still some javascript code in
+             * javascriptElmnt.toString(). There is just no chart data embedded in the
+             * javascript. This means that the call to substringBetween() on
+             * javascriptElmnt.toString() will return null, because no substring between
+             * the open and close parameters (substringBetween() parameters) exists. */
             final String javascriptStr = substringBetween(javascriptElmnt.toString(), "Trades\":[", "]");
             if (javascriptStr != null) {
                 try {
@@ -631,28 +735,28 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     final JSONArray tradesArr = sessionsNdxZero.getJSONArray("Trades");
                     final int numPrices = tradesArr.length();
 
-                    /* Fill chartPrices_1day. If null values are found, replace them with the last
-                     * non-null value. If the first value is null, replace it with the
-                     * first non-null value. */
+                    /* Fill chartPrices_1day. If null values are found, replace them
+                     * with the last non-null value. If the first value is null,
+                     * replace it with the first non-null value. */
                     if (tradesArr.length() > 0) {
                         chartPrices_1day.ensureCapacity(numPrices);
 
-                        /* Init as out of bounds. If firstNonNullNdx is never changed to an index in
-                         * bounds, then all values in tradesArr are null. */
+                        /* Init as out of bounds. If firstNonNullNdx is never changed to
+                         * an index in bounds, then all values in tradesArr are null. */
                         int firstNonNullNdx = numPrices;
 
                         // Find firstNonNullNdx and fill chartPrices up through firstNonNullNdx
-                        /* After this if/else statement, chartPrices is filled with non-null values
-                         * up through firstNonNullNdx. */
+                        /* After this if/else statement, chartPrices is filled with non-null
+                         * values up through firstNonNullNdx. */
                         if (tradesArr.get(0).toString().equals("null")) {
                             for (int i = 1; i < numPrices; i++) { // Redundant to check index 0
                                 if (!tradesArr.get(i).toString().equals("null")) {
                                     firstNonNullNdx = i;
 
                                     /* The first non-null value has been found. The indexes <
-                                     * firstNonNullNdx have null values and therefore should be
-                                     * replaced with the first non-null value (firstNonNullValue)
-                                     * which is at firstNonNullNdx. */
+                                     * firstNonNullNdx have null values and therefore should
+                                     * be replaced with the first non-null value
+                                     * (firstNonNullValue) which is at firstNonNullNdx. */
                                     final double firstNonNullValue = parseDouble(tradesArr.get(firstNonNullNdx).toString());
                                     while (i >= 0) {
                                         chartPrices_1day.add(firstNonNullValue);
@@ -677,7 +781,10 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     }
                 } catch (final JSONException jsone) {
                     Log.e("JSONException", jsone.getLocalizedMessage());
+                    missingChartPeriods.add(AdvancedStock.ChartPeriod.ONE_DAY);
                 }
+            } else {
+                missingChartPeriods.add(AdvancedStock.ChartPeriod.ONE_DAY);
             }
 
 
@@ -711,12 +818,13 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             final String wsj_5yearsAgoDateStr = String.format(Locale.US, "%d/%d/%d",
                     fiveYearsAgo.getMonthValue(), fiveYearsAgo.getDayOfMonth(), fiveYearsAgo.getYear());
 
-            /* If the WSJ URL parameters (ie. start date) request data from dates that are prior to
-             * a stock's existence, then the WSJ response delivers all historical data available for
-             * the stock. Because five years is the largest chart period we are using, data for the
-             * smaller periods can be grabbed from the five year WSJ response page. The actual
-             * number of data points that exists for a stock can be determined by parsing the WSJ
-             * response and counting the number of certain elements (ie. table rows). */
+            /* If the WSJ URL parameters (ie. start date) request data from dates that
+             * are prior to a stock's existence, then the WSJ response delivers all
+             * historical data available for the stock. Because five years is the largest
+             * chart period we are using, data for the smaller periods can be grabbed
+             * from the five year WSJ response page. The actual number of data points
+             * that exists for a stock can be determined by parsing the WSJ response and
+             * counting the number of certain elements (ie. table rows). */
             final String wsj_url_5years = String.format(Locale.US,
                     "https://quotes.wsj.com/ajax/historicalprices/4/%s?MOD_VIEW=page&ticker=%s&country=%s" +
                             "&exchange=%s&instrumentType=%s&num_rows=%d&range_days=%d&startDate=%s&endDate=%s",
@@ -745,23 +853,29 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 fiveYearDoc = Jsoup.connect(wsj_url_5years).get();
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
-                /** Add to missing stats? */
+                missingChartPeriods.add(AdvancedStock.ChartPeriod.TWO_WEEKS);
+                missingChartPeriods.add(AdvancedStock.ChartPeriod.ONE_MONTH);
+                missingChartPeriods.add(AdvancedStock.ChartPeriod.THREE_MONTHS);
+                missingChartPeriods.add(AdvancedStock.ChartPeriod.ONE_YEAR);
+                missingChartPeriods.add(AdvancedStock.ChartPeriod.FIVE_YEARS);
             }
 
             if (fiveYearDoc != null) {
                 int reverseNdx, periodNdx, i;
 
-                /* This is the number of data points needed for each period. The stock market is
-                 * only open on weekdays, and there are 9 holidays that the stock market closes for.
-                 * So the stock market is open for ~252 days a year. Use this value to approximate
-                 * the number of data points that should be in each period. */
-                final int[] PERIODS = {1260, 252, 63, 21, 10};
-                /* Don't get too many data points for long chart periods because it takes too long
-                 * and is unnecessary. Take no more than 150 data points max in a period. These
-                 * increments mean that for chartPrices for periods greater than 1 day, the list
-                 * will either be empty (not enough data), or have a constant size. The non-empty
-                 * sizes are: [5 year]=140, [1 year]=126, [3 month]=63, [1 month]=21, [2 weeks]=10. */
-                final int[] PERIOD_INCREMENTS = {9, 2, 1, 1, 1};
+                /* This is the number of data points needed for each period. The stock
+                 * market is only open on weekdays, and there are 9 holidays that the
+                 * stock market closes for. So the stock market is open for ~252 days
+                 * a year. Use this value to approximate the number of data points that
+                 * should be in each period. */
+                final int[] SIZES = {1260, 252, 63, 21, 10};
+                /* Don't get too many data points for long chart periods because it
+                 * takes too long and is unnecessary. These increments mean that for
+                 * chartPrices for periods greater than 1 day, the list will either
+                 * be empty (not enough data), or have a constant size. The non-empty
+                 * sizes are: [5 year]=140, [1 year]=126, [3 month]=63, [1 month]=21,
+                 * [2 weeks]=10. */
+                final int[] INCREMENTS = {9, 2, 1, 1, 1};
 
                 final Elements rowElmnts = fiveYearDoc.select(":root > body > div > " +
                         "div#historical_data_table > div > table > tbody > tr");
@@ -769,31 +883,35 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 final double[] allChartPrices = new double[NUM_DATA_POINTS];
                 final String[] allChartDates = new String[NUM_DATA_POINTS];
 
-                /* The most recent prices are at the top of the WSJ page (top of the HTML table), and
-                 * the oldest prices are at the bottom. Fill allChartPrices starting with the last
-                 * price elements so that the oldest prices are the front of allPrices and the
-                 * recent prices are at the end. Do the same for allChartTimes. */
+                /* The most recent prices are at the top of the WSJ page (top of the HTML
+                 * table), and the oldest prices are at the bottom. Fill allChartPrices
+                 * starting with the last price elements so that the oldest prices are the
+                 * front of allPrices and the recent prices are at the end. Do the same
+                 * for allChartTimes. */
                 for (i = 0, reverseNdx = NUM_DATA_POINTS - 1; reverseNdx >= 0; i++, reverseNdx--) {
-                    /* Charts use the closing price of each day. The closing price is the 5th column
-                     * in each row. The date is the 1st column in each row. */
+                    /* Charts use the closing price of each day. The closing price is the
+                     * 5th column in each row. The date is the 1st column in each row. */
                     allChartPrices[i] = parseDouble(rowElmnts.get(reverseNdx).selectFirst(":root > :eq(4)").text());
                     allChartDates[i] = rowElmnts.get(reverseNdx).selectFirst(":root > :eq(0)").text();
                 }
 
-                /* Fill chartPrices and chartDates for each period. If there is not enough data to
-                 * represent a full period, then leave that period's chartPrices and chartDates empty. */
+                /* Fill chartPrices and chartDates for each period. If there is not enough
+                 * data to represent a full period, then leave that period's chartPrices and
+                 * chartDates empty. */
                 List<Double> curChartPrices;
                 List<String> curChartDates;
                 for (periodNdx = 0; periodNdx < chartPricesList.size(); periodNdx++) {
-                    if (PERIODS[periodNdx] <= NUM_DATA_POINTS) {
+                    if (SIZES[periodNdx] <= NUM_DATA_POINTS) {
                         // If there are enough data points to fill this period
 
                         curChartPrices = chartPricesList.get(periodNdx);
                         curChartDates = chartDatesList.get(periodNdx);
-                        for (reverseNdx = NUM_DATA_POINTS - PERIODS[periodNdx]; reverseNdx < NUM_DATA_POINTS; reverseNdx += PERIOD_INCREMENTS[periodNdx]) {
+                        for (reverseNdx = NUM_DATA_POINTS - SIZES[periodNdx]; reverseNdx < NUM_DATA_POINTS; reverseNdx += INCREMENTS[periodNdx]) {
                             curChartPrices.add(allChartPrices[reverseNdx]);
                             curChartDates.add(allChartDates[reverseNdx]);
                         }
+                    } else {
+                        missingChartPeriods.add(BIG_CHART_PERIODS[periodNdx]);
                     }
                 }
             }
@@ -868,7 +986,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
             final String avgVolume;
             strBuff = keyData1.get(1).ownText();
-            if (isDigitOrDec(strBuff.charAt(0))) {
+            if (!strBuff.isEmpty() && isDigitOrDec(strBuff.charAt(0))) {
                 avgVolume = strBuff;
             } else {
                 avgVolume = NA;
@@ -877,7 +995,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
             final double todaysLow, todaysHigh;
             strBuff = keyData1.get(2).ownText();
-            if (isDigitOrDec(strBuff.charAt(0))) {
+            if (!strBuff.isEmpty() && isDigitOrDec(strBuff.charAt(0))) {
                 // " - " is between low and high values
                 final String[] todaysRange = strBuff.split("\\s-\\s");
                 todaysLow = parseDouble(todaysRange[0].replaceAll("[^0-9.]+", ""));
@@ -890,11 +1008,11 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
             final double fiftyTwoWeekLow, fiftyTwoWeekHigh;
             strBuff = keyData1.get(3).ownText();
-            if (isDigitOrDec(strBuff.charAt(0))) {
+            if (!strBuff.isEmpty() && isDigitOrDec(strBuff.charAt(0))) {
                 // " - " is between low and high values
-                final String[] todaysRange = strBuff.split("\\s-\\s");
-                fiftyTwoWeekLow = parseDouble(todaysRange[0].replaceAll("[^0-9.]+", ""));
-                fiftyTwoWeekHigh = parseDouble(todaysRange[1].replaceAll("[^0-9.]+", ""));
+                final String[] fiftyTwoWeekRange = strBuff.split("\\s-\\s");
+                fiftyTwoWeekLow = parseDouble(fiftyTwoWeekRange[0].replaceAll("[^0-9.]+", ""));
+                fiftyTwoWeekHigh = parseDouble(fiftyTwoWeekRange[1].replaceAll("[^0-9.]+", ""));
             } else {
                 fiftyTwoWeekLow = -1;
                 fiftyTwoWeekHigh = -1;
@@ -910,7 +1028,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             final Element module6 = contentFrame.selectFirst(":root > section[class$=section_2] > " +
                     "div#contentCol > div:eq(1) > div.zonedModule[data-module-id=6]");
             final Elements keyData2 = module6.select("div > div[class$=keystock_drawer] > " +
-                    "div > ul > li > div > span.data_data");
+                    "div > ul > li > div > span");
 
             final double peRatio; // P/E ratio can be negative
             strBuff = keyData2.get(0).ownText();
@@ -950,12 +1068,12 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             }
 
             final String description;
-            strBuff = contentFrame.selectFirst(":root > section[class$=section_2] > " +
+            final Element descriptionElmnt = contentFrame.selectFirst(":root > section[class$=section_2] > " +
                     "div#contentCol + div > div:eq(1) > div.zonedModule[data-module-id=11] > div > " +
-                    "div[class$=data] > div[class$=description] > p.txtBody").ownText();
-            // If there is no description, the element (p.txtBody) doesn't exist
-            if (strBuff != null) {
-                description = strBuff;
+                    "div[class$=data] > div[class$=description] > p.txtBody");
+            // If there is no description, the description element (p.txtBody) doesn't exist
+            if (descriptionElmnt != null) {
+                description = descriptionElmnt.ownText();
             } else {
                 description = NA;
                 missingStats.add(Stat.DESCRIPTION);
@@ -1006,7 +1124,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
         @Override
         protected void onPostExecute(final AdvancedStock stock) {
-            mcompletionListener.get().onDownloadIndividualStockTaskCompleted(stock, missingStats);
+            mcompletionListener.get().onDownloadIndividualStockTaskCompleted(stock, missingStats, missingChartPeriods);
         }
 
         private boolean isDigitOrDec(final char c) {
