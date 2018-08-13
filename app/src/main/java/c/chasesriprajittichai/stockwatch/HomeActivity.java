@@ -59,6 +59,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
     private static class FindStockTask extends AsyncTask<Void, Integer, Boolean> {
 
         private final String mticker;
+        private String mname = ""; // Init as empty
         private final WeakReference<FindStockTaskListener> mcompletionListener;
 
         private FindStockTask(final String ticker, final FindStockTaskListener completionListener) {
@@ -74,11 +75,16 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
             try {
                 final Document doc = Jsoup.connect(URL).get();
 
+                final Element contentFrame = doc.selectFirst("html > body > div.pageFrame > div.contentFrame");
+
                 // If the stock's page is found on WSJ, this element does not exist
-                final Element flagElmnt = doc.selectFirst(
-                        "html > body > div.pageFrame > div.contentFrame div[class$=notfound_header module]");
+                final Element flagElmnt = contentFrame.selectFirst("div[class$=notfound_header module]");
 
                 stockExists = (flagElmnt == null);
+
+                if (stockExists) {
+                    mname = contentFrame.selectFirst("span.companyName").ownText();
+                }
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
             }
@@ -88,7 +94,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
         @Override
         protected void onPostExecute(final Boolean stockExists) {
-            mcompletionListener.get().onFindStockTaskCompleted(mticker, stockExists);
+            mcompletionListener.get().onFindStockTaskCompleted(mticker, mname, stockExists);
         }
     }
 
@@ -107,11 +113,13 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
     /* Called from FindStockTask.onPostExecute(). */
     @Override
-    public void onFindStockTaskCompleted(final String ticker, final boolean stockExists) {
+    public void onFindStockTaskCompleted(final String ticker, final String name,
+                                         final boolean stockExists) {
         if (stockExists) {
             // Go to individual stock activity
             final Intent intent = new Intent(this, IndividualStockActivity.class);
             intent.putExtra("Ticker", ticker);
+            intent.putExtra("Name", name);
             // Equivalent to checking if ticker is in mstocks
             intent.putExtra("Is in favorites", mtickerToIndexMap.containsKey(ticker));
             startActivity(intent);
@@ -134,19 +142,23 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
         /* Starter kit */
 //        fillPreferencesWithRandomStocks(0);
 
-        final String[] tickers = mpreferences.getString("Tickers CSV", "").split(","); // "".split(",") returns {""}
-        final String[] data = mpreferences.getString("Data CSV", "").split(","); // "".split(",") returns {""}
-        /* If there are stocks in favorites, initialize recycler view to show tickers with the
-         * previous data. */
-        if (!tickers[0].isEmpty()) {
-            mstocks.ensureCapacity(tickers.length);
+        final String[] tickerArr = mpreferences.getString("Tickers TSV", "").split("\t"); // "".split("\t") returns {""}
+        final String[] nameArr = mpreferences.getString("Names TSV", "").split("\t"); // "".split("\t") returns {""}
+        final String[] dataArr = mpreferences.getString("Data TSV", "").split("\t"); // "".split("\t") returns {""}
+        /* If there are stocks in favorites, initialize recycler view to show tickers
+         * with the previous data. */
+        if (!tickerArr[0].isEmpty()) {
+            mstocks.ensureCapacity(tickerArr.length);
             BasicStock curStock;
-            String curTicker;
+            String curTicker, curName;
             BasicStock.State curState;
             double curPrice, curChangePoint, curChangePercent;
-            for (int tickerNdx = 0, dataNdx = 0; tickerNdx < tickers.length; tickerNdx++, dataNdx += 4) {
-                curTicker = tickers[tickerNdx];
-                switch (data[dataNdx]) {
+            for (int tickerNdx = 0, dataNdx = 0; tickerNdx < tickerArr.length; tickerNdx++, dataNdx += 4) {
+                // nameNdx is the same as tickerNdx (each element is a name, unlike in Data TSV)
+
+                curTicker = tickerArr[tickerNdx];
+                curName = nameArr[tickerNdx];
+                switch (dataArr[dataNdx]) {
                     case "PREMARKET":
                         curState = PREMARKET;
                         break;
@@ -168,11 +180,11 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
                         // Do not add this error stock to mstocks or mtickerToIndexMap
                         continue;
                 }
-                curPrice = parseDouble(data[dataNdx + 1]);
-                curChangePoint = parseDouble(data[dataNdx + 2]);
-                curChangePercent = parseDouble(data[dataNdx + 3]);
+                curPrice = parseDouble(dataArr[dataNdx + 1]);
+                curChangePoint = parseDouble(dataArr[dataNdx + 2]);
+                curChangePercent = parseDouble(dataArr[dataNdx + 3]);
 
-                curStock = new BasicStock(curState, curTicker, curPrice, curChangePoint, curChangePercent);
+                curStock = new BasicStock(curState, curTicker, curName, curPrice, curChangePoint, curChangePercent);
 
                 // Fill mstocks and mtickerToIndexMap
                 mstocks.add(curStock);
@@ -186,6 +198,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
             // Go to individual stock activity
             final Intent intent = new Intent(this, IndividualStockActivity.class);
             intent.putExtra("Ticker", basicStock.getTicker());
+            intent.putExtra("Name", basicStock.getName());
             // Equivalent to checking if ticker is in mstocks
             intent.putExtra("Is in favorites", mtickerToIndexMap.containsKey(basicStock.getTicker()));
             startActivity(intent);
@@ -227,8 +240,9 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
          * used again. */
         mtimer.cancel();
 
-        mpreferences.edit().putString("Tickers CSV", mstocks.getStockTickersAsCSV()).apply();
-        mpreferences.edit().putString("Data CSV", mstocks.getStockDataAsCSV()).apply();
+        mpreferences.edit().putString("Tickers TSV", mstocks.getStockTickersAsTSV()).apply();
+        mpreferences.edit().putString("Names TSV", mstocks.getStockNamesAsTSV()).apply();
+        mpreferences.edit().putString("Data TSV", mstocks.getStockDataAsTSV()).apply();
 
         unregisterManagers();
     }
@@ -304,10 +318,12 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
     @Override
     public void onResponse(final BasicStockList updatedStocks) {
         for (final BasicStock s : updatedStocks) {
-            /* Updating the recycler view while dragging disrupts the dragging, causing the
-             * currently dragged item to fall over whatever position is hovers. */
-            /* The user could have swipe-deleted curStock in the time that the MultiStockRequest was
-             * executing. If so, mtickerToIndexMap does not contain curTicker. */
+            /* Updating the recycler view while dragging disrupts the dragging,
+             * causing the currently dragged item to fall over whatever position
+             * it is hovers over. */
+            /* The user could have swipe-deleted curStock in the time that the
+             * MultiStockRequest was executing. If so, mtickerToIndexMap does
+             * not contain curTicker. */
             if (!mrecyclerAdapter.isDragging() && mtickerToIndexMap.containsKey(s.getTicker())) {
                 mrecyclerAdapter.notifyItemChanged(mtickerToIndexMap.get(s.getTicker()));
             }
@@ -316,7 +332,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
     @Override
     public void onErrorResponse(final VolleyError error) {
-        if (error != null) {
+        if (!error.getLocalizedMessage().isEmpty()) {
             Log.e("VolleyError", error.getLocalizedMessage());
         } else {
             Log.e("NullVolleyError", "VolleyError thrown, but error is null.");
@@ -445,15 +461,22 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
     }
 
     /**
-     * Testing function. Fills Tickers CSV preference with all the tickers from the NASDAQ and fills
-     * Data CSV preference with -1. The largest number of stocks that can be added is the number of
+     * Testing function. Fills Tickers TSV preference with tickers from the NASDAQ
+     * and fills Data TSV preference with -1. Fills Names TSV preference with
+     * "ticker name", because we don't know the names of the stocks, only the
+     * tickers. The largest number of stocks that can be added is the number of
      * companies in the NASDAQ.
      *
      * @param size The number of stocks to put in preferences.
      */
     private void fillPreferencesWithRandomStocks(int size) {
         final String tickersStr = getString(R.string.nasdaqTickers);
+
         final String[] tickerArr = tickersStr.split(",");
+        final String[] nameArr = new String[tickerArr.length];
+        for (int i = 0; i < nameArr.length; i++) {
+            nameArr[i] = tickerArr[i] + " name";
+        }
         boolean usingMaxSize = false;
         if (size >= tickerArr.length) {
             size = tickerArr.length;
@@ -461,11 +484,15 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
         }
 
         if (usingMaxSize) {
-            mpreferences.edit().putString("Tickers CSV", TextUtils.join(",", tickerArr)).apply();
+            mpreferences.edit().putString("Tickers TSV", TextUtils.join("\t", tickerArr)).apply();
+            mpreferences.edit().putString("Names TSV", TextUtils.join("\t", nameArr)).apply();
         } else {
             final String[] subTickerArr = new String[size];
             System.arraycopy(tickerArr, 0, subTickerArr, 0, size);
-            mpreferences.edit().putString("Tickers CSV", TextUtils.join(",", subTickerArr)).apply();
+            mpreferences.edit().putString("Tickers TSV", TextUtils.join("\t", subTickerArr)).apply();
+            final String[] subNameArr = new String[size];
+            System.arraycopy(nameArr, 0, subNameArr, 0, size);
+            mpreferences.edit().putString("Names TSV", TextUtils.join("\t", subNameArr)).apply();
         }
 
         final String[] dataArr = new String[4 * size];
@@ -475,7 +502,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
             dataArr[i + 2] = "-1";
             dataArr[i + 3] = "-1";
         }
-        mpreferences.edit().putString("Data CSV", TextUtils.join(",", dataArr)).apply();
+        mpreferences.edit().putString("Data TSV", TextUtils.join("\t", dataArr)).apply();
     }
 
     @Override

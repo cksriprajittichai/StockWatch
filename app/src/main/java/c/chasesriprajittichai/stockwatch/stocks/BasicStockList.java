@@ -21,18 +21,25 @@ public final class BasicStockList extends ArrayList<BasicStock> {
     }
 
     /**
-     * @return A CSV string of the tickers of the stocks in mstocks.
+     * @return A TSV string of the tickers of the stocks in mstocks.
      */
-    public String getStockTickersAsCSV() {
-        return TextUtils.join(",", getStockTickers());
+    public String getStockTickersAsTSV() {
+        return TextUtils.join("\t", getStockTickers());
+    }
+
+    /**
+     * @return A TSV string of the tickers of the stocks in mstocks.
+     */
+    public String getStockNamesAsTSV() {
+        return TextUtils.join("\t", getStockNames());
     }
 
     /**
      * Stock data includes the stock's state, price, change point, and change percent.
      *
-     * @return A CSV string of the data of the stocks in mstocks.
+     * @return A TSV string of the data of the stocks in mstocks.
      */
-    public String getStockDataAsCSV() {
+    public String getStockDataAsTSV() {
         final List<BasicStock.State> states = getStockStates();
         final List<Double> prices = getStockPrices();
         final List<Double> changePoints = getStockChangePoints();
@@ -40,13 +47,13 @@ public final class BasicStockList extends ArrayList<BasicStock> {
 
         final List<String> data = new ArrayList<>(size());
         for (int i = 0; i < size(); i++) {
-            data.add(states.get(i).toString() + ',' +
-                    prices.get(i) + ',' +
-                    changePoints.get(i) + ',' +
+            data.add(states.get(i).toString() + '\t' +
+                    prices.get(i) + '\t' +
+                    changePoints.get(i) + '\t' +
                     changePercents.get(i));
         }
 
-        return TextUtils.join(",", data);
+        return TextUtils.join("\t", data);
     }
 
     private List<BasicStock.State> getStockStates() {
@@ -63,6 +70,14 @@ public final class BasicStockList extends ArrayList<BasicStock> {
             tickers.add(s.getTicker());
         }
         return tickers;
+    }
+
+    private List<String> getStockNames() {
+        final List<String> names = new ArrayList<>(size());
+        for (final BasicStock s : this) {
+            names.add(s.getName());
+        }
+        return names;
     }
 
     private List<Double> getStockPrices() {

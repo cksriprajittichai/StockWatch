@@ -105,6 +105,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     @BindView(R.id.textView_description_individual) TextView mdescriptionTextView;
 
     private String mticker; // Needed to create mstock
+    private String mname; // Needed to create mstock
     private AdvancedStock mstock;
     private boolean mstockHasBeenInitialized = false; // mstock is initialized in onDownloadIndividualStockTaskCompleted()
     private boolean mwasInFavoritesInitially;
@@ -118,10 +119,6 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                                                        final Set<AdvancedStock.ChartPeriod> missingChartPeriods) {
         mstock = stock;
         mstockHasBeenInitialized = true;
-
-        if (!getTitle().equals(mstock.getName())) {
-            setTitle(mstock.getName());
-        }
 
 
         // ChartPeriods from string-array resource are in increasing order (1D -> 5Y)
@@ -147,9 +144,9 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     /* If the 1D chart is filled, the current ChartPeriod will be set to
                      * ONE_DAY. Otherwise, if the 1D chart is not filled, the initially
                      * selected ChartPeriod should be the smallest big ChartPeriod
-                     * (TWO_WEEKS). By the way that we're filling the charts, if a
-                     * single big ChartPeriod is filled, that guarantees that the 2W
-                     * chart will be filled. */
+                     * (TWO_WEEKS). By the way that we're filling the charts, if at
+                     * least one big ChartPeriod is filled, that guarantees that the
+                     * 2W chart is filled. */
                     msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.TWO_WEEKS);
                     msparkViewAdapter.setyData(mstock.getYData_2weeks());
                     msparkViewAdapter.setDates(mstock.getDates_2weeks());
@@ -412,12 +409,13 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_individual_stock);
-        setTitle(""); // Show empty title now, company name will be shown (in onPostExecute())
-        ButterKnife.bind(this);
         mticker = getIntent().getStringExtra("Ticker");
+        mname = getIntent().getStringExtra("Name");
+        setTitle(mname);
+        ButterKnife.bind(this);
 
         // Start task ASAP
-        new DownloadStockDataTask(mticker, this).execute();
+        new DownloadStockDataTask(mticker, mname, this).execute();
 
         AndroidThreeTen.init(this); // Init, timezone not actually used
         mpreferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -457,23 +455,25 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             }
 
             /* The activity has paused. Update the favorites status.
-             * The condition to be able to edit Tickers CSV and Data CSV are dependent on whether
-             * or not the favorites status has changed. */
+             * The condition to be able to edit Tickers TSV and Data TSV are dependent
+             * on whether or not the favorites status has changed. */
             mwasInFavoritesInitially = misInFavorites;
         }
     }
 
     @Override
     public void onBackPressed() {
-        /* The parent (non-override) onBackPressed() does not create a new HomeActivity. So when we
-         * go back back to HomeActivity, the first function called is onResume(); onCreate() is not
-         * called. HomeActivity depends on Tickers CSV and Data CSV not being changed in between
-         * calls to HomeActivity.onPause() and HomeActivity.onResume() (where
-         * HomeActivity.onCreate() is not called in between HomeActivity.onPause() and
-         * HomeActivity.onResume()). Tickers CSV and Data CSV can be changed within this class.
-         * Therefore, if we don't start a new HomeActivity in this function, then it is possible
-         * that Tickers CSV and Data CSV are changed in between calls to HomeActivity.onResume()
-         * and HomeActivity.onPause(), which would cause HomeActivity to function incorrectly. */
+        /* The parent (non-override) onBackPressed() does not create a new HomeActivity.
+         * So when we go back back to HomeActivity, the first function called is
+         * onResume(); onCreate() is not called. HomeActivity depends on Tickers TSV and
+         * Data TSV not being changed in between calls to HomeActivity.onPause() and
+         * HomeActivity.onResume() (where HomeActivity.onCreate() is not called in
+         * between HomeActivity.onPause() and HomeActivity.onResume()). Tickers TSV and
+         * Data TSV can be changed within this class. Therefore, if we don't start a new
+         * HomeActivity in this function, then it is possible that Tickers TSV and Data
+         * TSV are changed in between calls to HomeActivity.onResume() and
+         * HomeActivity.onPause(), which would cause HomeActivity to function
+         * incorrectly. */
         final Intent intent = new Intent(this, HomeActivity.class);
         startActivity(intent);
     }
@@ -482,57 +482,27 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     @Override
     public void onItemSelected(final int index) {
         // mchartPeriodPicker's values come from chartPeriods string-array resource
-        final String chartPeriodStr = mchartPeriodPicker.getValues()[index].toString();
+        // chartPeriodStr must be a value in CHART_PERIOD_STRS
+        final CharSequence chartPeriodStr = mchartPeriodPicker.getValues()[index];
+        final CharSequence[] CHART_PERIOD_STRS = getResources().getStringArray(R.array.chartPeriods);
 
-        switch (chartPeriodStr.toLowerCase(Locale.US)) {
-            case "1d":
-                if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.ONE_DAY) {
-                    msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.ONE_DAY);
-                    msparkViewAdapter.setyData(mstock.getYData_1day());
-                    /* This activity shouldn't access msparkView's dates if the current
-                     * ChartPeriod is ONE_DAY. The updating of the dates to the UI are
-                     * managed in initTopViewsDynamic() and onScrubbed(). */
+        final AdvancedStock.ChartPeriod selected;
+
+        for (int i = 0; i < CHART_PERIOD_STRS.length; i++) {
+            if (CHART_PERIOD_STRS[i].equals(chartPeriodStr)) {
+                selected = AdvancedStock.ChartPeriod.values()[i];
+
+                if (selected != msparkViewAdapter.getChartPeriod()) {
+                    // If the selected ChartPeriod has changed
+                    msparkViewAdapter.setChartPeriod(selected);
+                    msparkViewAdapter.setyData(mstock.getYData(selected));
+                    msparkViewAdapter.setDates(mstock.getDates(selected));
+                    msparkViewAdapter.notifyDataSetChanged();
+                    initTopViewsDynamic();
                 }
                 break;
-            case "2w":
-                if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.TWO_WEEKS) {
-                    msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.TWO_WEEKS);
-                    msparkViewAdapter.setyData(mstock.getYData_2weeks());
-                    msparkViewAdapter.setDates(mstock.getDates_2weeks());
-                }
-                break;
-            case "1m":
-                if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.ONE_MONTH) {
-                    msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.ONE_MONTH);
-                    msparkViewAdapter.setyData(mstock.getYData_1month());
-                    msparkViewAdapter.setDates(mstock.getDates_1month());
-                }
-                break;
-            case "3m":
-                if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.THREE_MONTHS) {
-                    msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.THREE_MONTHS);
-                    msparkViewAdapter.setyData(mstock.getYData_3months());
-                    msparkViewAdapter.setDates(mstock.getDates_3months());
-                }
-                break;
-            case "1y":
-                if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.ONE_YEAR) {
-                    msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.ONE_YEAR);
-                    msparkViewAdapter.setyData(mstock.getYData_1year());
-                    msparkViewAdapter.setDates(mstock.getDates_1year());
-                }
-                break;
-            case "5y":
-                if (msparkViewAdapter.getChartPeriod() != AdvancedStock.ChartPeriod.FIVE_YEARS) {
-                    msparkViewAdapter.setChartPeriod(AdvancedStock.ChartPeriod.FIVE_YEARS);
-                    msparkViewAdapter.setyData(mstock.getYData_5years());
-                    msparkViewAdapter.setDates(mstock.getDates_5years());
-                }
-                break;
+            }
         }
-
-        msparkViewAdapter.notifyDataSetChanged();
-        initTopViewsDynamic();
     }
 
     @Override
@@ -556,79 +526,88 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     }
 
     /**
-     * Adds mstock to mpreferences: adds mstock's ticker to Tickers CSV and and adds
-     * mstock's data to Data CSV. mstock is added to the front of each preference
-     * string, meaning that mstock is inserted at the top of the list of stocks. This
-     * function does not check if mstock is already in mpreferences before adding mstock.
+     * Adds mstock to mpreferences: adds mstock's ticker to Tickers TSV, adds
+     * mstock's name to Names TSV, and adds mstock's data to Data TSV. mstock is
+     * added to the front of each preference string, meaning that mstock is
+     * inserted at the top of the list of stocks. This function does not check
+     * if mstock is already in mpreferences before adding mstock.
      * <p>
-     * If mstock's state is ERROR, this function does nothing. If mstock's state is OPEN,
-     * If mstock's state is OPEN, the live data (i.e. mstock.getPrice()) is added to
-     * mpreferences. If mstock's state is not ERROR or OPEN (mstock instanceof
+     * If mstock's state is ERROR, this function does nothing. If mstock's state
+     * is OPEN, the live data (i.e. mstock.getPrice()) is added to mpreferences.
+     * If mstock's state is not ERROR or OPEN (mstock instanceof
      * StockWithAfterHoursValues), the data at the last close (i.e. still use
      * mstock.getPrice()) is added to mpreferences.
      * <p>
      * Functionality changes depending on the value of mstockHasBeenInitialized.
-     * If mstock has not been initialized, mticker (same value as what
-     * mstock.getTicker() once mstockHasBeenInitialized) is added to Tickers CSV, and
-     * the uninitialized data values of mstock are set to specific values that are then
-     * added to Data CSV. The state is set to CLOSED, because the OPEN and CLOSED states
-     * are the most limiting states (less functionality than PREMARKET state, for example).
-     * The change point and change percent values are set to 0.
+     * If mstock has not been initialized, the uninitialized data values of
+     * mstock are set to specific values (0) that are then added to Data TSV.
+     * The state is set to OPEN, because the OPEN (and CLOSED) state are the most
+     * limiting states (less functionality than the PREMARKET state, for example).
      */
     private void addStockToPreferences() {
-        final String tickersCSV = mpreferences.getString("Tickers CSV", "");
-        final String dataCSV = mpreferences.getString("Data CSV", "");
+        final String tickersTSV = mpreferences.getString("Tickers TSV", "");
+        final String namesTSV = mpreferences.getString("Names TSV", "");
+        final String dataTSV = mpreferences.getString("Data TSV", "");
 
         final String dataStr;
         if (!mstockHasBeenInitialized) {
-            dataStr = String.format(Locale.US, "%s,%d,%d,%d",
+            dataStr = String.format(Locale.US, "%s\t%d\t%d\t%d",
                     OPEN.toString(), 0, 0, 0);
         } else if (mstock.getState() == ERROR) {
             return;
         } else {
-            dataStr = String.format(Locale.US, "%s,%f,%f,%f",
+            dataStr = String.format(Locale.US, "%s\t%f\t%f\t%f",
                     mstock.getState().toString(),
                     mstock.getPrice(),
                     mstock.getChangePoint(),
                     mstock.getChangePercent());
         }
 
-        if (!tickersCSV.isEmpty()) {
+        if (!tickersTSV.isEmpty()) {
             // There are other stocks in favorites
-            mpreferences.edit().putString("Tickers CSV", mticker + ',' + tickersCSV).apply();
-            mpreferences.edit().putString("Data CSV", dataStr + ',' + dataCSV).apply();
+            mpreferences.edit().putString("Tickers TSV", mticker + '\t' + tickersTSV).apply();
+            mpreferences.edit().putString("Names TSV", mname + '\t' + namesTSV).apply();
+            mpreferences.edit().putString("Data TSV", dataStr + '\t' + dataTSV).apply();
         } else {
             // There are no stocks in favorites, this will be the first
-            mpreferences.edit().putString("Tickers CSV", mticker).apply();
-            mpreferences.edit().putString("Data CSV", dataStr).apply();
+            mpreferences.edit().putString("Tickers TSV", mticker).apply();
+            mpreferences.edit().putString("Names TSV", mname).apply();
+            mpreferences.edit().putString("Data TSV", dataStr).apply();
         }
     }
 
     /**
-     * Removes mstock from mpreferences; removes mstock's ticker from Tickers CSV and
-     * removes mStock's data from Data CSV.
+     * Removes mstock from mpreferences: removes mstock's ticker from Tickers
+     * TSV, removes mstock's name from Names TSV, and removes mStock's data
+     * from Data TSV.
      * <p>
-     * Functionality does not change depending on the value of mstockHasBeenInitialized.
+     * Functionality does not change depending on the value of
+     * mstockHasBeenInitialized.
      */
     private void removeStockFromPreferences() {
-        final String tickersCSV = mpreferences.getString("Tickers CSV", "");
-        final String[] tickerArr = tickersCSV.split(","); // "".split(",") returns {""}
+        final String tickersTSV = mpreferences.getString("Tickers TSV", "");
+        final String namesTSV = mpreferences.getString("Names TSV", "");
+        final String[] tickerArr = tickersTSV.split("\t"); // "".split("\t") returns {""}
+        final String[] nameArr = namesTSV.split("\t"); // "".split("\t") returns {""}
 
         if (!tickerArr[0].isEmpty()) {
             final List<String> tickerList = new ArrayList<>(Arrays.asList(tickerArr));
+            final List<String> nameList = new ArrayList<>(Arrays.asList(nameArr));
             final List<String> dataList = new ArrayList<>(Arrays.asList(
-                    mpreferences.getString("Data CSV", "").split(",")));
+                    mpreferences.getString("Data TSV", "").split("\t")));
 
             final int tickerNdx = tickerList.indexOf(mticker);
             tickerList.remove(tickerNdx);
-            mpreferences.edit().putString("Tickers CSV", TextUtils.join(",", tickerList)).apply();
+            nameList.remove(tickerNdx);
+            mpreferences.edit().putString("Tickers TSV", TextUtils.join("\t", tickerList)).apply();
+            mpreferences.edit().putString("Names TSV", TextUtils.join("\t", nameList)).apply();
 
             // 4 data elements per 1 ticker. DataNdx is the index of the first element to delete.
             final int dataNdx = tickerNdx * 4;
             for (int deleteCount = 1; deleteCount <= 4; deleteCount++) { // Delete 4 data elements
                 dataList.remove(dataNdx);
             }
-            mpreferences.edit().putString("Data CSV", TextUtils.join(",", dataList)).apply();
+            mpreferences.edit().putString("Data TSV", TextUtils.join("\t", dataList)).apply();
         }
     }
 
@@ -658,13 +637,16 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
     private static final class DownloadStockDataTask extends AsyncTask<Void, Integer, AdvancedStock> {
 
-        private final String mticker;
+        private final String mticker; // Needed to construct AdvancedStocks and for URLs. Already known.
+        private final String mname; // Needed to construct AdvancedStocks. Already known.
         private final Set<Stat> missingStats = new HashSet<>();
         private final Set<AdvancedStock.ChartPeriod> missingChartPeriods = new HashSet<>();
         private final WeakReference<DownloadIndividualStockTaskListener> mcompletionListener;
 
-        private DownloadStockDataTask(final String ticker, final DownloadIndividualStockTaskListener completionListener) {
+        private DownloadStockDataTask(final String ticker, final String name,
+                                      final DownloadIndividualStockTaskListener completionListener) {
             mticker = ticker;
+            mname = name;
             mcompletionListener = new WeakReference<>(completionListener);
         }
 
@@ -680,7 +662,6 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 return AdvancedStock.ERROR_AdvancedStock;
             }
 
-            String name = mticker; // Init as ticker, should change to company name found in JSON
             /* Some stocks have no chart data. If this is the case, chart_prices will be an
              * empty array list. */
             final BasicStock.State state;
@@ -728,7 +709,6 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     final JSONObject valueOuterObj = topObj.getJSONObject("Value");
                     final JSONArray dataArr = valueOuterObj.getJSONArray("Data");
                     final JSONObject valueInnerObj = dataArr.getJSONObject(0).getJSONObject("Value");
-                    name = valueInnerObj.getString("Name");
 
                     final JSONArray sessionsArr = valueInnerObj.getJSONArray("Sessions");
                     final JSONObject sessionsNdxZero = sessionsArr.getJSONObject(0);
@@ -853,11 +833,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 fiveYearDoc = Jsoup.connect(wsj_url_5years).get();
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
-                missingChartPeriods.add(AdvancedStock.ChartPeriod.TWO_WEEKS);
-                missingChartPeriods.add(AdvancedStock.ChartPeriod.ONE_MONTH);
-                missingChartPeriods.add(AdvancedStock.ChartPeriod.THREE_MONTHS);
-                missingChartPeriods.add(AdvancedStock.ChartPeriod.ONE_YEAR);
-                missingChartPeriods.add(AdvancedStock.ChartPeriod.FIVE_YEARS);
+                missingChartPeriods.addAll(Arrays.asList(BIG_CHART_PERIODS));
             }
 
             if (fiveYearDoc != null) {
@@ -1082,37 +1058,38 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
             switch (state) {
                 case PREMARKET:
-                    ret = new PremarketStock(state, mticker, name, price, changePoint, changePercent,
-                            ah_price, ah_changePoint, ah_changePercent, todaysLow,
-                            todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap,
-                            prevClose, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
-                            chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
-                            chartPrices_5years, chartDates_2weeks, chartDates_1month, chartDates_3months,
-                            chartDates_1year, chartDates_5years);
+                    ret = new PremarketStock(state, mticker, mname, price, changePoint, changePercent,
+                            ah_price, ah_changePoint, ah_changePercent, todaysLow, todaysHigh,
+                            fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap, prevClose, peRatio, eps,
+                            yield, avgVolume, description, chartPrices_1day, chartPrices_2weeks,
+                            chartPrices_1month, chartPrices_3months, chartPrices_1year,
+                            chartPrices_5years, chartDates_2weeks, chartDates_1month,
+                            chartDates_3months, chartDates_1year, chartDates_5years);
                     break;
                 case OPEN:
-                    ret = new AdvancedStock(state, mticker, name, price, changePoint, changePercent,
-                            todaysLow, todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh,
-                            marketCap, prevClose, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
-                            chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
-                            chartPrices_5years, chartDates_2weeks, chartDates_1month, chartDates_3months, chartDates_1year, chartDates_5years);
+                    ret = new AdvancedStock(state, mticker, mname, price, changePoint, changePercent,
+                            todaysLow, todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap,
+                            prevClose, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
+                            chartPrices_2weeks, chartPrices_1month, chartPrices_3months,
+                            chartPrices_1year, chartPrices_5years, chartDates_2weeks, chartDates_1month,
+                            chartDates_3months, chartDates_1year, chartDates_5years);
                     break;
                 case AFTER_HOURS:
-                    ret = new AfterHoursStock(state, mticker, name, price, changePoint, changePercent,
-                            ah_price, ah_changePoint, ah_changePercent, todaysLow,
-                            todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap,
-                            prevClose, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
-                            chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
+                    ret = new AfterHoursStock(state, mticker, mname, price, changePoint, changePercent,
+                            ah_price, ah_changePoint, ah_changePercent, todaysLow, todaysHigh,
+                            fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap, prevClose, peRatio, eps,
+                            yield, avgVolume, description, chartPrices_1day, chartPrices_2weeks,
+                            chartPrices_1month, chartPrices_3months, chartPrices_1year,
                             chartPrices_5years, chartDates_2weeks, chartDates_1month, chartDates_3months,
                             chartDates_1year, chartDates_5years);
                     break;
                 case CLOSED:
-                    ret = new AdvancedStock(state, mticker, name, price, changePoint, changePercent,
-                            todaysLow, todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh,
-                            marketCap, prevClose, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
-                            chartPrices_2weeks, chartPrices_1month, chartPrices_3months, chartPrices_1year,
-                            chartPrices_5years, chartDates_2weeks, chartDates_1month, chartDates_3months,
-                            chartDates_1year, chartDates_5years);
+                    ret = new AdvancedStock(state, mticker, mname, price, changePoint, changePercent,
+                            todaysLow, todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap,
+                            prevClose, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
+                            chartPrices_2weeks, chartPrices_1month, chartPrices_3months,
+                            chartPrices_1year, chartPrices_5years, chartDates_2weeks, chartDates_1month,
+                            chartDates_3months, chartDates_1year, chartDates_5years);
                     break;
                 case ERROR:
                 default:

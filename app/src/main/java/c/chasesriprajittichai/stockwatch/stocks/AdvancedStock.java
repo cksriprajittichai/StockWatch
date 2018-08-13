@@ -15,7 +15,6 @@ public class AdvancedStock extends BasicStock {
             new ArrayList<>(), new ArrayList<>(), new ArrayList<>()) {
     };
 
-    private final String mname;
     private final double mpriceAtOpen;
     private double mtodaysLow;
     private double mtodaysHigh;
@@ -52,8 +51,7 @@ public class AdvancedStock extends BasicStock {
                          final List<Double> yData_5years, final List<String> dates_2weeks,
                          final List<String> dates_1month, final List<String> dates_3months,
                          final List<String> dates_1year, final List<String> dates_5years) {
-        super(state, ticker, price, changePoint, changePercent);
-        mname = name;
+        super(state, ticker, name, price, changePoint, changePercent);
         mtodaysLow = todaysLow;
         mtodaysHigh = todaysHigh;
         mfiftyTwoWeekLow = fiftyTwoWeekLow;
@@ -77,10 +75,6 @@ public class AdvancedStock extends BasicStock {
         mdates_3months = dates_3months;
         mdates_1year = dates_1year;
         mdates_5years = dates_5years;
-    }
-
-    public String getName() {
-        return mname;
     }
 
     public double getLivePrice() {

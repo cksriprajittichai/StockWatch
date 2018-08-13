@@ -6,14 +6,16 @@ public class BasicStock {
 
     private State mstate;
     private final String mticker;
+    private final String mname;
     private double mprice;
     private double mchangePoint;
     private double mchangePercent;
 
-    public BasicStock(final State state, final String ticker, final double price,
-                      final double changePoint, final double changePercent) {
+    public BasicStock(final State state, final String ticker, final String name,
+                      final double price, final double changePoint, final double changePercent) {
         mstate = state;
         mticker = ticker;
+        mname = name;
         mprice = price;
         mchangePoint = changePoint;
         mchangePercent = changePercent;
@@ -29,6 +31,10 @@ public class BasicStock {
 
     public String getTicker() {
         return mticker;
+    }
+
+    public String getName() {
+        return mname;
     }
 
     public double getPrice() {
