@@ -6,14 +6,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+
 public final class BasicStockList extends ArrayList<BasicStock> {
 
     public BasicStockList() {
         super();
-    }
-
-    public BasicStockList(final int initialCapacity) {
-        super(initialCapacity);
     }
 
     public BasicStockList(final Collection<BasicStock> c) {
@@ -21,23 +18,24 @@ public final class BasicStockList extends ArrayList<BasicStock> {
     }
 
     /**
-     * @return A TSV string of the tickers of the stocks in mstocks.
+     * @return A TSV string of the tickers of the stocks in mstocks
      */
     public String getStockTickersAsTSV() {
         return TextUtils.join("\t", getStockTickers());
     }
 
     /**
-     * @return A TSV string of the tickers of the stocks in mstocks.
+     * @return A TSV string of the tickers of the stocks in mstocks
      */
     public String getStockNamesAsTSV() {
         return TextUtils.join("\t", getStockNames());
     }
 
     /**
-     * Stock data includes the stock's state, price, change point, and change percent.
+     * Stock data includes the stock's state, price, change point, and change
+     * percent.
      *
-     * @return A TSV string of the data of the stocks in mstocks.
+     * @return A TSV String of the data of the stocks in mstocks
      */
     public String getStockDataAsTSV() {
         final List<BasicStock.State> states = getStockStates();

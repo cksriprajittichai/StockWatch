@@ -2,22 +2,25 @@ package c.chasesriprajittichai.stockwatch.stocks;
 
 import java.util.List;
 
+
 public final class OpenStock extends AdvancedStock {
 
-    public OpenStock(String ticker, String name, double price, double changePoint,
-                     double changePercent, double todaysLow, double todaysHigh,
-                     double fiftyTwoWeekLow, double fiftyTwoWeekHigh, String marketCap,
-                     double prevClose, double peRatio, double eps, double yield,
-                     String averageVolume, String description, List<Double> yData_1day,
-                     List<Double> yData_2weeks, List<Double> yData_1month,
-                     List<Double> yData_3months, List<Double> yData_1year,
-                     List<Double> yData_5years, List<String> dates_2weeks,
-                     List<String> dates_1month, List<String> dates_3months,
-                     List<String> dates_1year, List<String> dates_5years) {
-        super(State.OPEN, ticker, name, price, changePoint, changePercent, todaysLow, todaysHigh,
-                fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap, prevClose, peRatio, eps, yield,
-                averageVolume, description, yData_1day, yData_2weeks, yData_1month, yData_3months,
-                yData_1year, yData_5years, dates_2weeks, dates_1month, dates_3months, dates_1year,
-                dates_5years);
+    public OpenStock(final String ticker, final String name, final double priceAtClose,
+                       final double changePointAtClose, final double changePercentAtClose,
+                       final double todaysLow, final double todaysHigh,
+                       final double fiftyTwoWeekLow, final double fiftyTwoWeekHigh,
+                       final String marketCap, final double prevClose, final double peRatio,
+                       final double eps, final double yield, final String averageVolume,
+                       final String description, final List<Double> prices_1day,
+                       final List<Double> prices_2weeks, final List<Double> prices_1month,
+                       final List<Double> prices_3months, final List<Double> prices_1year,
+                       final List<Double> prices_5years, final List<String> dates_2weeks,
+                       final List<String> dates_1month, final List<String> dates_3months,
+                       final List<String> dates_1year, final List<String> dates_5years) {
+        super(State.OPEN, ticker, name, priceAtClose, changePointAtClose, changePercentAtClose, todaysLow,
+                todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap, prevClose, peRatio,
+                eps, yield, averageVolume, description, prices_1day, prices_2weeks, prices_1month,
+                prices_3months, prices_1year, prices_5years, dates_2weeks, dates_1month, dates_3months,
+                dates_1year, dates_5years);
     }
 }

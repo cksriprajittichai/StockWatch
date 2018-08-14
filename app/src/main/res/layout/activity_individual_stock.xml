@@ -44,7 +44,7 @@ the stock (all contained in the ScrollView) are shown.
             android:paddingRight="16dp">
 
             <TextView
-                android:id="@+id/textView_scrubPrice_individual"
+                android:id="@+id/textView_topPrice_individual"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
@@ -60,14 +60,14 @@ the stock (all contained in the ScrollView) are shown.
                 android:orientation="horizontal">
 
                 <TextView
-                    android:id="@+id/textView_scrubChangePoint_individual"
+                    android:id="@+id/textView_topChangePoint_individual"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:textAppearanceSmall"
                     android:textColor="@color/colorAccent" />
 
                 <TextView
-                    android:id="@+id/textView_scrubChangePercent_individual"
+                    android:id="@+id/textView_topChangePercent_individual"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
@@ -75,7 +75,7 @@ the stock (all contained in the ScrollView) are shown.
                     android:textColor="@color/colorAccent" />
 
                 <TextView
-                    android:id="@+id/textView_scrubTime_individual"
+                    android:id="@+id/textView_topTime_individual"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
@@ -92,14 +92,14 @@ the stock (all contained in the ScrollView) are shown.
                 android:orientation="horizontal">
 
                 <TextView
-                    android:id="@+id/textView_afterHoursChangePoint_individual"
+                    android:id="@+id/textView_topAfterHoursChangePoint_individual"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textAppearance="?android:textAppearanceSmall"
                     android:textColor="@android:color/white" />
 
                 <TextView
-                    android:id="@+id/textView_afterHoursChangePercent_individual"
+                    android:id="@+id/textView_topAfterHoursChangePercent_individual"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"
@@ -107,7 +107,7 @@ the stock (all contained in the ScrollView) are shown.
                     android:textColor="@android:color/white" />
 
                 <TextView
-                    android:id="@+id/textView_afterHoursTime_individual"
+                    android:id="@+id/textView_topAfterHoursTime_individual"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"

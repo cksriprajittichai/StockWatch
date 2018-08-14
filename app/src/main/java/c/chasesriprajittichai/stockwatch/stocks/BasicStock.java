@@ -1,64 +1,66 @@
 package c.chasesriprajittichai.stockwatch.stocks;
 
+
 public class BasicStock {
 
     public enum State {ERROR, PREMARKET, OPEN, AFTER_HOURS, CLOSED}
 
-    private State mstate;
-    private final String mticker;
-    private final String mname;
-    private double mprice;
-    private double mchangePoint;
-    private double mchangePercent;
+    private State state;
+    private final String ticker;
+    private final String name;
+    private double price;
+    private double changePoint;
+    private double changePercent;
 
     public BasicStock(final State state, final String ticker, final String name,
-                      final double price, final double changePoint, final double changePercent) {
-        mstate = state;
-        mticker = ticker;
-        mname = name;
-        mprice = price;
-        mchangePoint = changePoint;
-        mchangePercent = changePercent;
+                      final double price, final double changePoint,
+                      final double changePercent) {
+        this.state = state;
+        this.ticker = ticker;
+        this.name = name;
+        this.price = price;
+        this.changePoint = changePoint;
+        this.changePercent = changePercent;
     }
 
     public State getState() {
-        return mstate;
+        return state;
     }
 
     public void setState(final State state) {
-        mstate = state;
+        this.state = state;
     }
 
     public String getTicker() {
-        return mticker;
+        return ticker;
     }
 
     public String getName() {
-        return mname;
+        return name;
     }
 
     public double getPrice() {
-        return mprice;
+        return price;
     }
 
     public void setPrice(final double price) {
-        mprice = price;
+        this.price = price;
     }
 
     public double getChangePoint() {
-        return mchangePoint;
+        return changePoint;
     }
 
     public void setChangePoint(final double changePoint) {
-        mchangePoint = changePoint;
+        this.changePoint = changePoint;
     }
 
     public double getChangePercent() {
-        return mchangePercent;
+        return changePercent;
     }
 
     public void setChangePercent(final double changePercent) {
-        mchangePercent = changePercent;
+        this.changePercent = changePercent;
     }
 
 }

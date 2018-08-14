@@ -9,12 +9,13 @@ import android.view.View;
 
 import c.chasesriprajittichai.stockwatch.R;
 
+
 public final class RecyclerDivider extends RecyclerView.ItemDecoration {
 
-    private final Drawable mdivider;
+    private final Drawable divider;
 
     public RecyclerDivider(final Context context) {
-        mdivider = ContextCompat.getDrawable(context, R.drawable.recycler_divider_home);
+        divider = ContextCompat.getDrawable(context, R.drawable.recycler_divider_home);
     }
 
     @Override
@@ -31,10 +32,10 @@ public final class RecyclerDivider extends RecyclerView.ItemDecoration {
             params = (RecyclerView.LayoutParams) child.getLayoutParams();
 
             top = child.getBottom() + params.bottomMargin;
-            bottom = top + mdivider.getIntrinsicHeight();
+            bottom = top + divider.getIntrinsicHeight();
 
-            mdivider.setBounds(left, top, right, bottom);
-            mdivider.draw(c);
+            divider.setBounds(left, top, right, bottom);
+            divider.draw(c);
         }
     }
 }

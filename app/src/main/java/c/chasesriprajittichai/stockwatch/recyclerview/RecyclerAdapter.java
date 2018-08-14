@@ -24,62 +24,62 @@ public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.
 
     class ViewHolder extends RecyclerView.ViewHolder {
 
-        private final TextView mstateTextView;
-        private final TextView mtickerTextView;
-        private final TextView mpriceTextView;
-        private final TextView mchangePercentTextView;
+        private final TextView state;
+        private final TextView ticker;
+        private final TextView price;
+        private final TextView changePercent;
 
         ViewHolder(final View v) {
             super(v);
 
-            mstateTextView = v.findViewById(R.id.textView_state_homeRecyclerItem);
-            mtickerTextView = v.findViewById(R.id.textView_ticker_homeRecyclerItem);
-            mpriceTextView = v.findViewById(R.id.textView_price_homeRecyclerItem);
-            mchangePercentTextView = v.findViewById(R.id.textView_changePercent_homeRecyclerItem);
+            state = v.findViewById(R.id.textView_state_homeRecyclerItem);
+            ticker = v.findViewById(R.id.textView_ticker_homeRecyclerItem);
+            price = v.findViewById(R.id.textView_price_homeRecyclerItem);
+            changePercent = v.findViewById(R.id.textView_changePercent_homeRecyclerItem);
         }
 
         void bind(final BasicStock stock, final OnItemClickListener listener) {
             if (stock.getState() == BasicStock.State.AFTER_HOURS) {
                 // After hours state is the only state with an unwanted character in the enum name
-                mstateTextView.setText(String.format(Locale.US, "%s", "AFTER HOURS"));
+                state.setText(String.format(Locale.US, "%s", "AFTER HOURS"));
             } else {
-                mstateTextView.setText(stock.getState().toString());
+                state.setText(stock.getState().toString());
             }
-            mtickerTextView.setText(stock.getTicker());
-            mpriceTextView.setText(String.format(Locale.US, "%.2f", stock.getPrice()));
+            ticker.setText(stock.getTicker());
+            price.setText(String.format(Locale.US, "%.2f", stock.getPrice()));
 
             // Assign green or red color to mprice change percent text
             // Append '%' onto end of mprice change percent. First '%' is escape char for '%'.
             if (stock.getChangePercent() < 0) {
                 // '-' is already part of the number
-                mchangePercentTextView.setText(String.format(Locale.US, "%.2f%%", stock.getChangePercent()));
-                mchangePercentTextView.setTextColor(Color.RED);
+                changePercent.setText(String.format(Locale.US, "%.2f%%", stock.getChangePercent()));
+                changePercent.setTextColor(Color.RED);
             } else {
-                mchangePercentTextView.setText(String.format(Locale.US, "+%.2f%%", stock.getChangePercent()));
-                mchangePercentTextView.setTextColor(Color.GREEN);
+                changePercent.setText(String.format(Locale.US, "+%.2f%%", stock.getChangePercent()));
+                changePercent.setTextColor(Color.GREEN);
             }
 
             itemView.setOnClickListener(l -> listener.onItemClick(stock));
         }
     }
 
-    private final BasicStockList mstocks;
-    private final OnItemClickListener monItemClickListener;
+    private final BasicStockList stocks;
+    private final OnItemClickListener onItemClickListener;
     private boolean isDragging;
 
     public RecyclerAdapter(final BasicStockList stocks, final OnItemClickListener listener) {
-        mstocks = stocks;
-        monItemClickListener = listener;
+        this.stocks = stocks;
+        onItemClickListener = listener;
         isDragging = false;
     }
 
     public void remove(final int position) {
-        mstocks.remove(position);
+        stocks.remove(position);
         notifyItemRemoved(position);
     }
 
     public void swap(final int firstPosition, final int secondPosition) {
-        Collections.swap(mstocks, firstPosition, secondPosition);
+        Collections.swap(stocks, firstPosition, secondPosition);
         notifyItemMoved(firstPosition, secondPosition);
     }
 
@@ -95,12 +95,12 @@ public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.
 
     @Override
     public void onBindViewHolder(@NonNull final ViewHolder holder, final int position) {
-        holder.bind(mstocks.get(position), monItemClickListener);
+        holder.bind(stocks.get(position), onItemClickListener);
     }
 
     @Override
     public int getItemCount() {
-        return mstocks.size();
+        return stocks.size();
     }
 
     public boolean isDragging() {

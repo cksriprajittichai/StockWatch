@@ -1,5 +1,6 @@
 package c.chasesriprajittichai.stockwatch.stocks;
 
+
 public interface StockWithAfterHoursValues {
     /* Should be implemented by a stock that has a state that is not OPEN
      * or CLOSED, and has price, change point, and change percent values

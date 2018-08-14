@@ -7,57 +7,58 @@ import java.util.List;
 
 import c.chasesriprajittichai.stockwatch.stocks.AdvancedStock;
 
+
 public final class SparkViewAdapter extends SparkAdapter {
 
-    private List<Double> myData;
-    private List<String> mdates;
-    private AdvancedStock.ChartPeriod mchartPeriod = AdvancedStock.ChartPeriod.ONE_DAY; // Initial period
+    private List<Double> prices;
+    private List<String> dates;
+    private AdvancedStock.ChartPeriod chartPeriod = AdvancedStock.ChartPeriod.ONE_DAY; // Initial period
 
     SparkViewAdapter() {
-        myData = new ArrayList<>();
-        mdates = new ArrayList<>();
+        prices = new ArrayList<>();
+        dates = new ArrayList<>();
     }
 
     SparkViewAdapter(final List<Double> yData, final List<String> dates) {
-        myData = yData;
-        mdates = dates;
+        prices = yData;
+        this.dates = dates;
     }
 
     @Override
     public int getCount() {
-        return myData.size();
+        return prices.size();
     }
 
     @Override
     public Object getItem(final int index) {
-        return myData.get(index);
+        return prices.get(index);
     }
 
     @Override
     public float getY(final int index) {
-        return (float) myData.get(index).doubleValue();
+        return (float) prices.get(index).doubleValue();
     }
 
     public String getDate(final int index) {
-        return mdates.get(index);
+        return dates.get(index);
     }
 
     /* Does not call notifyDataSetChanged(). */
     public void setyData(final List<Double> yData) {
-        myData = yData;
+        prices = yData;
     }
 
     /* Does not call notifyDataSetChanged(). */
     public void setDates(final List<String> dates) {
-        mdates = dates;
+        this.dates = dates;
     }
 
     public AdvancedStock.ChartPeriod getChartPeriod() {
-        return mchartPeriod;
+        return chartPeriod;
     }
 
     public void setChartPeriod(final AdvancedStock.ChartPeriod chartPeriod) {
-        mchartPeriod = chartPeriod;
+        this.chartPeriod = chartPeriod;
     }
 
 }
