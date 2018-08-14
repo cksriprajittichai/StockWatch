@@ -3,16 +3,17 @@ package c.chasesriprajittichai.stockwatch.stocks;
 import java.util.ArrayList;
 import java.util.List;
 
-public class AdvancedStock extends BasicStock {
+public abstract class AdvancedStock extends BasicStock {
 
     public enum ChartPeriod {ONE_DAY, TWO_WEEKS, ONE_MONTH, THREE_MONTHS, ONE_YEAR, FIVE_YEARS}
 
-    public static AdvancedStock ERROR_AdvancedStock = new AdvancedStock(State.ERROR, "",
+    public static AdvancedStock ERROR = new AdvancedStock(State.ERROR, "",
             "", 0, 0, 0, 0, 0,
             0, 0, "", 0, 0, 0,
-            0, "", "", new ArrayList<>(), new ArrayList<>(), new ArrayList<>(),
-            new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(),
-            new ArrayList<>(), new ArrayList<>(), new ArrayList<>()) {
+            0, "", "", new ArrayList<>(), new ArrayList<>(),
+            new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(),
+            new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(),
+            new ArrayList<>()) {
     };
 
     private final double mpriceAtOpen;
@@ -39,18 +40,18 @@ public class AdvancedStock extends BasicStock {
     private final List<String> mdates_1year;
     private final List<String> mdates_5years;
 
-    public AdvancedStock(final State state, final String ticker, final String name,
-                         final double price, final double changePoint, final double changePercent,
-                         final double todaysLow, final double todaysHigh,
-                         final double fiftyTwoWeekLow, final double fiftyTwoWeekHigh,
-                         final String marketCap, final double prevClose, final double peRatio,
-                         final double eps, final double yield, final String averageVolume,
-                         final String description, final List<Double> yData_1day,
-                         final List<Double> yData_2weeks, final List<Double> yData_1month,
-                         final List<Double> yData_3months, final List<Double> yData_1year,
-                         final List<Double> yData_5years, final List<String> dates_2weeks,
-                         final List<String> dates_1month, final List<String> dates_3months,
-                         final List<String> dates_1year, final List<String> dates_5years) {
+    AdvancedStock(final State state, final String ticker, final String name,
+                  final double price, final double changePoint, final double changePercent,
+                  final double todaysLow, final double todaysHigh,
+                  final double fiftyTwoWeekLow, final double fiftyTwoWeekHigh,
+                  final String marketCap, final double prevClose, final double peRatio,
+                  final double eps, final double yield, final String averageVolume,
+                  final String description, final List<Double> yData_1day,
+                  final List<Double> yData_2weeks, final List<Double> yData_1month,
+                  final List<Double> yData_3months, final List<Double> yData_1year,
+                  final List<Double> yData_5years, final List<String> dates_2weeks,
+                  final List<String> dates_1month, final List<String> dates_3months,
+                  final List<String> dates_1year, final List<String> dates_5years) {
         super(state, ticker, name, price, changePoint, changePercent);
         mtodaysLow = todaysLow;
         mtodaysHigh = todaysHigh;

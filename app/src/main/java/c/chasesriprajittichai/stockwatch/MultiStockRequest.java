@@ -93,7 +93,7 @@ public final class MultiStockRequest extends Request<BasicStockList> {
 
         // Iterate through mstocks that we're updating
         for (int i = 0; i < numStocksToUpdate; i++) {
-            switch (states.get(i).text().toLowerCase(Locale.US)) {
+            switch (states.get(i).ownText().toLowerCase(Locale.US)) {
                 case "before the bell":
                     curState = PREMARKET;
                     curDataShouldBeCloseData = true;
@@ -115,20 +115,20 @@ public final class MultiStockRequest extends Request<BasicStockList> {
                     Log.e("UnrecognizedMarketWatchState", String.format(
                             "Unrecognized state string from Market Watch multiple stock page.%n" +
                                     "Unrecognized state string: %s%n" +
-                                    "Ticker: %s", states.get(i).text(), tickers.get(i).text()));
+                                    "Ticker: %s", states.get(i).ownText(), tickers.get(i).ownText()));
                     // Do not add this error stock to the BasicStockList that will be returned
                     continue;
             }
 
             // Remove ',' or '%' that could be in strings
             if (curDataShouldBeCloseData) {
-                curPrice = parseDouble(close_prices.get(i).text().replaceAll("[^0-9.]+", ""));
-                curChangePoint = parseDouble(close_changePoints.get(i).text().replaceAll("[^0-9.-]+", ""));
-                curChangePercent = parseDouble(close_changePercents.get(i).text().replaceAll("[^0-9.-]+", ""));
+                curPrice = parseDouble(close_prices.get(i).ownText().replaceAll("[^0-9.]+", ""));
+                curChangePoint = parseDouble(close_changePoints.get(i).ownText().replaceAll("[^0-9.-]+", ""));
+                curChangePercent = parseDouble(close_changePercents.get(i).ownText().replaceAll("[^0-9.-]+", ""));
             } else {
-                curPrice = parseDouble(live_prices.get(i).text().replaceAll("[^0-9.]+", ""));
-                curChangePoint = parseDouble(live_changePoints.get(i).text().replaceAll("[^0-9.-]+", ""));
-                curChangePercent = parseDouble(live_changePercents.get(i).text().replaceAll("[^0-9.-]+", ""));
+                curPrice = parseDouble(live_prices.get(i).ownText().replaceAll("[^0-9.]+", ""));
+                curChangePoint = parseDouble(live_changePoints.get(i).ownText().replaceAll("[^0-9.-]+", ""));
+                curChangePercent = parseDouble(live_changePercents.get(i).ownText().replaceAll("[^0-9.-]+", ""));
             }
 
             /* mstocks points to the same BasicStock objects that HomeActivity has references to.

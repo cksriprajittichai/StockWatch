@@ -47,6 +47,8 @@ import c.chasesriprajittichai.stockwatch.listeners.DownloadIndividualStockTaskLi
 import c.chasesriprajittichai.stockwatch.stocks.AdvancedStock;
 import c.chasesriprajittichai.stockwatch.stocks.AfterHoursStock;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
+import c.chasesriprajittichai.stockwatch.stocks.ClosedStock;
+import c.chasesriprajittichai.stockwatch.stocks.OpenStock;
 import c.chasesriprajittichai.stockwatch.stocks.PremarketStock;
 import c.chasesriprajittichai.stockwatch.stocks.StockWithAfterHoursValues;
 
@@ -211,7 +213,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             meps.setText(getString(R.string.string, "N/A"));
         }
         if (!missingStats.contains(Stat.YIELD)) {
-            myield.setText(getString(R.string.double2dec, mstock.getYield()));
+            myield.setText(getString(R.string.double2dec_percent, mstock.getYield()));
         } else {
             myield.setText(getString(R.string.string, "N/A"));
         }
@@ -659,7 +661,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 multiDoc = Jsoup.connect("https://www.marketwatch.com/investing/multi?tickers=" + mticker).get();
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
-                return AdvancedStock.ERROR_AdvancedStock;
+                return AdvancedStock.ERROR;
             }
 
             /* Some stocks have no chart data. If this is the case, chart_prices will be an
@@ -693,7 +695,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                             "Unrecognized state string from Market Watch multiple stock page.%n" +
                                     "Unrecognized state string: %s%n" +
                                     "Ticker: %s", stateStr, mticker));
-                    return AdvancedStock.ERROR_AdvancedStock;
+                    return AdvancedStock.ERROR;
             }
 
             /* If there is no chart data, javascriptElmnt element still exists in the
@@ -773,7 +775,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 individualDoc = Jsoup.connect("https://quotes.wsj.com/" + mticker).get();
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
-                return AdvancedStock.ERROR_AdvancedStock;
+                return AdvancedStock.ERROR;
             }
 
             /* Get chart data for periods greater than one day from Wall Street Journal.
@@ -867,8 +869,8 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 for (i = 0, reverseNdx = NUM_DATA_POINTS - 1; reverseNdx >= 0; i++, reverseNdx--) {
                     /* Charts use the closing price of each day. The closing price is the
                      * 5th column in each row. The date is the 1st column in each row. */
-                    allChartPrices[i] = parseDouble(rowElmnts.get(reverseNdx).selectFirst(":root > :eq(4)").text());
-                    allChartDates[i] = rowElmnts.get(reverseNdx).selectFirst(":root > :eq(0)").text();
+                    allChartPrices[i] = parseDouble(rowElmnts.get(reverseNdx).selectFirst(":root > :eq(4)").ownText());
+                    allChartDates[i] = rowElmnts.get(reverseNdx).selectFirst(":root > :eq(0)").ownText();
                 }
 
                 /* Fill chartPrices and chartDates for each period. If there is not enough
@@ -1058,7 +1060,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
             switch (state) {
                 case PREMARKET:
-                    ret = new PremarketStock(state, mticker, mname, price, changePoint, changePercent,
+                    ret = new PremarketStock(mticker, mname, price, changePoint, changePercent,
                             ah_price, ah_changePoint, ah_changePercent, todaysLow, todaysHigh,
                             fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap, prevClose, peRatio, eps,
                             yield, avgVolume, description, chartPrices_1day, chartPrices_2weeks,
@@ -1067,7 +1069,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                             chartDates_3months, chartDates_1year, chartDates_5years);
                     break;
                 case OPEN:
-                    ret = new AdvancedStock(state, mticker, mname, price, changePoint, changePercent,
+                    ret = new OpenStock(mticker, mname, price, changePoint, changePercent,
                             todaysLow, todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap,
                             prevClose, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
                             chartPrices_2weeks, chartPrices_1month, chartPrices_3months,
@@ -1075,7 +1077,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                             chartDates_3months, chartDates_1year, chartDates_5years);
                     break;
                 case AFTER_HOURS:
-                    ret = new AfterHoursStock(state, mticker, mname, price, changePoint, changePercent,
+                    ret = new AfterHoursStock(mticker, mname, price, changePoint, changePercent,
                             ah_price, ah_changePoint, ah_changePercent, todaysLow, todaysHigh,
                             fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap, prevClose, peRatio, eps,
                             yield, avgVolume, description, chartPrices_1day, chartPrices_2weeks,
@@ -1084,7 +1086,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                             chartDates_1year, chartDates_5years);
                     break;
                 case CLOSED:
-                    ret = new AdvancedStock(state, mticker, mname, price, changePoint, changePercent,
+                    ret = new ClosedStock(mticker, mname, price, changePoint, changePercent,
                             todaysLow, todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap,
                             prevClose, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
                             chartPrices_2weeks, chartPrices_1month, chartPrices_3months,
@@ -1093,7 +1095,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     break;
                 case ERROR:
                 default:
-                    return AdvancedStock.ERROR_AdvancedStock;
+                    return AdvancedStock.ERROR;
             }
 
             return ret;
