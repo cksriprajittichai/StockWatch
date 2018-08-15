@@ -171,6 +171,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             // If there are no filled charts
             initTopViewsStatic();
             sparkView.setVisibility(View.GONE);
+            chartPeriodPicker.setVisibility(View.GONE);
             chartPeriodPickerUnderline.setVisibility(View.GONE);
         } else {
             // If there is at least 1 filled chart
@@ -230,7 +231,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         if (!missingStats.contains(Stat.DESCRIPTION)) {
             description.setText(this.stock.getDescription());
         } else {
-            description.setText(getString(R.string.string, "Description not found"));
+            description.setText(getString(R.string.descriptionNotFound));
         }
 
         /* This activity was showing the progressBar, now show
@@ -606,7 +607,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     private void removeStockFromPreferences() {
         final String tickersTSV = prefs.getString("Tickers TSV", "");
         final String namesTSV = prefs.getString("Names TSV", "");
-        final String[] tickerArr = tickersTSV.split("\t"); // "".split("\t") returns {""}
+        final String[] tickerArr = tickersTSV.split("\t");
         final String[] nameArr = namesTSV.split("\t");
 
         if (!tickerArr[0].isEmpty()) {
@@ -957,12 +958,16 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     diffs.get(0).ownText().replaceAll("[^0-9.-]+", ""));
             final double changePercent = parseDouble(
                     diffs.get(1).ownText().replaceAll("[^0-9.-]+", ""));
-            /** Not sure what HTML looks like when prevClose doesn't exist */
             final double prevClose = parseDouble(
                     module2.selectFirst(
                             ":root > div > div[id$=divId] > div[class$=compare] > " +
                                     "div[class$=compare_data] > ul > li:eq(1) > " +
                                     "span.data_data").ownText().replaceAll("[^0-9.]+", ""));
+            /* If previous close isn't applicable (stock just had IPO), element
+             * exists and has value 0. */
+            if (prevClose == 0) {
+                missingStats.add(Stat.PREV_CLOSE);
+            }
 
 
             /* The 1 day data is gathered from the Market Watch multi stock

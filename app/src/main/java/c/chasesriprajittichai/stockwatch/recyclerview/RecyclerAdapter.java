@@ -18,9 +18,13 @@ import c.chasesriprajittichai.stockwatch.stocks.BasicStockList;
 
 public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.ViewHolder> {
 
+
     public interface OnItemClickListener {
+
         void onItemClick(final BasicStock basicStock);
+
     }
+
 
     class ViewHolder extends RecyclerView.ViewHolder {
 
@@ -48,20 +52,32 @@ public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.
             ticker.setText(stock.getTicker());
             price.setText(String.format(Locale.US, "%.2f", stock.getPrice()));
 
-            // Assign green or red color to mprice change percent text
-            // Append '%' onto end of mprice change percent. First '%' is escape char for '%'.
-            if (stock.getChangePercent() < 0) {
-                // '-' is already part of the number
+            /* Stock price could be 0 if the user searches for a stock that is
+             * not in favorites already, then stars (adds to favorites) the
+             * stock and presses back before the stock data is loaded in
+             * IndividualStockActivity. If this occurs, make the price and
+             * change percent numbers gray.
+             * Otherwise, make the change percent number green or red depending
+             * on the number's sign. */
+            if (stock.getPrice() == 0) {
+                price.setTextColor(Color.GRAY);
                 changePercent.setText(String.format(Locale.US, "%.2f%%", stock.getChangePercent()));
-                changePercent.setTextColor(Color.RED);
+                changePercent.setTextColor(Color.GRAY);
             } else {
-                changePercent.setText(String.format(Locale.US, "+%.2f%%", stock.getChangePercent()));
-                changePercent.setTextColor(Color.GREEN);
+                if (stock.getChangePercent() < 0) {
+                    // '-' is already part of the number
+                    changePercent.setText(String.format(Locale.US, "%.2f%%", stock.getChangePercent()));
+                    changePercent.setTextColor(Color.RED);
+                } else {
+                    changePercent.setText(String.format(Locale.US, "+%.2f%%", stock.getChangePercent()));
+                    changePercent.setTextColor(Color.GREEN);
+                }
             }
 
             itemView.setOnClickListener(l -> listener.onItemClick(stock));
         }
     }
+
 
     private final BasicStockList stocks;
     private final OnItemClickListener onItemClickListener;

@@ -5,11 +5,13 @@ import java.util.List;
 
 
 public abstract class StockWithAfterHoursValues extends AdvancedStock {
-    /* Should be implemented by a stock that has a state that is not OPEN or CLOSED, and has price,
-     * change point, and change percent values at the the stock's last close.
-     * The price at the last close can be accessed through this.getPrice(), which is inherited from
-     * BasicStock. AfterHoursPrice tracks the price in after hours, which is the live price. This
-     * same convention is used for change point and change percent. */
+    /* Should be implemented by a stock that has a state that is not OPEN or
+     * CLOSED, and has price, change point, and change percent values at the
+     * the stock's last close.
+     * The price at the last close can be accessed through getPrice(), which is
+     * inherited from BasicStock. AfterHoursPrice tracks the price in after
+     * hours, which is the live price. This same convention is used for change
+     * point and change percent. */
 
     // Price in after hours; live price
     private double afterHoursPrice;
@@ -24,11 +26,10 @@ public abstract class StockWithAfterHoursValues extends AdvancedStock {
                               final double priceAtClose, final double changePointAtClose,
                               final double changePercentAtClose, final double afterHoursPrice,
                               final double afterHoursChangePoint, final double afterHoursChangePercent,
-                              final double todaysLow, final double todaysHigh,
-                              final double fiftyTwoWeekLow, final double fiftyTwoWeekHigh,
-                              final String marketCap, final double prevClose,
-                              final double peRatio, final double eps, final double yield,
-                              final String averageVolume, final String description,
+                              final double todaysLow, final double todaysHigh, final double fiftyTwoWeekLow,
+                              final double fiftyTwoWeekHigh, final String marketCap,
+                              final double prevClose, final double peRatio, final double eps,
+                              final double yield, final String averageVolume, final String description,
                               final List<Double> prices_1day, final List<Double> prices_2weeks,
                               final List<Double> prices_1month, final List<Double> prices_3months,
                               final List<Double> prices_1year, final List<Double> prices_5years,

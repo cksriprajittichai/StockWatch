@@ -148,12 +148,12 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
         /* Starter kit */
 //        fillPreferencesWithRandomStocks(0);
 
-        final String[] tickerArr = prefs.getString("Tickers TSV", "").split("\t"); // "".split("\t") returns {""}
+        final String[] tickerArr = prefs.getString("Tickers TSV", "").split("\t");
         final String[] nameArr = prefs.getString("Names TSV", "").split("\t");
         final String[] dataArr = prefs.getString("Data TSV", "").split("\t");
 
         /* If there are stocks in favorites, initialize recycler view to show
-         * tickers with the previous data. */
+         * tickers with the previous saved data. */
         if (!tickerArr[0].isEmpty()) {
             stocks.ensureCapacity(tickerArr.length);
             BasicStock curStock;
@@ -334,8 +334,8 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
         for (final BasicStock s : updatedStocks) {
             /* Updating the recycler view while dragging disrupts the dragging,
              * causing the currently dragged item to fall over whatever position
-             * it is hovers over. */
-            /* The user could have swipe-deleted curStock in the time that the
+             * it is hovers over.
+             * The user could have swipe-deleted curStock in the time that the
              * MultiStockRequest was executing. If so, tickerToIndexMap does
              * not contain curTicker. */
             if (!rvAdapter.isDragging() && tickerToIndexMap.containsKey(s.getTicker())) {
@@ -346,10 +346,11 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
     @Override
     public void onErrorResponse(final VolleyError error) {
-        if (!error.getLocalizedMessage().isEmpty()) {
+        if (error.getLocalizedMessage() != null && !error.getLocalizedMessage().isEmpty()) {
             Log.e("VolleyError", error.getLocalizedMessage());
         } else {
-            Log.e("NullVolleyError", "VolleyError thrown, but error is null.");
+            Log.e("VolleyError",
+                    "VolleyError thrown in HomeActivity.onErrorResponse, but error is null.");
         }
     }
 
