@@ -13,20 +13,21 @@ import org.jsoup.select.Elements;
 
 import java.util.Locale;
 
-import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
-import c.chasesriprajittichai.stockwatch.stocks.BasicStockList;
+import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhValsList;
+import c.chasesriprajittichai.stockwatch.stocks.Stock;
+import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhVals;
 
-import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.AFTER_HOURS;
-import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.CLOSED;
-import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.OPEN;
-import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.PREMARKET;
+import static c.chasesriprajittichai.stockwatch.stocks.Stock.State.AFTER_HOURS;
+import static c.chasesriprajittichai.stockwatch.stocks.Stock.State.CLOSED;
+import static c.chasesriprajittichai.stockwatch.stocks.Stock.State.OPEN;
+import static c.chasesriprajittichai.stockwatch.stocks.Stock.State.PREMARKET;
 import static java.lang.Double.parseDouble;
 
 
 /**
  * Modeled after {@link com.android.volley.toolbox.StringRequest}.
  */
-public final class MultiStockRequest extends Request<BasicStockList> {
+public final class MultiStockRequest extends Request<ConcreteStockWithAhValsList> {
 
     /**
      * Lock to guard mListener as it is cleared on cancel() and read on
@@ -35,31 +36,32 @@ public final class MultiStockRequest extends Request<BasicStockList> {
     private final Object lock = new Object();
 
     // Guarded by lock
-    private Response.Listener<BasicStockList> responseListener;
+    private Response.Listener<ConcreteStockWithAhValsList> responseListener;
 
-    private final BasicStockList stocks;
+    private final ConcreteStockWithAhValsList stocks;
 
     /**
      * @param url              The URL of the multiple-stock site to get data
      *                         from
      * @param stocks           The stocks that should be updated
-     * @param responseListener Listener to receive the BasicStockList response
+     * @param responseListener Listener to receive the ConcreteStockWithAhValsList response
      * @param errorListener    Error responseListener, or null to ignore errors
      */
-    MultiStockRequest(final String url, final BasicStockList stocks,
-                      final Response.Listener<BasicStockList> responseListener,
+    MultiStockRequest(final String url, final ConcreteStockWithAhValsList stocks,
+                      final Response.Listener<ConcreteStockWithAhValsList> responseListener,
                       final Response.ErrorListener errorListener) {
         super(Method.GET, url, errorListener);
         this.responseListener = responseListener;
-        this.stocks = new BasicStockList(stocks);
+        this.stocks = new ConcreteStockWithAhValsList(stocks);
     }
 
     /* Does not run on the UI thread. */
     @Override
-    protected Response<BasicStockList> parseNetworkResponse(final NetworkResponse response) {
-        BasicStock curStock;
-        BasicStock.State curState;
-        double curPrice, curChangePoint, curChangePercent;
+    protected Response<ConcreteStockWithAhValsList> parseNetworkResponse(final NetworkResponse response) {
+        ConcreteStockWithAhVals curStock;
+        Stock.State curState;
+        double curPrice, curChangePoint, curChangePercent,
+                curAhPrice, curAhChangePoint, curAhChangePercent;
         final Elements quoteRoots, live_valueRoots, tickers, states, live_prices,
                 live_changeRoots, live_changePoints, live_changePercents, close_valueRoots,
                 close_prices, close_changeRoots, close_changePoints, close_changePercents;
@@ -103,50 +105,49 @@ public final class MultiStockRequest extends Request<BasicStockList> {
 
         final int numStocksToUpdate = tickers.size();
 
-        /* curPrice will be displayed on rv. If a stock's state is OPEN or
-         * CLOSED, then its display price should be the live price. If a stock's
-         * state is PREMARKET or AFTER_HOURS, then its display price should be
-         * the last price that the stock closed at. The same logic applies for
-         * curChangePoint and curChangePercent. */
-        boolean curDataShouldBeCloseData;
-
         // Iterate through stocks that we're updating
         for (int i = 0; i < numStocksToUpdate; i++) {
             switch (states.get(i).ownText().toLowerCase(Locale.US)) {
                 case "before the bell":
                     curState = PREMARKET;
-                    curDataShouldBeCloseData = true;
                     break;
                 case "market open":
                 case "countdown to close":
                     curState = OPEN;
-                    curDataShouldBeCloseData = false;
                     break;
                 case "after hours":
                     curState = AFTER_HOURS;
-                    curDataShouldBeCloseData = true;
                     break;
                 case "market closed":
                     curState = CLOSED;
-                    curDataShouldBeCloseData = false;
                     break;
                 default:
                     Log.e("UnrecognizedMarketWatchState", String.format(
                             "Unrecognized state string from Market Watch multiple stock page.%n" +
                                     "Unrecognized state string: %s%n" +
                                     "Ticker: %s", states.get(i).ownText(), tickers.get(i).ownText()));
-                    // Do not add this error stock to the BasicStockList that will be returned
+                    // Do not add this error stock to the list that will be returned
                     continue;
             }
 
+            curStock = stocks.get(i);
+            curStock.setState(curState);
+
             // Remove ',' or '%' that could be in strings
-            if (curDataShouldBeCloseData) {
+            if (curState == AFTER_HOURS || curState == PREMARKET) {
                 curPrice = parseDouble(
                         close_prices.get(i).ownText().replaceAll("[^0-9.]+", ""));
                 curChangePoint = parseDouble(
                         close_changePoints.get(i).ownText().replaceAll("[^0-9.-]+", ""));
                 curChangePercent = parseDouble(
                         close_changePercents.get(i).ownText().replaceAll("[^0-9.-]+", ""));
+
+                curAhPrice = parseDouble(
+                        live_prices.get(i).ownText().replaceAll("[^0-9.]+", ""));
+                curAhChangePoint = parseDouble(
+                        live_changePoints.get(i).ownText().replaceAll("[^0-9.-]+", ""));
+                curAhChangePercent = parseDouble(
+                        live_changePercents.get(i).ownText().replaceAll("[^0-9.-]+", ""));
             } else {
                 curPrice = parseDouble(
                         live_prices.get(i).ownText().replaceAll("[^0-9.]+", ""));
@@ -154,24 +155,26 @@ public final class MultiStockRequest extends Request<BasicStockList> {
                         live_changePoints.get(i).ownText().replaceAll("[^0-9.-]+", ""));
                 curChangePercent = parseDouble(
                         live_changePercents.get(i).ownText().replaceAll("[^0-9.-]+", ""));
+
+                curAhPrice = 0;
+                curAhChangePoint = 0;
+                curAhChangePercent = 0;
             }
 
-            /* stocks points to the same BasicStock objects that HomeActivity
-             * has references to. So this updates the stocks in HomeActivity's
-             * stocks also. */
-            curStock = stocks.get(i);
-            curStock.setState(curState);
             curStock.setPrice(curPrice);
             curStock.setChangePoint(curChangePoint);
             curStock.setChangePercent(curChangePercent);
+            curStock.setAfterHoursPrice(curAhPrice);
+            curStock.setAfterHoursChangePoint(curAhChangePoint);
+            curStock.setAfterHoursChangePercent(curAhChangePercent);
         }
 
         return Response.success(stocks, HttpHeaderParser.parseCacheHeaders(response));
     }
 
     @Override
-    protected void deliverResponse(final BasicStockList responseStocks) {
-        final Response.Listener<BasicStockList> listener;
+    protected void deliverResponse(final ConcreteStockWithAhValsList responseStocks) {
+        final Response.Listener<ConcreteStockWithAhValsList> listener;
         synchronized (lock) {
             listener = this.responseListener;
         }

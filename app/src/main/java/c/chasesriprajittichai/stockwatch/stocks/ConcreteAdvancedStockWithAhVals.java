@@ -5,7 +5,7 @@ import java.util.List;
 
 
 public final class ConcreteAdvancedStockWithAhVals
-        extends ConcreteBasicStockWithAhVals
+        extends ConcreteStockWithAhVals
         implements AdvancedStock, StockWithAhVals {
 
     private final double priceAtOpen;

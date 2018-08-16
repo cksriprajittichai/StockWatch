@@ -1,8 +1,14 @@
 package c.chasesriprajittichai.stockwatch.stocks;
 
-public interface BasicStock {
+public interface Stock {
 
     enum State {ERROR, PREMARKET, OPEN, AFTER_HOURS, CLOSED}
+
+    double getLivePrice();
+
+    double getLiveChangePoint();
+
+    double getLiveChangePercent();
 
     String getTicker();
 
@@ -23,15 +29,5 @@ public interface BasicStock {
     double getChangePercent();
 
     void setChangePercent(final double changePercent);
-
-    double getLivePrice();
-
-    double getLiveChangePoint();
-
-    double getLiveChangePercent();
-
-    double getNetChangePoint();
-
-    double getNetChangePercent();
 
 }

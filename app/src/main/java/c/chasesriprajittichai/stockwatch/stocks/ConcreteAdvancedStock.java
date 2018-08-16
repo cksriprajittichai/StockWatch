@@ -4,9 +4,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public final class ConcreteAdvancedStock extends ConcreteBasicStock implements AdvancedStock {
+public final class ConcreteAdvancedStock extends ConcreteStock implements AdvancedStock {
 
-    public static final ConcreteAdvancedStock ERROR = new ConcreteAdvancedStock(BasicStock.State.ERROR, "",
+    public static final ConcreteAdvancedStock ERROR = new ConcreteAdvancedStock(Stock.State.ERROR, "",
             "", 0, 0, 0, 0, 0,
             0, 0, "", 0, 0, 0,
             0, "", "", new ArrayList<>(), new ArrayList<>(),

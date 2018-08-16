@@ -27,6 +27,7 @@ import net.hockeyapp.android.UpdateManager;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
@@ -43,37 +44,40 @@ import c.chasesriprajittichai.stockwatch.listeners.FindStockTaskListener;
 import c.chasesriprajittichai.stockwatch.recyclerview.RecyclerAdapter;
 import c.chasesriprajittichai.stockwatch.recyclerview.RecyclerDivider;
 import c.chasesriprajittichai.stockwatch.recyclerview.StockSwipeAndDragCallback;
-import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
-import c.chasesriprajittichai.stockwatch.stocks.BasicStockList;
-import c.chasesriprajittichai.stockwatch.stocks.ConcreteBasicStock;
+import c.chasesriprajittichai.stockwatch.stocks.ConcreteStock;
+import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhVals;
+import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhValsList;
+import c.chasesriprajittichai.stockwatch.stocks.Stock;
+import c.chasesriprajittichai.stockwatch.stocks.StockInHomeActivity;
 
-import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.AFTER_HOURS;
-import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.CLOSED;
-import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.OPEN;
-import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.PREMARKET;
+import static c.chasesriprajittichai.stockwatch.stocks.Stock.State.AFTER_HOURS;
+import static c.chasesriprajittichai.stockwatch.stocks.Stock.State.CLOSED;
+import static c.chasesriprajittichai.stockwatch.stocks.Stock.State.ERROR;
+import static c.chasesriprajittichai.stockwatch.stocks.Stock.State.OPEN;
+import static c.chasesriprajittichai.stockwatch.stocks.Stock.State.PREMARKET;
 import static java.lang.Double.parseDouble;
 
 
 public final class HomeActivity extends AppCompatActivity implements FindStockTaskListener,
-        Response.Listener<BasicStockList>, Response.ErrorListener {
+        Response.Listener<ConcreteStockWithAhValsList>, Response.ErrorListener {
 
 
-    private static class FindStockTask extends AsyncTask<Void, Integer, Boolean> {
+    private static class FindStockTask extends AsyncTask<Void, Integer, StockInHomeActivity> {
 
-        private final String ticker;
-        private String name = ""; // Init as empty
+        private final String searchTicker;
+        private StockInHomeActivity stock;
         private final WeakReference<FindStockTaskListener> completionListener;
 
-        private FindStockTask(final String ticker, final FindStockTaskListener completionListener) {
-            this.ticker = ticker;
+        private FindStockTask(final String searchTicker, final FindStockTaskListener completionListener) {
+            this.searchTicker = searchTicker;
             this.completionListener = new WeakReference<>(completionListener);
         }
 
         @Override
-        protected Boolean doInBackground(final Void... params) {
-            final String URL = "https://quotes.wsj.com/" + ticker;
+        protected StockInHomeActivity doInBackground(final Void... params) {
+            final String URL = "https://quotes.wsj.com/" + searchTicker;
 
-            boolean stockExists = false;
+            final boolean stockExists;
             try {
                 final Document doc = Jsoup.connect(URL).get();
 
@@ -87,19 +91,64 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
                 stockExists = (flagElmnt == null);
 
                 if (stockExists) {
-                    name = contentFrame.selectFirst(
+                    final String name = contentFrame.selectFirst(
                             "span.companyName").ownText();
+
+                    final Element module2 = contentFrame.selectFirst(
+                            ":root > section[class$=section_1] > div.zonedModule[data-module-id=2]");
+                    final Element mainData = module2.selectFirst(
+                            "ul[class$=info_main]");
+
+                    // Remove ',' or '%' that could be in strings
+                    final double price = parseDouble(mainData.selectFirst(
+                            ":root > li[class$=quote] > span.curr_price > " +
+                                    "span > span#quote_val").ownText().replaceAll("[^0-9.]+", ""));
+                    final Elements diffs = mainData.select(
+                            ":root > li[class$=diff] > span > span");
+                    final double changePoint = parseDouble(
+                            diffs.get(0).ownText().replaceAll("[^0-9.-]+", ""));
+                    final double changePercent = parseDouble(
+                            diffs.get(1).ownText().replaceAll("[^0-9.-]+", ""));
+
+                    final Element subData = mainData.nextElementSibling();
+                    boolean stockHasAhVals = subData.className().endsWith("info_sub");
+
+                    final Stock.State state;
+                    final String stateStr;
+                    if (stockHasAhVals) {
+                        final double ahPrice, ahChangePoint, ahChangePercent;
+                        // Remove ',' or '%' that could be in strings
+                        ahPrice = parseDouble(subData.selectFirst(
+                                "span#ms_quote_val").ownText().replaceAll("[^0-9.]+", ""));
+                        final Elements ah_diffs = subData.select(
+                                "span[id] > span");
+                        ahChangePoint = parseDouble(ah_diffs.get(0).ownText().replaceAll("[^0-9.-]+", ""));
+                        ahChangePercent = parseDouble(ah_diffs.get(1).ownText().replaceAll("[^0-9.-]+", ""));
+
+                        stateStr = subData.selectFirst("span").ownText();
+                        state = stateStr.equals("AFTER HOURS") ? AFTER_HOURS : PREMARKET;
+
+                        stock = new ConcreteStockWithAhVals(state, searchTicker, name,
+                                price, changePoint, changePercent,
+                                ahPrice, ahChangePoint, ahChangePercent);
+                    } else {
+                        stateStr = mainData.selectFirst("span.timestamp_label").ownText();
+                        state = stateStr.equals("REAL TIME") ? OPEN : CLOSED;
+
+                        stock = new ConcreteStock(state, searchTicker, name,
+                                price, changePoint, changePercent);
+                    }
                 }
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
             }
 
-            return stockExists;
+            return stock;
         }
 
         @Override
-        protected void onPostExecute(final Boolean stockExists) {
-            completionListener.get().onFindStockTaskCompleted(ticker, name, stockExists);
+        protected void onPostExecute(final StockInHomeActivity stock) {
+            completionListener.get().onFindStockTaskCompleted(searchTicker, stock);
         }
 
     }
@@ -107,7 +156,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
     @BindView(R.id.recyclerView_home) RecyclerView rv;
 
-    private BasicStockList stocks;
+    private ConcreteStockWithAhValsList stocks;
     private RecyclerAdapter rvAdapter;
     private SearchView searchView;
     private SharedPreferences prefs;
@@ -119,20 +168,21 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
     /* Called from FindStockTask.onPostExecute(). */
     @Override
-    public void onFindStockTaskCompleted(final String ticker, final String name,
-                                         final boolean stockExists) {
-        if (stockExists) {
+    public void onFindStockTaskCompleted(final String searchTicker, final StockInHomeActivity stock) {
+        if (stock != null) {
             // Go to individual stock activity
             final Intent intent = new Intent(this, IndividualStockActivity.class);
-            intent.putExtra("Ticker", ticker);
-            intent.putExtra("Name", name);
-            // Equivalent to checking if ticker is in stocks
-            intent.putExtra("Is in favorites", tickerToIndexMap.containsKey(ticker));
+            intent.putExtra("Ticker", stock.getTicker());
+            intent.putExtra("Name", stock.getName());
+            intent.putExtra("Data", stock.getDataAsArray());
+
+            // Equivalent to checking if searchTicker is in stocks
+            intent.putExtra("Is in favorites", tickerToIndexMap.containsKey(stock.getTicker()));
             startActivity(intent);
         } else {
             searchView.setQuery("", false);
             Toast.makeText(HomeActivity.this,
-                    ticker + " couldn't be found", Toast.LENGTH_SHORT).show();
+                    searchTicker + " couldn't be found", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -144,7 +194,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
         ButterKnife.bind(this);
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
         requestQueue = Volley.newRequestQueue(this);
-        stocks = new BasicStockList();
+        stocks = new ConcreteStockWithAhValsList();
 
         /* Starter kit */
 //        fillPreferencesWithRandomStocks(0);
@@ -157,43 +207,36 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
          * tickers with the previous saved data. */
         if (!tickerArr[0].isEmpty()) {
             stocks.ensureCapacity(tickerArr.length);
-            BasicStock curStock;
+            ConcreteStockWithAhVals curStock;
             String curTicker, curName;
-            BasicStock.State curState;
-            double curPrice, curChangePoint, curChangePercent;
-            for (int tickerNdx = 0, dataNdx = 0; tickerNdx < tickerArr.length; tickerNdx++, dataNdx += 4) {
-                // nameNdx is the same as tickerNdx (each element is a name, unlike in Data TSV)
-
+            Stock.State curState;
+            double curPrice, curChangePoint, curChangePercent,
+                    curAhPrice, curAhChangePoint, curAhChangePercent;
+            for (int tickerNdx = 0, dataNdx = 0; tickerNdx < tickerArr.length; tickerNdx++, dataNdx += 7) {
+                // nameNdx is the same as tickerNdx (1 searchTicker for 1 name, unlike Data TSV)
                 curTicker = tickerArr[tickerNdx];
                 curName = nameArr[tickerNdx];
-                switch (dataArr[dataNdx]) {
-                    case "PREMARKET":
-                        curState = PREMARKET;
-                        break;
-                    case "OPEN":
-                        curState = OPEN;
-                        break;
-                    case "AFTER_HOURS":
-                        curState = AFTER_HOURS;
-                        break;
-                    case "CLOSED":
-                        curState = CLOSED;
-                        break;
-                    case "ERROR":
-                    default:
-                        Log.e("ErrorStateInHomeActivity", String.format(
-                                "Stock with state equal to ERROR in HomeActivity.%n" +
-                                        "Ticker: %s", curTicker));
-                        // MultiStockRequest should never return stocks with the ERROR state
-                        // Do not add this error stock to stocks or to tickerToIndexMap
-                        continue;
+
+                curState = Util.stringToStateMap.get(dataArr[dataNdx]);
+                if (curState == ERROR) {
+                    Log.e("ErrorStateInHomeActivity", String.format(
+                            "Stock with state equal to ERROR in HomeActivity.%n" +
+                                    "Ticker: %s", curTicker));
+                    // Do not add this error stock to stocks or to tickerToIndexMap
+                    continue;
                 }
+
                 curPrice = parseDouble(dataArr[dataNdx + 1]);
                 curChangePoint = parseDouble(dataArr[dataNdx + 2]);
                 curChangePercent = parseDouble(dataArr[dataNdx + 3]);
+                curAhPrice = parseDouble(dataArr[dataNdx + 4]);
+                curAhChangePoint = parseDouble(dataArr[dataNdx + 5]);
+                curAhChangePercent = parseDouble(dataArr[dataNdx + 6]);
 
-                curStock = new ConcreteBasicStock(curState, curTicker, curName,
-                        curPrice, curChangePoint, curChangePercent);
+                curStock = new ConcreteStockWithAhVals(
+                        curState, curTicker, curName,
+                        curPrice, curChangePoint, curChangePercent,
+                        curAhPrice, curAhChangePoint, curAhChangePercent);
 
                 // Fill stocks and tickerToIndexMap
                 stocks.add(curStock);
@@ -203,13 +246,15 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
         rv.setLayoutManager(new LinearLayoutManager(this));
         rv.addItemDecoration(new RecyclerDivider(this));
-        rvAdapter = new RecyclerAdapter(stocks, basicStock -> {
+        rvAdapter = new RecyclerAdapter(stocks, (ConcreteStockWithAhVals stock) -> {
             // Go to individual stock activity
             final Intent intent = new Intent(this, IndividualStockActivity.class);
-            intent.putExtra("Ticker", basicStock.getTicker());
-            intent.putExtra("Name", basicStock.getName());
-            // Equivalent to checking if ticker is in stocks
-            intent.putExtra("Is in favorites", tickerToIndexMap.containsKey(basicStock.getTicker()));
+            intent.putExtra("Ticker", stock.getTicker());
+            intent.putExtra("Name", stock.getName());
+            intent.putExtra("Data", stock.getDataAsArray());
+
+            // Equivalent to checking if searchTicker is in stocks
+            intent.putExtra("Is in favorites", tickerToIndexMap.containsKey(stock.getTicker()));
             startActivity(intent);
         });
         rv.setAdapter(rvAdapter);
@@ -288,11 +333,11 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
          * that have been removed from stocks. HomeActivity.onResponse() handles
          * this by ensuring that stocks contains a stock before updating the
          * UI. */
-        final BasicStockList stocksToUpdate = new BasicStockList(stocks);
+        final ConcreteStockWithAhValsList stocksToUpdate = new ConcreteStockWithAhValsList(stocks);
         final int numStocksTotal = stocksToUpdate.size();
         int numStocksUpdated = 0;
 
-        // URL form: <base URL><ticker 1>,<ticker 2>,<ticker 3>,<ticker n>
+        // URL form: <base URL><searchTicker 1>,<searchTicker 2>,<searchTicker 3>,<searchTicker n>
         final String BASE_URL_MULTI = "https://www.marketwatch.com/investing/multi?tickers=";
         /* Up to 10 stocks are shown in the MarketWatch view multiple stocks
          * website. The first 10 tickers listed in the URL are shown. Appending
@@ -300,7 +345,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
          * first 10 tickers will be shown. */
         final StringBuilder tickersPartUrl = new StringBuilder(50); // Approximate size
 
-        BasicStockList stocksToUpdateThisIteration;
+        ConcreteStockWithAhValsList stocksToUpdateThisIteration;
         int numStocksToUpdateThisIteration;
         while (numStocksUpdated < numStocksTotal) {
             // Ex: if we've already updated 30 / 37 stocks, finish only 7 on the last iteration
@@ -310,13 +355,13 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
                 numStocksToUpdateThisIteration = numStocksTotal - numStocksUpdated;
             }
 
-            stocksToUpdateThisIteration = new BasicStockList(
+            stocksToUpdateThisIteration = new ConcreteStockWithAhValsList(
                     stocksToUpdate.subList(
                             numStocksUpdated,
                             numStocksUpdated + numStocksToUpdateThisIteration));
 
             // Append tickers for stocks that will be updated in this iteration
-            for (final BasicStock s : stocksToUpdateThisIteration) {
+            for (final Stock s : stocksToUpdateThisIteration) {
                 tickersPartUrl.append(s.getTicker());
                 tickersPartUrl.append(',');
             }
@@ -332,8 +377,8 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
     }
 
     @Override
-    public void onResponse(final BasicStockList updatedStocks) {
-        for (final BasicStock s : updatedStocks) {
+    public void onResponse(final ConcreteStockWithAhValsList updatedStocks) {
+        for (final Stock s : updatedStocks) {
             /* Updating the recycler view while dragging disrupts the dragging,
              * causing the currently dragged item to fall over whatever position
              * it is hovers over.
@@ -403,23 +448,23 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
          * updateTickerToIndexMap(). */
         switch (item.getItemId()) {
             case R.id.menuItem_sortAlphabetically_home:
-                final Comparator<BasicStock> tickerComparator =
-                        Comparator.comparing(BasicStock::getTicker);
+                final Comparator<Stock> tickerComparator =
+                        Comparator.comparing(Stock::getTicker);
                 stocks.sort(tickerComparator);
                 updateTickerToIndexMap();
                 rvAdapter.notifyItemRangeChanged(0, rvAdapter.getItemCount());
                 return true;
             case R.id.menuItem_sortByPrice_home:
                 // Sort by decreasing price
-                final Comparator<BasicStock> descPriceComparator =
-                        Comparator.comparingDouble(BasicStock::getPrice).reversed();
+                final Comparator<Stock> descPriceComparator =
+                        Comparator.comparingDouble(Stock::getPrice).reversed();
                 stocks.sort(descPriceComparator);
                 updateTickerToIndexMap();
                 rvAdapter.notifyItemRangeChanged(0, rvAdapter.getItemCount());
                 return true;
             case R.id.menuItem_sortByChangePercent_home:
                 // Sort by decreasing magnitude of change percent
-                stocks.sort((BasicStock a, BasicStock b) -> {
+                stocks.sort((Stock a, Stock b) -> {
                     // Ignore sign, compare change percents by magnitude
                     return Double.compare(Math.abs(b.getChangePercent()), Math.abs(a.getChangePercent()));
                 });
@@ -427,8 +472,8 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
                 rvAdapter.notifyItemRangeChanged(0, rvAdapter.getItemCount());
                 return true;
             case R.id.menuItem_sortByState_home:
-                final Comparator<BasicStock> stateComparator =
-                        Comparator.comparing(BasicStock::getState);
+                final Comparator<Stock> stateComparator =
+                        Comparator.comparing(Stock::getState);
                 stocks.sort(stateComparator);
                 updateTickerToIndexMap();
                 rvAdapter.notifyItemRangeChanged(0, rvAdapter.getItemCount());
@@ -450,7 +495,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
     /**
      * This function should be called when a stock is removed by being swiped
-     * away. This function updates the indexes in stocks that a ticker in
+     * away. This function updates the indexes in stocks that a searchTicker in
      * tickerToIndexMap maps to. After a swipe deletion, the stocks in range
      * [index of stock removed, size of stocks] of stocks need to be updated.
      * The stocks in this range are now at their previous index - 1 in stocks.
@@ -470,7 +515,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
     }
 
     /**
-     * Updates the indexes in stocks that a ticker in tickerToIndexMap maps to. This
+     * Updates the indexes in stocks that a searchTicker in tickerToIndexMap maps to. This
      * function clears tickerToIndexMap and reconstructs it with the current stock
      * indexing of stocks. This should be called anytime after the indexing of stocks
      * in stocks changes. This is equivalent to calling
@@ -484,11 +529,12 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
     }
 
     /**
-     * Testing function. Fills Tickers TSV preference with tickers from the
-     * NASDAQ and fills Data TSV preference with -1. Fills Names TSV preference
-     * with "[ticker] name", because we don't know the names of the stocks, only
-     * the tickers. The largest number of stocks that can be added is the number
-     * of companies in the NASDAQ.
+     * Fills Tickers TSV with tickers from the NASDAQ and sets all of Data TSV's
+     * numeric values to -1 and sets Data TSV's {@link Stock.State} values to
+     * {@link Stock.State#CLOSED} . Fills Names TSV with "[searchTicker] name",
+     * because we don't know the names of the stocks, only the tickers. The
+     * largest number of stocks that can be added is the number of companies in
+     * the NASDAQ.
      *
      * @param size The number of stocks to put in preferences
      */
@@ -518,15 +564,19 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
             prefs.edit().putString("Names TSV", TextUtils.join("\t", subNameArr)).apply();
         }
 
-        final String[] dataArr = new String[4 * size];
-        for (int i = 0; i < size * 4; i += 4) {
-            dataArr[i] = CLOSED.toString();
+        final String[] dataArr = new String[7 * size];
+        for (int i = 0; i < size * 7; i += 7) {
+            dataArr[i] = Stock.State.CLOSED.toString();
             dataArr[i + 1] = "-1";
             dataArr[i + 2] = "-1";
             dataArr[i + 3] = "-1";
+            dataArr[i + 4] = "-1";
+            dataArr[i + 5] = "-1";
+            dataArr[i + 6] = "-1";
         }
         prefs.edit().putString("Data TSV", TextUtils.join("\t", dataArr)).apply();
     }
+
 
     @Override
     public void onDestroy() {

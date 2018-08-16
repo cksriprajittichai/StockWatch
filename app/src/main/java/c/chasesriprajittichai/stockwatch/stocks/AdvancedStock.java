@@ -3,7 +3,7 @@ package c.chasesriprajittichai.stockwatch.stocks;
 import java.util.List;
 
 
-public interface AdvancedStock extends BasicStock {
+public interface AdvancedStock extends Stock {
 
     enum ChartPeriod {
         ONE_DAY, TWO_WEEKS, ONE_MONTH, THREE_MONTHS, ONE_YEAR, FIVE_YEARS

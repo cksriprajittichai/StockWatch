@@ -13,14 +13,14 @@ import java.util.Map;
 
 import c.chasesriprajittichai.stockwatch.HomeActivity;
 import c.chasesriprajittichai.stockwatch.R;
-import c.chasesriprajittichai.stockwatch.stocks.BasicStockList;
+import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhValsList;
 
 
 public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallback {
 
     private final HomeActivity homeActivity;
     private final RecyclerAdapter recyclerAdapter;
-    private final BasicStockList stocks;
+    private final ConcreteStockWithAhValsList stocks;
     private final Map<String, Integer> tickerToIndexMap;
 
     // Minimize the amount of allocation done in drawing methods
@@ -32,7 +32,7 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
 
     public StockSwipeAndDragCallback(final HomeActivity homeActivity,
                                      final RecyclerAdapter recyclerAdapter,
-                                     final BasicStockList stocks,
+                                     final ConcreteStockWithAhValsList stocks,
                                      final Map<String, Integer> tickerToIndexMap) {
         super(0, ItemTouchHelper.LEFT | ItemTouchHelper.DOWN |
                 ItemTouchHelper.UP);

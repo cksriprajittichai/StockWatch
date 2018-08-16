@@ -12,18 +12,12 @@ import java.util.Collections;
 import java.util.Locale;
 
 import c.chasesriprajittichai.stockwatch.R;
-import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
-import c.chasesriprajittichai.stockwatch.stocks.BasicStockList;
+import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhVals;
+import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhValsList;
+import c.chasesriprajittichai.stockwatch.stocks.Stock;
 
 
 public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.ViewHolder> {
-
-
-    public interface OnItemClickListener {
-
-        void onItemClick(final BasicStock basicStock);
-
-    }
 
 
     class ViewHolder extends RecyclerView.ViewHolder {
@@ -42,48 +36,38 @@ public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.
             changePercent = v.findViewById(R.id.textView_changePercent_homeRecyclerItem);
         }
 
-        void bind(final BasicStock stock, final OnItemClickListener listener) {
-            if (stock.getState() == BasicStock.State.AFTER_HOURS) {
+        void bind(final ConcreteStockWithAhVals stock, final OnItemClickListener listener) {
+            if (stock.getState() == Stock.State.AFTER_HOURS) {
                 // After hours state is the only state with an unwanted character in the enum name
                 state.setText(String.format(Locale.US, "%s", "AFTER HOURS"));
             } else {
                 state.setText(stock.getState().toString());
             }
             ticker.setText(stock.getTicker());
-            price.setText(String.format(Locale.US, "%.2f", stock.getPrice()));
+            price.setText(String.format(Locale.US, "%.2f", stock.getLivePrice()));
 
-            /* Stock price could be 0 if the user searches for a stock that is
-             * not in favorites already, then stars (adds to favorites) the
-             * stock and presses back before the stock data is loaded in
-             * IndividualStockActivity. If this occurs, make the price and
-             * change percent numbers gray.
-             * Otherwise, make the change percent number green or red depending
-             * on the number's sign. */
-            if (stock.getPrice() == 0) {
-                price.setTextColor(Color.GRAY);
-                changePercent.setText(String.format(Locale.US, "%.2f%%", stock.getChangePercent()));
-                changePercent.setTextColor(Color.GRAY);
+            if (stock.getNetChangePercent() < 0) {
+                // '-' is already part of the number
+                changePercent.setText(String.format(Locale.US,
+                        "%.2f%%", stock.getNetChangePercent()));
+                changePercent.setTextColor(Color.RED);
             } else {
-                if (stock.getChangePercent() < 0) {
-                    // '-' is already part of the number
-                    changePercent.setText(String.format(Locale.US, "%.2f%%", stock.getChangePercent()));
-                    changePercent.setTextColor(Color.RED);
-                } else {
-                    changePercent.setText(String.format(Locale.US, "+%.2f%%", stock.getChangePercent()));
-                    changePercent.setTextColor(Color.GREEN);
-                }
+                changePercent.setText(String.format(Locale.US,
+                        "+%.2f%%", stock.getNetChangePercent()));
+                changePercent.setTextColor(Color.GREEN);
             }
 
             itemView.setOnClickListener(l -> listener.onItemClick(stock));
         }
+
     }
 
 
-    private final BasicStockList stocks;
+    private final ConcreteStockWithAhValsList stocks;
     private final OnItemClickListener onItemClickListener;
     private boolean isDragging;
 
-    public RecyclerAdapter(final BasicStockList stocks, final OnItemClickListener listener) {
+    public RecyclerAdapter(final ConcreteStockWithAhValsList stocks, final OnItemClickListener listener) {
         this.stocks = stocks;
         onItemClickListener = listener;
         isDragging = false;
@@ -125,6 +109,13 @@ public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.
 
     public void setDragging(boolean dragging) {
         isDragging = dragging;
+    }
+
+
+    public interface OnItemClickListener {
+
+        void onItemClick(final ConcreteStockWithAhVals stock);
+
     }
 
 }

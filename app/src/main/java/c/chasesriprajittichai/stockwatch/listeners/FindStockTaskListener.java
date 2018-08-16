@@ -1,8 +1,10 @@
 package c.chasesriprajittichai.stockwatch.listeners;
 
+import c.chasesriprajittichai.stockwatch.stocks.StockInHomeActivity;
+
+
 public interface FindStockTaskListener {
 
-    void onFindStockTaskCompleted(final String ticker, final String name,
-                                  final boolean stockExists);
+    void onFindStockTaskCompleted(final String searchTicker, final StockInHomeActivity stock);
 
 }

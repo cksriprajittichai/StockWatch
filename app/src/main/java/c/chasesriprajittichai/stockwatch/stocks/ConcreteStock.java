@@ -1,7 +1,10 @@
 package c.chasesriprajittichai.stockwatch.stocks;
 
-
-public class ConcreteBasicStock implements BasicStock {
+/**
+ * Some useful information about this class can be found at {@link
+ * ConcreteStockWithAhVals}.
+ */
+public class ConcreteStock implements Stock, StockInHomeActivity {
 
     private State state;
     private final String ticker;
@@ -10,15 +13,30 @@ public class ConcreteBasicStock implements BasicStock {
     private double changePoint;
     private double changePercent;
 
-    public ConcreteBasicStock(final State state, final String ticker,
-                              final String name, final double price,
-                              final double changePoint, final double changePercent) {
+    public ConcreteStock(final State state, final String ticker,
+                         final String name, final double price,
+                         final double changePoint, final double changePercent) {
         this.state = state;
         this.ticker = ticker;
         this.name = name;
         this.price = price;
         this.changePoint = changePoint;
         this.changePercent = changePercent;
+    }
+
+    @Override
+    public double getLivePrice() {
+        return price;
+    }
+
+    @Override
+    public double getLiveChangePoint() {
+        return changePoint;
+    }
+
+    @Override
+    public double getLiveChangePercent() {
+        return changePercent;
     }
 
     @Override
@@ -72,21 +90,6 @@ public class ConcreteBasicStock implements BasicStock {
     }
 
     @Override
-    public double getLivePrice() {
-        return price;
-    }
-
-    @Override
-    public double getLiveChangePoint() {
-        return changePoint;
-    }
-
-    @Override
-    public double getLiveChangePercent() {
-        return changePercent;
-    }
-
-    @Override
     public double getNetChangePoint() {
         return changePoint;
     }
@@ -96,4 +99,13 @@ public class ConcreteBasicStock implements BasicStock {
         return changePercent;
     }
 
+    @Override
+    public String[] getDataAsArray() {
+        String[] data = new String[4];
+        data[0] = state.toString();
+        data[1] = String.valueOf(price);
+        data[2] = String.valueOf(changePoint);
+        data[3] = String.valueOf(changePercent);
+        return data;
+    }
 }
