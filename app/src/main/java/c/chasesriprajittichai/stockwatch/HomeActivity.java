@@ -45,6 +45,7 @@ import c.chasesriprajittichai.stockwatch.recyclerview.RecyclerDivider;
 import c.chasesriprajittichai.stockwatch.recyclerview.StockSwipeAndDragCallback;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStockList;
+import c.chasesriprajittichai.stockwatch.stocks.ConcreteBasicStock;
 
 import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.AFTER_HOURS;
 import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.CLOSED;
@@ -181,7 +182,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
                     case "ERROR":
                     default:
                         Log.e("ErrorStateInHomeActivity", String.format(
-                                "Stock with state equal to BasicStock.State.ERROR in HomeActivity.%n" +
+                                "Stock with state equal to ERROR in HomeActivity.%n" +
                                         "Ticker: %s", curTicker));
                         // MultiStockRequest should never return stocks with the ERROR state
                         // Do not add this error stock to stocks or to tickerToIndexMap
@@ -191,7 +192,8 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
                 curChangePoint = parseDouble(dataArr[dataNdx + 2]);
                 curChangePercent = parseDouble(dataArr[dataNdx + 3]);
 
-                curStock = new BasicStock(curState, curTicker, curName, curPrice, curChangePoint, curChangePercent);
+                curStock = new ConcreteBasicStock(curState, curTicker, curName,
+                        curPrice, curChangePoint, curChangePercent);
 
                 // Fill stocks and tickerToIndexMap
                 stocks.add(curStock);
@@ -314,7 +316,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
                             numStocksUpdated + numStocksToUpdateThisIteration));
 
             // Append tickers for stocks that will be updated in this iteration
-            for (BasicStock s : stocksToUpdateThisIteration) {
+            for (final BasicStock s : stocksToUpdateThisIteration) {
                 tickersPartUrl.append(s.getTicker());
                 tickersPartUrl.append(',');
             }
@@ -518,7 +520,7 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
         final String[] dataArr = new String[4 * size];
         for (int i = 0; i < size * 4; i += 4) {
-            dataArr[i] = BasicStock.State.CLOSED.toString();
+            dataArr[i] = CLOSED.toString();
             dataArr[i + 1] = "-1";
             dataArr[i + 2] = "-1";
             dataArr[i + 3] = "-1";

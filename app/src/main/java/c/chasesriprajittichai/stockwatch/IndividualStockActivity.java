@@ -45,12 +45,10 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import c.chasesriprajittichai.stockwatch.listeners.DownloadStockTaskListener;
 import c.chasesriprajittichai.stockwatch.stocks.AdvancedStock;
-import c.chasesriprajittichai.stockwatch.stocks.AfterHoursStock;
 import c.chasesriprajittichai.stockwatch.stocks.BasicStock;
-import c.chasesriprajittichai.stockwatch.stocks.ClosedStock;
-import c.chasesriprajittichai.stockwatch.stocks.OpenStock;
-import c.chasesriprajittichai.stockwatch.stocks.PremarketStock;
-import c.chasesriprajittichai.stockwatch.stocks.StockWithAfterHoursValues;
+import c.chasesriprajittichai.stockwatch.stocks.ConcreteAdvancedStock;
+import c.chasesriprajittichai.stockwatch.stocks.ConcreteAdvancedStockWithAhVals;
+import c.chasesriprajittichai.stockwatch.stocks.StockWithAhVals;
 
 import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.AFTER_HOURS;
 import static c.chasesriprajittichai.stockwatch.stocks.BasicStock.State.CLOSED;
@@ -72,7 +70,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     }
 
     // Big ChartPeriods excludes CHART_1D
-    final static AdvancedStock.ChartPeriod[] BIG_CHART_PERIODS = {
+    static final AdvancedStock.ChartPeriod[] BIG_CHART_PERIODS = {
             AdvancedStock.ChartPeriod.FIVE_YEARS, AdvancedStock.ChartPeriod.ONE_YEAR,
             AdvancedStock.ChartPeriod.THREE_MONTHS, AdvancedStock.ChartPeriod.ONE_MONTH,
             AdvancedStock.ChartPeriod.TWO_WEEKS
@@ -266,7 +264,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
             /* Init TextViews for after hours data in ah_linearLayout and init
              * their visibility. */
-            if (stock instanceof StockWithAfterHoursValues) {
+            if (stock instanceof StockWithAhVals) {
                 if (stock.getLiveChangePoint() < 0) {
                     // '-' is already part of the number
                     top_ah_changePoint.setText(getString(R.string.double2dec, stock.getLiveChangePoint()));
@@ -282,7 +280,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         } else {
             ah_linearLayout.setVisibility(View.INVISIBLE);
 
-            /* If stock instanceof StockWithAfterHoursValues, change values are
+            /* If stock instanceof StockWithAhVals, change values are
              * comparisons between live values and the first price of the
              * current ChartPeriod. */
             changePoint = stock.getLivePrice() - firstPriceOfPeriod;
@@ -318,7 +316,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         setScrubTime(AdvancedStock.ChartPeriod.ONE_DAY);
 
         // Init views for after hours data in ah_linearLayout
-        if (stock instanceof StockWithAfterHoursValues) {
+        if (stock instanceof StockWithAhVals) {
             if (stock.getLiveChangePoint() < 0) {
                 // '-' is already part of the number
                 top_ah_changePoint.setText(getString(R.string.double2dec, stock.getLiveChangePoint()));
@@ -360,7 +358,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
              * range of the chart, the change values should change so that they
              * are relative to the price at close. */
             if (index >= 78) {
-                /* Because stock instanceof StockWithAfterHoursValues,
+                /* Because stock instanceof StockWithAhVals,
                  * stock.getPrice() returns the price at close. */
                 firstPriceOfSection = stock.getPrice();
 
@@ -554,7 +552,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
      * If stock's state is ERROR, this function does nothing. If stock's state
      * is OPEN, the live data (i.e. stock.getPrice()) is added to prefs.
      * If stock's state is not ERROR or OPEN (stock instanceof
-     * StockWithAfterHoursValues), the data at the last close (i.e. still use
+     * StockWithAhVals), the data at the last close (i.e. still use
      * stock.getPrice()) is added to prefs.
      * <p>
      * Functionality changes depending on the value of stockHasBeenInitialized.
@@ -684,7 +682,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                         "https://www.marketwatch.com/investing/multi?tickers=" + ticker).get();
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
-                return AdvancedStock.ERROR;
+                return ConcreteAdvancedStock.ERROR;
             }
 
             /* Some stocks have no chart data. If this is the case, chart_prices will be an
@@ -723,7 +721,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                             "Unrecognized state string from Market Watch multiple stock page.%n" +
                                     "Unrecognized state string: %s%n" +
                                     "Ticker: %s", stateStr, ticker));
-                    return AdvancedStock.ERROR;
+                    return ConcreteAdvancedStock.ERROR;
             }
 
             /* If there is no chart data, javascriptElmnt element still exists
@@ -810,7 +808,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 individualDoc = Jsoup.connect("https://quotes.wsj.com/" + ticker).get();
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
-                return AdvancedStock.ERROR;
+                return ConcreteAdvancedStock.ERROR;
             }
 
             /* Get chart data for periods greater than one day from Wall Street
@@ -999,8 +997,8 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             final double ah_price;
             final double ah_changePoint;
             final double ah_changePercent;
-            if (state == BasicStock.State.PREMARKET || state == BasicStock.State.AFTER_HOURS) {
-                // Equivalent to checking if this stock instanceof StockWithAfterHoursValues
+            if (state == PREMARKET || state == AFTER_HOURS) {
+                // Equivalent to checking if this stock instanceof StockWithAhVals
                 // After hours values are live values, and regular values are values at close
                 final Element subData = module2.selectFirst(
                         "ul[class$=info_sub] > li[class]");
@@ -1131,44 +1129,22 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             }
 
 
-            switch (state) {
-                case PREMARKET:
-                    ret = new PremarketStock(ticker, name, price, changePoint, changePercent,
-                            ah_price, ah_changePoint, ah_changePercent, todaysLow, todaysHigh,
-                            fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap, prevClose, peRatio, eps,
-                            yield, avgVolume, description, chartPrices_1day, chartPrices_2weeks,
-                            chartPrices_1month, chartPrices_3months, chartPrices_1year,
-                            chartPrices_5years, chartDates_2weeks, chartDates_1month,
-                            chartDates_3months, chartDates_1year, chartDates_5years);
-                    break;
-                case OPEN:
-                    ret = new OpenStock(ticker, name, price, changePoint, changePercent,
-                            todaysLow, todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap,
-                            prevClose, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
-                            chartPrices_2weeks, chartPrices_1month, chartPrices_3months,
-                            chartPrices_1year, chartPrices_5years, chartDates_2weeks, chartDates_1month,
-                            chartDates_3months, chartDates_1year, chartDates_5years);
-                    break;
-                case AFTER_HOURS:
-                    ret = new AfterHoursStock(ticker, name, price, changePoint, changePercent,
-                            ah_price, ah_changePoint, ah_changePercent, todaysLow, todaysHigh,
-                            fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap, prevClose, peRatio, eps,
-                            yield, avgVolume, description, chartPrices_1day, chartPrices_2weeks,
-                            chartPrices_1month, chartPrices_3months, chartPrices_1year,
-                            chartPrices_5years, chartDates_2weeks, chartDates_1month, chartDates_3months,
-                            chartDates_1year, chartDates_5years);
-                    break;
-                case CLOSED:
-                    ret = new ClosedStock(ticker, name, price, changePoint, changePercent,
-                            todaysLow, todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap,
-                            prevClose, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
-                            chartPrices_2weeks, chartPrices_1month, chartPrices_3months,
-                            chartPrices_1year, chartPrices_5years, chartDates_2weeks, chartDates_1month,
-                            chartDates_3months, chartDates_1year, chartDates_5years);
-                    break;
-                case ERROR:
-                default:
-                    return AdvancedStock.ERROR;
+            if (state == PREMARKET || state == AFTER_HOURS) {
+                // Equivalent to checking if this stock instanceof StockWithAhVals
+                ret = new ConcreteAdvancedStockWithAhVals(state, ticker, name, price, changePoint,
+                        changePercent, ah_price, ah_changePoint, ah_changePercent, todaysLow,
+                        todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap, prevClose, peRatio,
+                        eps, yield, avgVolume, description, chartPrices_1day, chartPrices_2weeks,
+                        chartPrices_1month, chartPrices_3months, chartPrices_1year,
+                        chartPrices_5years, chartDates_2weeks, chartDates_1month, chartDates_3months,
+                        chartDates_1year, chartDates_5years);
+            } else {
+                ret = new ConcreteAdvancedStock(state, ticker, name, price, changePoint, changePercent,
+                        todaysLow, todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap,
+                        prevClose, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
+                        chartPrices_2weeks, chartPrices_1month, chartPrices_3months,
+                        chartPrices_1year, chartPrices_5years, chartDates_2weeks, chartDates_1month,
+                        chartDates_3months, chartDates_1year, chartDates_5years);
             }
 
             return ret;

@@ -1,66 +1,37 @@
 package c.chasesriprajittichai.stockwatch.stocks;
 
+public interface BasicStock {
 
-public class BasicStock {
+    enum State {ERROR, PREMARKET, OPEN, AFTER_HOURS, CLOSED}
 
-    public enum State {ERROR, PREMARKET, OPEN, AFTER_HOURS, CLOSED}
+    String getTicker();
 
-    private State state;
-    private final String ticker;
-    private final String name;
-    private double price;
-    private double changePoint;
-    private double changePercent;
+    String getName();
 
-    public BasicStock(final State state, final String ticker, final String name,
-                      final double price, final double changePoint,
-                      final double changePercent) {
-        this.state = state;
-        this.ticker = ticker;
-        this.name = name;
-        this.price = price;
-        this.changePoint = changePoint;
-        this.changePercent = changePercent;
-    }
+    State getState();
 
-    public State getState() {
-        return state;
-    }
+    void setState(final State state);
 
-    public void setState(final State state) {
-        this.state = state;
-    }
+    double getPrice();
 
-    public String getTicker() {
-        return ticker;
-    }
+    void setPrice(final double price);
 
-    public String getName() {
-        return name;
-    }
+    double getChangePoint();
 
-    public double getPrice() {
-        return price;
-    }
+    void setChangePoint(final double changePoint);
 
-    public void setPrice(final double price) {
-        this.price = price;
-    }
+    double getChangePercent();
 
-    public double getChangePoint() {
-        return changePoint;
-    }
+    void setChangePercent(final double changePercent);
 
-    public void setChangePoint(final double changePoint) {
-        this.changePoint = changePoint;
-    }
+    double getLivePrice();
 
-    public double getChangePercent() {
-        return changePercent;
-    }
+    double getLiveChangePoint();
 
-    public void setChangePercent(final double changePercent) {
-        this.changePercent = changePercent;
-    }
+    double getLiveChangePercent();
+
+    double getNetChangePoint();
+
+    double getNetChangePercent();
 
 }
