@@ -13,6 +13,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.jakewharton.threetenabp.AndroidThreeTen;
@@ -40,18 +41,18 @@ import java.util.stream.Collectors;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import c.chasesriprajittichai.stockwatch.listeners.DownloadStockTaskListener;
+import c.chasesriprajittichai.stockwatch.listeners.DownloadChartTaskListener;
+import c.chasesriprajittichai.stockwatch.listeners.DownloadStatsTaskListener;
 import c.chasesriprajittichai.stockwatch.stocks.AdvancedStock;
 import c.chasesriprajittichai.stockwatch.stocks.AdvancedStock.ChartPeriod;
 import c.chasesriprajittichai.stockwatch.stocks.ConcreteAdvancedStock;
 import c.chasesriprajittichai.stockwatch.stocks.ConcreteAdvancedStockWithAhVals;
 import c.chasesriprajittichai.stockwatch.stocks.ConcreteStock;
 import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhVals;
-import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhValsList;
 import c.chasesriprajittichai.stockwatch.stocks.Stock;
-import c.chasesriprajittichai.stockwatch.stocks.StockInHomeActivity;
 import c.chasesriprajittichai.stockwatch.stocks.StockWithAhVals;
 
+import static c.chasesriprajittichai.stockwatch.stocks.AdvancedStock.Stat;
 import static c.chasesriprajittichai.stockwatch.stocks.Stock.State.AFTER_HOURS;
 import static c.chasesriprajittichai.stockwatch.stocks.Stock.State.CLOSED;
 import static c.chasesriprajittichai.stockwatch.stocks.Stock.State.ERROR;
@@ -62,17 +63,13 @@ import static org.apache.commons.lang3.StringUtils.substringBetween;
 
 
 public final class IndividualStockActivity extends AppCompatActivity implements
-        DownloadStockTaskListener,
         HorizontalPicker.OnItemSelected,
-        CustomScrubGestureDetector.ScrubIndexListener {
+        CustomScrubGestureDetector.ScrubIndexListener,
+        DownloadChartTaskListener,
+        DownloadStatsTaskListener {
 
-    public enum Stat {
-        TODAYS_RANGE, FIFTY_TWO_WEEK_RANGE, MARKET_CAP, PREV_CLOSE, PE_RATIO,
-        EPS, YIELD, AVG_VOLUME, DESCRIPTION
-    }
-
-    // Big ChartPeriods excludes CHART_1D
-    static final ChartPeriod[] BIG_CHART_PERIODS = {
+    // Big ChartPeriods excludes 1D chart
+    private static final ChartPeriod[] BIG_CHART_PERIODS = {
             ChartPeriod.FIVE_YEARS, ChartPeriod.ONE_YEAR,
             ChartPeriod.THREE_MONTHS, ChartPeriod.ONE_MONTH,
             ChartPeriod.TWO_WEEKS
@@ -86,8 +83,9 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     @BindView(R.id.textView_topAfterHoursChangePoint_individual) TextView top_ah_changePoint;
     @BindView(R.id.textView_topAfterHoursChangePercent_individual) TextView top_ah_changePercent;
     @BindView(R.id.textView_topAfterHoursTime_individual) TextView top_ah_time;
-    @BindView(R.id.sparkView_individual) CustomSparkView sparkView;
+    @BindView(R.id.progressBar_loadingCharts) ProgressBar loadingChartsProgressBar;
     @BindView(R.id.textView_chartsUnavailable) TextView chartsUnavailable;
+    @BindView(R.id.sparkView_individual) CustomSparkView sparkView;
     @BindView(R.id.horizontalPicker_chartPeriod_individual) HorizontalPicker chartPeriodPicker;
     @BindView(R.id.view_chartPeriodPickerUnderline_individual) View chartPeriodPickerUnderline;
     @BindView(R.id.textView_todaysLow_individual) TextView todaysLow;
@@ -102,28 +100,16 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     @BindView(R.id.textView_averageVolume_individual) TextView avgVolume;
     @BindView(R.id.textView_description_individual) TextView description;
 
-    private StockInHomeActivity stockFromHome;
     private AdvancedStock stock;
-
-    // From stockFromHome. Used frequently in this class, so create own variables.
-    private String TICKER;
-    private String NAME;
-
-    private boolean advancedStockHasBeenInitialized = false; // stock is initialized in onDownloadStockTaskCompleted()
     private boolean wasInFavoritesInitially;
     private boolean isInFavorites;
     private SparkViewAdapter sparkViewAdapter;
     private SharedPreferences prefs;
 
-    /* Called from DownloadStockDataTask.onPostExecute(). */
+    /* Called from DownloadChartTask.onPostExecute(). */
     @Override
-    public void onDownloadStockTaskCompleted(final AdvancedStock advancedStock,
-                                             final Set<Stat> missingStats,
+    public void onDownloadChartTaskCompleted(final int status,
                                              final Set<ChartPeriod> missingChartPeriods) {
-        this.stock = advancedStock;
-        advancedStockHasBeenInitialized = true;
-
-
         // ChartPeriods from string-array resource are in increasing order (1D -> 5Y)
         final List<CharSequence> displayChartPeriods = Arrays.stream(
                 getResources().getStringArray(R.array.chartPeriods)).collect(Collectors.toList());
@@ -167,21 +153,33 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
         if (missingChartPeriods.size() == ChartPeriod.values().length) {
             // If there are no filled charts
-            initTopViewsStatic(advancedStock);
+            initTopViewsStatic();
+
+            loadingChartsProgressBar.setVisibility(View.GONE);
+            chartsUnavailable.setVisibility(View.VISIBLE);
             sparkView.setVisibility(View.GONE);
             chartPeriodPicker.setVisibility(View.GONE);
             chartPeriodPickerUnderline.setVisibility(View.GONE);
         } else {
             // If there is at least 1 filled chart
             initTopViewsDynamic();
+
+            final CharSequence[] displayChartPeriodsArr = new CharSequence[displayChartPeriods.size()];
+            displayChartPeriods.toArray(displayChartPeriodsArr);
+            chartPeriodPicker.setValues(displayChartPeriodsArr);
+
+            loadingChartsProgressBar.setVisibility(View.GONE);
             chartsUnavailable.setVisibility(View.GONE);
+            sparkView.setVisibility(View.VISIBLE);
+            chartPeriodPicker.setVisibility(View.VISIBLE);
+            chartPeriodPickerUnderline.setVisibility(View.VISIBLE);
         }
+    }
 
-        final CharSequence[] chartPeriodsArr = new CharSequence[displayChartPeriods.size()];
-        displayChartPeriods.toArray(chartPeriodsArr);
-        chartPeriodPicker.setValues(chartPeriodsArr);
-
-
+    /* Called from DownloadStatsTask.onPostExecute(). */
+    @Override
+    public void onDownloadStatsTaskCompleted(final int status,
+                                             final Set<Stat> missingStats) {
         if (!missingStats.contains(Stat.TODAYS_RANGE)) {
             todaysLow.setText(getString(R.string.double2dec, this.stock.getTodaysLow()));
             todaysHigh.setText(getString(R.string.double2dec, this.stock.getTodaysHigh()));
@@ -235,24 +233,22 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
     /**
      * Initialize the top TextViews that are changed during scrubbing. This
-     * includes the live price (large), the live change point, live change
-     * percent, the change point at close, the change percent at close, and the
-     * two TextViews that show values related to time.
+     * includes the live price (large), live change point, live change percent,
+     * change point at close, change percent at close, and the two views that
+     * show values related to time. Values are taken from {@link #stock}.
      * <p>
-     * Uses values from this class' {@link AdvancedStock}, {@link
-     * IndividualStockActivity#stock}.
-     * <p>
-     * This function should be used when there is at least one charts are filled
-     * with data. If a {@link ChartPeriod} that is larger than {@link
-     * ChartPeriod#ONE_DAY} is filled and selected, the top change values
-     * displayed are relative to the first price of the selected chart - but if
+     * This function should be used when at least one chart is filled with data.
+     * If a {@link ChartPeriod} that is larger than {@link ChartPeriod#ONE_DAY}
+     * is filled and selected, the top change point and change percent values
+     * displayed, are relative to the first price of the selected chart - but if
      * no charts are filled, then the top views should always display the values
      * from the current/most recent day. This function displays values that are
      * relative to the first price of the chart for the selected ChartPeriod,
-     * unlike {@link #initTopViewsStatic(Stock)}.
+     * unlike {@link #initTopViewsStatic()}.
      * <p>
-     * This function can also be called to restore these views to their initial
-     * states.
+     * This function should be called any time that the selected chart changes,
+     * so that the top views can update to display the values for the selected
+     * ChartPeriod.
      */
     private void initTopViewsDynamic() {
         top_price.setText(getString(R.string.double2dec, stock.getLivePrice()));
@@ -305,16 +301,14 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
     /**
      * Initialize the top TextViews that are changed during scrubbing. This
-     * includes the live price (large), the live change point, live change
-     * percent, the change point at close, the change percent at close, and the
-     * two TextViews that show values related to time.
+     * includes the live price (large), live change point, live change percent,
+     * change point at close, change percent at close, and the two views that
+     * show values related to time. Values are taken from {@link #stock}.
      * <p>
-     * This function is used in {@link IndividualStockActivity#onCreate(Bundle)}
-     * to initialize the top views to show the values that are known before
-     * {@link IndividualStockActivity#advancedStockHasBeenInitialized} is true (before
-     * {@link IndividualStockActivity#stock} is initialized; before {@link
-     * IndividualStockActivity#onDownloadStockTaskCompleted(AdvancedStock, Set,
-     * Set)} runs).
+     * This function is used in {@link #onCreate(Bundle)} to initialize the top
+     * views to show the top values which are known before {@link
+     * #onDownloadChartTaskCompleted(int, Set)} or {@link
+     * #onDownloadStatsTaskCompleted(int, Set)} is called.
      * <p>
      * This function should be used instead of {@link #initTopViewsDynamic()}
      * when no charts are filled with data. If a {@link ChartPeriod} that is
@@ -324,13 +318,8 @@ public final class IndividualStockActivity extends AppCompatActivity implements
      * display the values from the current/most recent day. This function does
      * not display values that are relative to the first price of the chart for
      * the selected ChartPeriod, unlike {@link #initTopViewsDynamic()}.
-     * <p>
-     * This function can also be called to restore these views to their initial
-     * states.
-     *
-     * @param stock The stock to get values from
      */
-    private void initTopViewsStatic(final Stock stock) {
+    private void initTopViewsStatic() {
         top_price.setText(getString(R.string.double2dec, stock.getLivePrice()));
         setScrubTime(ChartPeriod.ONE_DAY);
 
@@ -451,13 +440,12 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         setContentView(R.layout.activity_individual_stock);
         ButterKnife.bind(this);
         initStockFromHomeActivity();
-        TICKER = stockFromHome.getTicker();
-        NAME = stockFromHome.getName();
-        setTitle(NAME);
-        initTopViewsStatic(stockFromHome);
+        setTitle(stock.getName());
+        initTopViewsStatic();
 
         // Start task ASAP
-        new DownloadStockDataTask(stockFromHome, this).execute();
+        new DownloadChartTask(stock, this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        new DownloadStatsTask(stock, this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
 
         AndroidThreeTen.init(this); // Init, timezone not actually used
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
@@ -509,13 +497,11 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             ahChangePoint = parseDouble(data[5]);
             ahChangePercent = parseDouble(data[6]);
 
-            stockFromHome = new ConcreteStockWithAhVals(
-                    state, ticker, name,
+            stock = new ConcreteAdvancedStockWithAhVals(state, ticker, name,
                     price, changePoint, changePercent,
                     ahPrice, ahChangePoint, ahChangePercent);
         } else {
-            stockFromHome = new ConcreteStock(
-                    state, ticker, name,
+            stock = new ConcreteAdvancedStock(state, ticker, name,
                     price, changePoint, changePercent);
         }
     }
@@ -526,18 +512,10 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         if (isInFavorites != wasInFavoritesInitially) {
             // If the star status (favorite status) has changed
 
-            if (advancedStockHasBeenInitialized) {
-                if (wasInFavoritesInitially) {
-                    removeStockFromPreferences();
-                } else {
-                    addStockToPreferences();
-                }
+            if (wasInFavoritesInitially) {
+                removeStockFromPreferences();
             } else {
-                if (wasInFavoritesInitially) {
-                    removeStockFromPreferences();
-                } else {
-                    addStockToPreferences();
-                }
+                addStockToPreferences();
             }
 
             /* The activity has paused. Update the favorites status.
@@ -618,26 +596,24 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     }
 
     /**
-     * Adds values of {@link #stock} to {@link #prefs}: adds stock's ticker to
+     * Adds values from {@link #stock} to {@link #prefs}: adds stock's ticker to
      * Tickers TSV, stock's name to Names TSV, and stock's data to Data TSV.
      * There are seven data values added in this order: state, price, change
      * point, change percent, after hours price, after hours change point, and
      * after hours change percent. These seven data values are added to Data TSV
-     * regardless of whether or not stock has after hours values. If stock is
-     * not instanceof {@link StockWithAhVals} (does not have after hours
-     * values), then 0s are added in place of the three after hours values.
-     * stock's ticker, name, and data values are added to the front of each
-     * preference string, meaning that the stock is inserted at the top of the
-     * list of stocks ({@link ConcreteStockWithAhValsList}). This function does
-     * not check if stock is already in prefs before adding stock.
+     * regardless of whether or not stock has after hours values. If stock does
+     * not have after hours values (is not instanceof {@link StockWithAhVals}),
+     * then 0s are added in place of the three after hours values. stock's
+     * ticker, name, and data values are added to the front of each preference
+     * string, meaning that the stock is inserted at the top of the list of
+     * stocks that are represented in prefs. This function does not check if
+     * stock is already in prefs before adding stock.
      * <p>
      * If stock's state is {@link Stock.State#ERROR}, this function does
-     * nothing. If stock has not been initialized yet (initialization happens in
-     * {@link #onDownloadStockTaskCompleted(AdvancedStock, Set, Set)}), the
-     * values written to prefs are taken from {@link #stockFromHome}.
+     * nothing.
      */
     private void addStockToPreferences() {
-        if (advancedStockHasBeenInitialized && stock.getState() == ERROR) {
+        if (stock.getState() == ERROR) {
             return;
         }
 
@@ -646,35 +622,34 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         final String dataTSV = prefs.getString("Data TSV", "");
 
         final String dataStr;
-        Stock stockPtr = advancedStockHasBeenInitialized ? stock : stockFromHome;
-        if (stockPtr instanceof StockWithAhVals) {
-            final StockWithAhVals ahStockPtr = (StockWithAhVals) stockPtr;
+        if (stock instanceof StockWithAhVals) {
+            final StockWithAhVals ahStock = (StockWithAhVals) stock;
             dataStr = String.format(Locale.US, "%s\t%f\t%f\t%f\t%f\t%f\t%f",
-                    ahStockPtr.getState().toString(),
-                    ahStockPtr.getPrice(),
-                    ahStockPtr.getChangePoint(),
-                    ahStockPtr.getChangePercent(),
-                    ahStockPtr.getAfterHoursPrice(),
-                    ahStockPtr.getAfterHoursChangePoint(),
-                    ahStockPtr.getAfterHoursChangePercent());
+                    ahStock.getState().toString(),
+                    ahStock.getPrice(),
+                    ahStock.getChangePoint(),
+                    ahStock.getChangePercent(),
+                    ahStock.getAfterHoursPrice(),
+                    ahStock.getAfterHoursChangePoint(),
+                    ahStock.getAfterHoursChangePercent());
         } else {
             dataStr = String.format(Locale.US, "%s\t%f\t%f\t%f\t%d\t%d\t%d",
-                    stockPtr.getState().toString(),
-                    stockPtr.getPrice(),
-                    stockPtr.getChangePoint(),
-                    stockPtr.getChangePercent(),
+                    stock.getState().toString(),
+                    stock.getPrice(),
+                    stock.getChangePoint(),
+                    stock.getChangePercent(),
                     0, 0, 0);
         }
 
         if (!tickersTSV.isEmpty()) {
             // There are other stocks in favorites
-            prefs.edit().putString("Tickers TSV", TICKER + '\t' + tickersTSV).apply();
-            prefs.edit().putString("Names TSV", NAME + '\t' + namesTSV).apply();
+            prefs.edit().putString("Tickers TSV", stock.getTicker() + '\t' + tickersTSV).apply();
+            prefs.edit().putString("Names TSV", stock.getName() + '\t' + namesTSV).apply();
             prefs.edit().putString("Data TSV", dataStr + '\t' + dataTSV).apply();
         } else {
             // There are no stocks in favorites, this will be the first
-            prefs.edit().putString("Tickers TSV", TICKER).apply();
-            prefs.edit().putString("Names TSV", NAME).apply();
+            prefs.edit().putString("Tickers TSV", stock.getTicker()).apply();
+            prefs.edit().putString("Names TSV", stock.getName()).apply();
             prefs.edit().putString("Data TSV", dataStr).apply();
         }
     }
@@ -682,9 +657,6 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     /**
      * Removes {@link #stock} from {@link #prefs}: removes stock's ticker from
      * Tickers TSV, stock's name from Names TSV, and stock's data from Data TSV.
-     * <p>
-     * Functionality does not change depending on the value of
-     * {@link #advancedStockHasBeenInitialized}.
      */
     private void removeStockFromPreferences() {
         final String tickersTSV = prefs.getString("Tickers TSV", "");
@@ -698,7 +670,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             final List<String> dataList = new ArrayList<>(Arrays.asList(
                     prefs.getString("Data TSV", "").split("\t")));
 
-            final int tickerNdx = tickerList.indexOf(TICKER);
+            final int tickerNdx = tickerList.indexOf(stock.getTicker());
             tickerList.remove(tickerNdx);
             nameList.remove(tickerNdx);
             prefs.edit().putString("Tickers TSV", TextUtils.join("\t", tickerList)).apply();
@@ -737,156 +709,353 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     }
 
 
-    private static final class DownloadStockDataTask extends AsyncTask<Void, Integer, AdvancedStock> {
+    private static final class DownloadChartTask extends AsyncTask<Void, Integer, Integer> {
 
-        private final Stock stock;
-        private final Set<Stat> missingStats = new HashSet<>();
+        private final AdvancedStock stock;
         private final Set<ChartPeriod> missingChartPeriods = new HashSet<>();
-        private final WeakReference<DownloadStockTaskListener> completionListener;
+        private final WeakReference<DownloadChartTaskListener> completionListener;
 
-        private DownloadStockDataTask(final Stock stock,
-                                      final DownloadStockTaskListener completionListener) {
+        private DownloadChartTask(final AdvancedStock stock,
+                                  final DownloadChartTaskListener completionListener) {
             this.stock = stock;
             this.completionListener = new WeakReference<>(completionListener);
         }
 
         @Override
-        protected AdvancedStock doInBackground(final Void... params) {
-            final AdvancedStock ret;
+        protected Integer doInBackground(final Void... voids) {
+            int status = Status.GOOD;
 
-            final Document multiDoc;
+            Document multiDoc;
             try {
                 multiDoc = Jsoup.connect(
                         "https://www.marketwatch.com/investing/multi?tickers=" + stock.getTicker()).get();
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
-                return ConcreteAdvancedStock.ERROR;
+                multiDoc = null;
+                missingChartPeriods.add(ChartPeriod.ONE_DAY);
+                status = Status.IO_EXCEPTION_FOR_MW_ONLY;
             }
 
-            /* Some stocks have no chart data. If this is the case, chart_prices will be an
-             * empty array list. */
-            final Stock.State state;
-            final ArrayList<Double> chartPrices_1day = new ArrayList<>();
+            if (multiDoc != null) {
+                /* Some stocks have no chart data. If this is the case, chart_prices will be an
+                 * empty array list. */
+                final ArrayList<Double> chartPrices_1day = new ArrayList<>();
 
-            final Element multiQuoteValueRoot = multiDoc.selectFirst(
-                    "html > body > div#blanket > div[class*=multi] > div#maincontent > " +
-                            "div[class^=block multiquote] > div[class^=quotedisplay] > " +
-                            "div[class^=section activeQuote bgQuote]");
-            final Element javascriptElmnt = multiQuoteValueRoot.selectFirst(
-                    ":root > div.intradaychart > script[type=text/javascript]");
-            final String jsonString = substringBetween(
-                    javascriptElmnt.toString(),
-                    "var chartData = [", "];");
+                final Element multiQuoteValueRoot = multiDoc.selectFirst(
+                        "html > body > div#blanket > div[class*=multi] > div#maincontent > " +
+                                "div[class^=block multiquote] > div[class^=quotedisplay] > " +
+                                "div[class^=section activeQuote bgQuote]");
+                final Element javascriptElmnt = multiQuoteValueRoot.selectFirst(
+                        ":root > div.intradaychart > script[type=text/javascript]");
+                final String jsonString = substringBetween(
+                        javascriptElmnt.toString(),
+                        "var chartData = [", "];");
 
-            final String stateStr = multiQuoteValueRoot.selectFirst(
-                    ":root > div.marketheader > p.column.marketstate").ownText();
-            switch (stateStr.toLowerCase(Locale.US)) {
-                case "before the bell":
-                    state = PREMARKET;
-                    break;
-                case "market open":
-                case "countdown to close":
-                    state = OPEN;
-                    break;
-                case "after hours":
-                    state = AFTER_HOURS;
-                    break;
-                case "market closed":
-                    state = CLOSED;
-                    break;
-                default:
-                    Log.e("UnrecognizedMarketWatchState", String.format(
-                            "Unrecognized state string from Market Watch multiple stock page.%n" +
-                                    "Unrecognized state string: %s%n" +
-                                    "Ticker: %s", stateStr, stock.getTicker()));
-                    return ConcreteAdvancedStock.ERROR;
-            }
+                /* If there is no chart data, javascriptElmnt element still exists
+                 * in the HTML and there is still some javascript code in
+                 * javascriptElmnt.toString(). There is just no chart data embedded
+                 * in the javascript. This means that the call to substringBetween()
+                 * on javascriptElmnt.toString() will return null, because no
+                 * substring between the open and close parameters
+                 * (substringBetween() parameters) exists. */
+                final String javascriptStr = substringBetween(
+                        javascriptElmnt.toString(),
+                        "Trades\":[", "]");
+                if (javascriptStr != null) {
+                    try {
+                        final JSONObject topObj = new JSONObject(jsonString);
+                        final JSONObject valueOuterObj = topObj.getJSONObject("Value");
+                        final JSONArray dataArr = valueOuterObj.getJSONArray("Data");
+                        final JSONObject valueInnerObj = dataArr.getJSONObject(0).getJSONObject("Value");
 
-            /* If there is no chart data, javascriptElmnt element still exists
-             * in the HTML and there is still some javascript code in
-             * javascriptElmnt.toString(). There is just no chart data embedded
-             * in the javascript. This means that the call to substringBetween()
-             * on javascriptElmnt.toString() will return null, because no
-             * substring between the open and close parameters
-             * (substringBetween() parameters) exists. */
-            final String javascriptStr = substringBetween(
-                    javascriptElmnt.toString(),
-                    "Trades\":[", "]");
-            if (javascriptStr != null) {
-                try {
-                    final JSONObject topObj = new JSONObject(jsonString);
-                    final JSONObject valueOuterObj = topObj.getJSONObject("Value");
-                    final JSONArray dataArr = valueOuterObj.getJSONArray("Data");
-                    final JSONObject valueInnerObj = dataArr.getJSONObject(0).getJSONObject("Value");
+                        final JSONArray sessionsArr = valueInnerObj.getJSONArray("Sessions");
+                        final JSONObject sessionsNdxZero = sessionsArr.getJSONObject(0);
+                        final JSONArray tradesArr = sessionsNdxZero.getJSONArray("Trades");
+                        final int numPrices = tradesArr.length();
 
-                    final JSONArray sessionsArr = valueInnerObj.getJSONArray("Sessions");
-                    final JSONObject sessionsNdxZero = sessionsArr.getJSONObject(0);
-                    final JSONArray tradesArr = sessionsNdxZero.getJSONArray("Trades");
-                    final int numPrices = tradesArr.length();
+                        /* Fill chartPrices_1day. If null values are found, replace
+                         * them with the last non-null value. If the first value is
+                         * null, replace it with the first non-null value. */
+                        if (tradesArr.length() > 0) {
+                            chartPrices_1day.ensureCapacity(numPrices);
 
-                    /* Fill chartPrices_1day. If null values are found, replace
-                     * them with the last non-null value. If the first value is
-                     * null, replace it with the first non-null value. */
-                    if (tradesArr.length() > 0) {
-                        chartPrices_1day.ensureCapacity(numPrices);
+                            /* Init as out of bounds. If firstNonNullNdx is never
+                             * changed to an index in bounds, then all values in
+                             * tradesArr are null. */
+                            int firstNonNullNdx = numPrices;
 
-                        /* Init as out of bounds. If firstNonNullNdx is never
-                         * changed to an index in bounds, then all values in
-                         * tradesArr are null. */
-                        int firstNonNullNdx = numPrices;
+                            // Find firstNonNullNdx and fill chartPrices up through firstNonNullNdx
+                            /* After this if/else statement, chartPrices is filled
+                             * with non-null values up through firstNonNullNdx. */
+                            if (tradesArr.get(0).toString().equals("null")) {
+                                for (int i = 1; i < numPrices; i++) { // Redundant to check index 0
+                                    if (!tradesArr.get(i).toString().equals("null")) {
+                                        firstNonNullNdx = i;
 
-                        // Find firstNonNullNdx and fill chartPrices up through firstNonNullNdx
-                        /* After this if/else statement, chartPrices is filled
-                         * with non-null values up through firstNonNullNdx. */
-                        if (tradesArr.get(0).toString().equals("null")) {
-                            for (int i = 1; i < numPrices; i++) { // Redundant to check index 0
-                                if (!tradesArr.get(i).toString().equals("null")) {
-                                    firstNonNullNdx = i;
-
-                                    /* The first non-null value has been found.
-                                     * The indexes < firstNonNullNdx have null
-                                     * values and therefore should be replaced
-                                     * with the first non-null value
-                                     * (firstNonNullValue) which is at
-                                     * firstNonNullNdx. */
-                                    final double firstNonNullValue =
-                                            parseDouble(tradesArr.get(firstNonNullNdx).toString());
-                                    while (i >= 0) {
-                                        chartPrices_1day.add(firstNonNullValue);
-                                        i--;
+                                        /* The first non-null value has been found.
+                                         * The indexes < firstNonNullNdx have null
+                                         * values and therefore should be replaced
+                                         * with the first non-null value
+                                         * (firstNonNullValue) which is at
+                                         * firstNonNullNdx. */
+                                        final double firstNonNullValue =
+                                                parseDouble(tradesArr.get(firstNonNullNdx).toString());
+                                        while (i >= 0) {
+                                            chartPrices_1day.add(firstNonNullValue);
+                                            i--;
+                                        }
+                                        break;
                                     }
-                                    break;
+                                }
+                            } else {
+                                firstNonNullNdx = 0;
+                                chartPrices_1day.add(parseDouble(tradesArr.get(0).toString()));
+                            }
+
+                            // Fill chartPrices for the indexes after firstNonNullNdx
+                            for (int i = firstNonNullNdx + 1; i < numPrices; i++) {
+                                if (!tradesArr.get(i).toString().equals("null")) {
+                                    chartPrices_1day.add(parseDouble(tradesArr.get(i).toString()));
+                                } else {
+                                    chartPrices_1day.add(chartPrices_1day.get(i - 1));
                                 }
                             }
-                        } else {
-                            firstNonNullNdx = 0;
-                            chartPrices_1day.add(parseDouble(tradesArr.get(0).toString()));
-                        }
 
-                        // Fill chartPrices for the indexes after firstNonNullNdx
-                        for (int i = firstNonNullNdx + 1; i < numPrices; i++) {
-                            if (!tradesArr.get(i).toString().equals("null")) {
-                                chartPrices_1day.add(parseDouble(tradesArr.get(i).toString()));
-                            } else {
-                                chartPrices_1day.add(chartPrices_1day.get(i - 1));
+
+                            /* The values given on the Market Watch multi stock page can be slightly
+                             * off by minutes. For example, the Market Watch multi stock page may
+                             * correctly say that AAPL closed at $171.00, but the value used for the
+                             * Market Watch graph (where we're getting the 1 day graph data) may
+                             * show that the AAPL price at 4:00pm (time of close) is $171.21; for
+                             * this example, it is likely that around the time of 4:00pm, AAPL's
+                             * price moved toward $171.21 (or at least increased from its closing
+                             * price). The largest problem that this issue causes is that a user
+                             * could be scrubbing through the 1 day graph, and notice that the price
+                             * at 4:00pm is different from the closing price - this also causes the
+                             * change values at 4:00pm to be nonzero, which is incorrect. Fix this
+                             * issue by manually setting the price at 4:00pm to the price at close.
+                             * Recall that in the 1 day chart, the prices are taken every 5 minutes,
+                             * starting at 9:30am - the 4:00pm price is at index 78. */
+                            if (chartPrices_1day.size() >= 78) {
+                                chartPrices_1day.set(78, stock.getPrice());
                             }
+
+                            // Update stock's one day chart
+                            stock.setPrices_1day(chartPrices_1day);
                         }
+                    } catch (final JSONException jsone) {
+                        Log.e("JSONException", jsone.getLocalizedMessage());
+                        missingChartPeriods.add(ChartPeriod.ONE_DAY);
                     }
-                } catch (final JSONException jsone) {
-                    Log.e("JSONException", jsone.getLocalizedMessage());
+                } else {
                     missingChartPeriods.add(ChartPeriod.ONE_DAY);
                 }
-            } else {
-                missingChartPeriods.add(ChartPeriod.ONE_DAY);
             }
 
 
+            Document individualDoc;
+            try {
+                individualDoc = Jsoup.connect("https://quotes.wsj.com/" + stock.getTicker()).get();
+            } catch (final IOException ioe) {
+                Log.e("IOException", ioe.getLocalizedMessage());
+                individualDoc = null;
+                missingChartPeriods.addAll(Arrays.asList(BIG_CHART_PERIODS));
+                status = status == Status.GOOD ?
+                        Status.IO_EXCEPTION_FOR_WSJ_ONLY :
+                        Status.IO_EXCEPTION_FOR_MW_AND_WSJ;
+            }
+
+            if (individualDoc != null) {
+                /* Get chart data for periods greater than one day from Wall Street
+                 * Journal. Certain values from WSJ page are needed for the URL of
+                 * the WSJ database of historical prices. */
+                final Element contentFrame = individualDoc.selectFirst(
+                        ":root > body > div.pageFrame > div.contentFrame");
+                final Element module2 = contentFrame.selectFirst(
+                        ":root > section[class$=section_1] > div.zonedModule[data-module-id=2]");
+
+                final String countryCode = module2.selectFirst(
+                        ":root > input#quote_country_code").ownText();
+                final String exchangeCode = module2.selectFirst(
+                        ":root > input#quote_exchange_code").ownText();
+                final String quoteType = module2.selectFirst(
+                        ":root > input#quote_type").ownText();
+
+                final LocalDate today = LocalDate.now();
+                /* Deduct extra two weeks because it doesn't hurt and ensures that the URL we create
+                 * doesn't incorrectly believe that there isn't enough data for the five year chart. */
+                final LocalDate fiveYearsAgo = today.minusYears(5).minusWeeks(2);
+                final int period_5years = (int) ChronoUnit.DAYS.between(fiveYearsAgo, today);
+
+                // Pad zeros on the left if necessary
+                final String wsj_todayDateStr = String.format(Locale.US, "%d/%d/%d",
+                        today.getMonthValue(), today.getDayOfMonth(), today.getYear());
+                final String wsj_5yearsAgoDateStr = String.format(Locale.US, "%d/%d/%d",
+                        fiveYearsAgo.getMonthValue(), fiveYearsAgo.getDayOfMonth(), fiveYearsAgo.getYear());
+
+                /* If the WSJ URL parameters (ie. start date) request data from dates that
+                 * are prior to a stock's existence, then the WSJ response delivers all
+                 * historical data available for the stock. Because five years is the largest
+                 * chart period we are using, data for the smaller periods can be grabbed
+                 * from the five year WSJ response page. The actual number of data points
+                 * that exists for a stock can be determined by parsing the WSJ response and
+                 * counting the number of certain elements (ie. table rows). */
+                final String wsj_url_5years = String.format(Locale.US,
+                        "https://quotes.wsj.com/ajax/historicalprices/4/%s?MOD_VIEW=page" +
+                                "&ticker=%s&country=%s&exchange=%s&instrumentType=%s&num_rows=%d" +
+                                "&range_days=%d&startDate=%s&endDate=%s",
+                        stock.getTicker(), stock.getTicker(), countryCode, exchangeCode, quoteType,
+                        period_5years, period_5years, wsj_5yearsAgoDateStr, wsj_todayDateStr);
+
+
+                final List<Double> chartPrices_5years = new ArrayList<>();
+                final List<Double> chartPrices_1year = new ArrayList<>();
+                final List<Double> chartPrices_3months = new ArrayList<>();
+                final List<Double> chartPrices_1month = new ArrayList<>();
+                final List<Double> chartPrices_2weeks = new ArrayList<>();
+                final List<List<Double>> chartPricesList = new ArrayList<>(Arrays.asList(
+                        chartPrices_5years, chartPrices_1year, chartPrices_3months,
+                        chartPrices_1month, chartPrices_2weeks));
+                final List<String> chartDates_5years = new ArrayList<>();
+                final List<String> chartDates_1year = new ArrayList<>();
+                final List<String> chartDates_3months = new ArrayList<>();
+                final List<String> chartDates_1month = new ArrayList<>();
+                final List<String> chartDates_2weeks = new ArrayList<>();
+                final List<List<String>> chartDatesList = new ArrayList<>(Arrays.asList(
+                        chartDates_5years, chartDates_1year, chartDates_3months,
+                        chartDates_1month, chartDates_2weeks));
+
+
+                Document fiveYearDoc;
+                try {
+                    fiveYearDoc = Jsoup.connect(wsj_url_5years).get();
+                } catch (final IOException ioe) {
+                    Log.e("IOException", ioe.getLocalizedMessage());
+                    fiveYearDoc = null;
+                    missingChartPeriods.addAll(Arrays.asList(BIG_CHART_PERIODS));
+                    status = status == Status.GOOD ?
+                            Status.IO_EXCEPTION_FOR_WSJ_ONLY :
+                            Status.IO_EXCEPTION_FOR_MW_AND_WSJ;
+                }
+
+                if (fiveYearDoc != null) {
+                    int reverseNdx, periodNdx, i;
+
+                    /* This is the number of data points needed for each period. The
+                     * stock market is only open on weekdays, and there are 9
+                     * holidays that the stock market closes for. So the stock
+                     * market is open for ~252 days a year. Use this value to
+                     * approximate the number of data points that should be in each
+                     * period. */
+                    final int[] SIZES = {1260, 252, 63, 21, 10};
+                    /* Don't get too many data points for long chart periods because
+                     * it takes too long and is unnecessary. These increments mean
+                     * that for chartPrices for periods greater than 1 day, the list
+                     * will either be empty (not enough data), or have a constant
+                     * size. The non-empty sizes are: [5 year]=140, [1 year]=126,
+                     * [3 month]=63, [1 month]=21, [2 weeks]=10. */
+                    final int[] INCREMENTS = {9, 2, 1, 1, 1};
+
+                    final Elements rowElmnts = fiveYearDoc.select(
+                            ":root > body > div > div#historical_data_table > " +
+                                    "div > table > tbody > tr");
+                    final int NUM_DATA_POINTS = rowElmnts.size() <= 1260 ? rowElmnts.size() : 1260;
+                    final double[] allChartPrices = new double[NUM_DATA_POINTS];
+                    final String[] allChartDates = new String[NUM_DATA_POINTS];
+
+                    /* The most recent prices are at the top of the WSJ page (top of
+                     * the HTML table), and the oldest prices are at the bottom.
+                     * Fill allChartPrices starting with the last price elements so
+                     * that the oldest prices are the front of allPrices and the
+                     * recent prices are at the end. Do the same for allChartTimes. */
+                    for (i = 0, reverseNdx = NUM_DATA_POINTS - 1; reverseNdx >= 0; i++, reverseNdx--) {
+                        /* Charts use the closing price of each day. The closing
+                         * price is the 5th column in each row. The date is the 1st
+                         * column in each row. */
+                        allChartPrices[i] = parseDouble(rowElmnts.get(reverseNdx).selectFirst(
+                                ":root > :eq(4)").ownText());
+                        allChartDates[i] = rowElmnts.get(reverseNdx).selectFirst(
+                                ":root > :eq(0)").ownText();
+                    }
+
+                    /* Fill chartPrices and chartDates for each period. If there is
+                     * not enough data to represent a full period, then leave that
+                     * period's chartPrices and chartDates empty. */
+                    List<Double> curChartPrices;
+                    List<String> curChartDates;
+                    for (periodNdx = 0; periodNdx < chartPricesList.size(); periodNdx++) {
+                        if (SIZES[periodNdx] <= NUM_DATA_POINTS) {
+                            // If there are enough data points to fill this period
+
+                            curChartPrices = chartPricesList.get(periodNdx);
+                            curChartDates = chartDatesList.get(periodNdx);
+                            for (reverseNdx = NUM_DATA_POINTS - SIZES[periodNdx];
+                                 reverseNdx < NUM_DATA_POINTS;
+                                 reverseNdx += INCREMENTS[periodNdx]) {
+                                curChartPrices.add(allChartPrices[reverseNdx]);
+                                curChartDates.add(allChartDates[reverseNdx]);
+                            }
+                        } else {
+                            missingChartPeriods.add(BIG_CHART_PERIODS[periodNdx]);
+                        }
+                    }
+                }
+
+
+                // Update stock's charts for the "big" ChartPeriods
+                stock.setPrices_2weeks(chartPrices_2weeks);
+                stock.setPrices_1month(chartPrices_1month);
+                stock.setPrices_3months(chartPrices_3months);
+                stock.setPrices_1year(chartPrices_1year);
+                stock.setPrices_5years(chartPrices_5years);
+                stock.setDates_2weeks(chartDates_2weeks);
+                stock.setDates_1month(chartDates_1month);
+                stock.setDates_3months(chartDates_3months);
+                stock.setDates_1year(chartDates_1year);
+                stock.setDates_5years(chartDates_5years);
+            }
+
+            return status;
+        }
+
+        @Override
+        protected void onPostExecute(final Integer status) {
+            completionListener.get().onDownloadChartTaskCompleted(status, missingChartPeriods);
+        }
+
+
+        interface Status {
+
+            int GOOD = 0;
+            int IO_EXCEPTION_FOR_MW_ONLY = 1;
+            int IO_EXCEPTION_FOR_WSJ_ONLY = 2;
+            int IO_EXCEPTION_FOR_MW_AND_WSJ = 3;
+
+        }
+
+    }
+
+
+    private static final class DownloadStatsTask extends AsyncTask<Void, Integer, Integer> {
+
+        private AdvancedStock stock;
+        private final Set<Stat> missingStats = new HashSet<>();
+        private final WeakReference<DownloadStatsTaskListener> completionListener;
+
+        private DownloadStatsTask(final AdvancedStock stock,
+                                  final DownloadStatsTaskListener completionListener) {
+            this.stock = stock;
+            this.completionListener = new WeakReference<>(completionListener);
+        }
+
+        @Override
+        protected Integer doInBackground(final Void... voids) {
             final Document individualDoc;
             try {
                 individualDoc = Jsoup.connect("https://quotes.wsj.com/" + stock.getTicker()).get();
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
-                return ConcreteAdvancedStock.ERROR;
+                return Status.IO_EXCEPTION;
             }
 
             /* Get chart data for periods greater than one day from Wall Street
@@ -897,144 +1066,22 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             final Element module2 = contentFrame.selectFirst(
                     ":root > section[class$=section_1] > div.zonedModule[data-module-id=2]");
 
-            final String countryCode = module2.selectFirst(
-                    ":root > input#quote_country_code").ownText();
-            final String exchangeCode = module2.selectFirst(
-                    ":root > input#quote_exchange_code").ownText();
-            final String quoteType = module2.selectFirst(
-                    ":root > input#quote_type").ownText();
-
-            final LocalDate today = LocalDate.now();
-            /* Deduct extra two weeks because it doesn't hurt and ensures that the URL we create
-             * doesn't incorrectly believe that there isn't enough data for the five year chart. */
-            final LocalDate fiveYearsAgo = today.minusYears(5).minusWeeks(2);
-            final int period_5years = (int) ChronoUnit.DAYS.between(fiveYearsAgo, today);
-
-            // Pad zeros on the left if necessary
-            final String wsj_todayDateStr = String.format(Locale.US, "%d/%d/%d",
-                    today.getMonthValue(), today.getDayOfMonth(), today.getYear());
-            final String wsj_5yearsAgoDateStr = String.format(Locale.US, "%d/%d/%d",
-                    fiveYearsAgo.getMonthValue(), fiveYearsAgo.getDayOfMonth(), fiveYearsAgo.getYear());
-
-            /* If the WSJ URL parameters (ie. start date) request data from dates that
-             * are prior to a stock's existence, then the WSJ response delivers all
-             * historical data available for the stock. Because five years is the largest
-             * chart period we are using, data for the smaller periods can be grabbed
-             * from the five year WSJ response page. The actual number of data points
-             * that exists for a stock can be determined by parsing the WSJ response and
-             * counting the number of certain elements (ie. table rows). */
-            final String wsj_url_5years = String.format(Locale.US,
-                    "https://quotes.wsj.com/ajax/historicalprices/4/%s?MOD_VIEW=page" +
-                            "&ticker=%s&country=%s&exchange=%s&instrumentType=%s&num_rows=%d" +
-                            "&range_days=%d&startDate=%s&endDate=%s",
-                    stock.getTicker(), stock.getTicker(), countryCode, exchangeCode, quoteType,
-                    period_5years, period_5years, wsj_5yearsAgoDateStr, wsj_todayDateStr);
-
-
-            final List<Double> chartPrices_5years = new ArrayList<>();
-            final List<Double> chartPrices_1year = new ArrayList<>();
-            final List<Double> chartPrices_3months = new ArrayList<>();
-            final List<Double> chartPrices_1month = new ArrayList<>();
-            final List<Double> chartPrices_2weeks = new ArrayList<>();
-            final List<List<Double>> chartPricesList = new ArrayList<>(Arrays.asList(
-                    chartPrices_5years, chartPrices_1year, chartPrices_3months,
-                    chartPrices_1month, chartPrices_2weeks));
-            final List<String> chartDates_5years = new ArrayList<>();
-            final List<String> chartDates_1year = new ArrayList<>();
-            final List<String> chartDates_3months = new ArrayList<>();
-            final List<String> chartDates_1month = new ArrayList<>();
-            final List<String> chartDates_2weeks = new ArrayList<>();
-            final List<List<String>> chartDatesList = new ArrayList<>(Arrays.asList(
-                    chartDates_5years, chartDates_1year, chartDates_3months,
-                    chartDates_1month, chartDates_2weeks));
-
-            Document fiveYearDoc = null;
-            // Loop and fill chart prices for each chart period
-            try {
-                fiveYearDoc = Jsoup.connect(wsj_url_5years).get();
-            } catch (final IOException ioe) {
-                Log.e("IOException", ioe.getLocalizedMessage());
-                missingChartPeriods.addAll(Arrays.asList(BIG_CHART_PERIODS));
-            }
-
-            if (fiveYearDoc != null) {
-                int reverseNdx, periodNdx, i;
-
-                /* This is the number of data points needed for each period. The
-                 * stock market is only open on weekdays, and there are 9
-                 * holidays that the stock market closes for. So the stock
-                 * market is open for ~252 days a year. Use this value to
-                 * approximate the number of data points that should be in each
-                 * period. */
-                final int[] SIZES = {1260, 252, 63, 21, 10};
-                /* Don't get too many data points for long chart periods because
-                 * it takes too long and is unnecessary. These increments mean
-                 * that for chartPrices for periods greater than 1 day, the list
-                 * will either be empty (not enough data), or have a constant
-                 * size. The non-empty sizes are: [5 year]=140, [1 year]=126,
-                 * [3 month]=63, [1 month]=21, [2 weeks]=10. */
-                final int[] INCREMENTS = {9, 2, 1, 1, 1};
-
-                final Elements rowElmnts = fiveYearDoc.select(
-                        ":root > body > div > div#historical_data_table > " +
-                                "div > table > tbody > tr");
-                final int NUM_DATA_POINTS = rowElmnts.size() <= 1260 ? rowElmnts.size() : 1260;
-                final double[] allChartPrices = new double[NUM_DATA_POINTS];
-                final String[] allChartDates = new String[NUM_DATA_POINTS];
-
-                /* The most recent prices are at the top of the WSJ page (top of
-                 * the HTML table), and the oldest prices are at the bottom.
-                 * Fill allChartPrices starting with the last price elements so
-                 * that the oldest prices are the front of allPrices and the
-                 * recent prices are at the end. Do the same for allChartTimes. */
-                for (i = 0, reverseNdx = NUM_DATA_POINTS - 1; reverseNdx >= 0; i++, reverseNdx--) {
-                    /* Charts use the closing price of each day. The closing
-                     * price is the 5th column in each row. The date is the 1st
-                     * column in each row. */
-                    allChartPrices[i] = parseDouble(rowElmnts.get(reverseNdx).selectFirst(
-                            ":root > :eq(4)").ownText());
-                    allChartDates[i] = rowElmnts.get(reverseNdx).selectFirst(
-                            ":root > :eq(0)").ownText();
-                }
-
-                /* Fill chartPrices and chartDates for each period. If there is
-                 * not enough data to represent a full period, then leave that
-                 * period's chartPrices and chartDates empty. */
-                List<Double> curChartPrices;
-                List<String> curChartDates;
-                for (periodNdx = 0; periodNdx < chartPricesList.size(); periodNdx++) {
-                    if (SIZES[periodNdx] <= NUM_DATA_POINTS) {
-                        // If there are enough data points to fill this period
-
-                        curChartPrices = chartPricesList.get(periodNdx);
-                        curChartDates = chartDatesList.get(periodNdx);
-                        for (reverseNdx = NUM_DATA_POINTS - SIZES[periodNdx];
-                             reverseNdx < NUM_DATA_POINTS;
-                             reverseNdx += INCREMENTS[periodNdx]) {
-                            curChartPrices.add(allChartPrices[reverseNdx]);
-                            curChartDates.add(allChartDates[reverseNdx]);
-                        }
-                    } else {
-                        missingChartPeriods.add(BIG_CHART_PERIODS[periodNdx]);
-                    }
-                }
-            }
-
 
             /* Get non-chart data. */
             final Element mainData = module2.selectFirst(
                     "ul[class$=info_main]");
+            final double price, changePoint, changePercent, prevClose;
             // Remove ',' or '%' that could be in strings
-            final double price = parseDouble(mainData.selectFirst(
+            price = parseDouble(mainData.selectFirst(
                     ":root > li[class$=quote] > span.curr_price > " +
                             "span > span#quote_val").ownText().replaceAll("[^0-9.]+", ""));
             final Elements diffs = mainData.select(
                     ":root > li[class$=diff] > span > span");
-            final double changePoint = parseDouble(
+            changePoint = parseDouble(
                     diffs.get(0).ownText().replaceAll("[^0-9.-]+", ""));
-            final double changePercent = parseDouble(
+            changePercent = parseDouble(
                     diffs.get(1).ownText().replaceAll("[^0-9.-]+", ""));
-            final double prevClose = parseDouble(
+            prevClose = parseDouble(
                     module2.selectFirst(
                             ":root > div > div[id$=divId] > div[class$=compare] > " +
                                     "div[class$=compare_data] > ul > li:eq(1) > " +
@@ -1043,41 +1090,26 @@ public final class IndividualStockActivity extends AppCompatActivity implements
              * exists and has value 0. */
             if (prevClose == 0) {
                 missingStats.add(Stat.PREV_CLOSE);
+            } else {
+                stock.setPrevClose(prevClose);
             }
+            stock.setPrice(price);
+            stock.setChangePoint(changePoint);
+            stock.setChangePercent(changePercent);
 
 
-            /* The 1 day data is gathered from the Market Watch multi stock
-             * page. The values given on that page can be slightly off by
-             * minutes. For example, the Market Watch multi stock page may
-             * correctly say that AAPL closed at $171.00, but the value used for
-             * the Market Watch graph (which is where we're getting the 1 day
-             * graph data) may say that the AAPL price at 4:00pm (time of close)
-             * is $171.21; this issue occurs if AAPL's is changing at the end of
-             * the open trading period and into the after hours period; for this
-             * example, it is likely that around the time of 4:00pm, AAPL's
-             * price moved toward $171.21 (or at least increased from its
-             * closing price). The largest problem that this small price
-             * difference causes is that a user could be scrubbing through the
-             * 1 day graph, and notice that the price at 4:00pm is different
-             * from the closing price - this also causes the change values at
-             * 4:00pm to be nonzero, which is incorrect. Fix this issue by
-             * manually setting the price at 4:00pm to the price at close for
-             * stocks that have 1 day chart data up to at least 4:00pm. Recall
-             * that in the 1 day chart, the prices are taken every 5 minutes,
-             * starting at 9:30am - the 4:00pm price is at index 78. Now that we
-             * have the price at close (price), fix the issue in the 1 day chart
-             * data. */
-            if (chartPrices_1day.size() >= 78) {
-                chartPrices_1day.set(78, price);
-            }
+            final Element subData = mainData.nextElementSibling();
+            boolean stockHasAhVals = subData.className().endsWith("info_sub");
 
+            final Stock.State state;
+            final String stateStr;
+            if (stockHasAhVals) {
+                // Ensure stock is the correct type
+                if (!(stock instanceof StockWithAhVals)) {
+                    stock = new ConcreteAdvancedStockWithAhVals(stock);
+                }
 
-            final double ahPrice, ahChangePoint, ahChangePercent;
-            if (state == AFTER_HOURS || state == PREMARKET) {
-                // Equivalent to checking if this stock instanceof StockWithAhVals
-                // After hours values are live values, and regular values are values at close
-                final Element subData = module2.selectFirst(
-                        "ul[class$=info_sub] > li[class]");
+                final double ahPrice, ahChangePoint, ahChangePercent;
                 // Remove ',' or '%' that could be in strings
                 ahPrice = parseDouble(subData.selectFirst(
                         "span#ms_quote_val").ownText().replaceAll("[^0-9.]+", ""));
@@ -1085,17 +1117,26 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                         "span[id] > span");
                 ahChangePoint = parseDouble(ah_diffs.get(0).ownText().replaceAll("[^0-9.-]+", ""));
                 ahChangePercent = parseDouble(ah_diffs.get(1).ownText().replaceAll("[^0-9.-]+", ""));
+                final StockWithAhVals ahStock = (StockWithAhVals) stock;
+                ahStock.setAfterHoursPrice(ahPrice);
+                ahStock.setAfterHoursChangePoint(ahChangePoint);
+                ahStock.setAfterHoursChangePercent(ahChangePercent);
+
+                stateStr = subData.selectFirst("span").ownText();
+                state = stateStr.equals("AFTER HOURS") ? AFTER_HOURS : PREMARKET;
             } else {
-                // Initialize unused data
-                ahPrice = -1;
-                ahChangePoint = -1;
-                ahChangePercent = -1;
+                // Ensure stock is the correct type
+                if (stock instanceof StockWithAhVals) {
+                    stock = new ConcreteAdvancedStock(stock);
+                }
+
+                stateStr = mainData.selectFirst("span.timestamp_label").ownText();
+                state = stateStr.equals("REAL TIME") ? OPEN : CLOSED;
             }
+            stock.setState(state);
 
 
             String strBuff;
-            final String NA = "N/A";
-
 
             /* Values in the table (keyData1) can be either a real value (i.e.
              * "310,540 - 313,799"), or something else (i.e. empty string). It
@@ -1110,8 +1151,8 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             strBuff = keyData1.get(1).ownText();
             if (!strBuff.isEmpty() && Util.Char.isDigitOrDec(strBuff.charAt(0))) {
                 avgVolume = strBuff;
+                stock.setAverageVolume(avgVolume);
             } else {
-                avgVolume = NA;
                 missingStats.add(Stat.AVG_VOLUME);
             }
 
@@ -1122,9 +1163,9 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 final String[] todaysRange = strBuff.split("\\s-\\s");
                 todaysLow = parseDouble(todaysRange[0].replaceAll("[^0-9.]+", ""));
                 todaysHigh = parseDouble(todaysRange[1].replaceAll("[^0-9.]+", ""));
+                stock.setTodaysLow(todaysLow);
+                stock.setTodaysHigh(todaysHigh);
             } else {
-                todaysLow = -1;
-                todaysHigh = -1;
                 missingStats.add(Stat.TODAYS_RANGE);
             }
 
@@ -1135,9 +1176,9 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 final String[] fiftyTwoWeekRange = strBuff.split("\\s-\\s");
                 fiftyTwoWeekLow = parseDouble(fiftyTwoWeekRange[0].replaceAll("[^0-9.]+", ""));
                 fiftyTwoWeekHigh = parseDouble(fiftyTwoWeekRange[1].replaceAll("[^0-9.]+", ""));
+                stock.setFiftyTwoWeekLow(fiftyTwoWeekLow);
+                stock.setFiftyTwoWeekHigh(fiftyTwoWeekHigh);
             } else {
-                fiftyTwoWeekLow = -1;
-                fiftyTwoWeekHigh = -1;
                 missingStats.add(Stat.FIFTY_TWO_WEEK_RANGE);
             }
 
@@ -1158,8 +1199,8 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             strBuff = keyData2.get(0).ownText();
             if (Util.Char.isDigitOrDecOrMinus(strBuff.charAt(0))) {
                 peRatio = parseDouble(strBuff.replaceAll("[^0-9.-]+", ""));
+                stock.setPeRatio(peRatio);
             } else {
-                peRatio = -1;
                 missingStats.add(Stat.PE_RATIO);
             }
 
@@ -1167,8 +1208,8 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             strBuff = keyData2.get(1).ownText();
             if (Util.Char.isDigitOrDecOrMinus(strBuff.charAt(0))) {
                 eps = parseDouble(strBuff.replaceAll("[^0-9.-]+", ""));
+                stock.setEps(eps);
             } else {
-                eps = -1;
                 missingStats.add(Stat.EPS);
             }
 
@@ -1177,8 +1218,8 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             strBuff = keyData2.get(2).ownText();
             if (Util.Char.isDigitOrDec(strBuff.charAt(0))) {
                 marketCap = strBuff;
+                stock.setMarketCap(marketCap);
             } else {
-                marketCap = NA;
                 missingStats.add(Stat.MARKET_CAP);
             }
 
@@ -1186,8 +1227,8 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             strBuff = keyData2.get(5).ownText();
             if (Util.Char.isDigitOrDecOrMinus(strBuff.charAt(0))) {
                 yield = parseDouble(strBuff.replaceAll("[^0-9.-]+", ""));
+                stock.setYield(yield);
             } else {
-                yield = -1;
                 missingStats.add(Stat.YIELD);
             }
 
@@ -1199,37 +1240,25 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             // If there is no description, the description element (p.txtBody) doesn't exist
             if (descriptionElmnt != null) {
                 description = descriptionElmnt.ownText();
+                stock.setDescription(description);
             } else {
-                description = NA;
                 missingStats.add(Stat.DESCRIPTION);
             }
 
-
-            if (state == AFTER_HOURS || state == PREMARKET) {
-                // Equivalent to checking if this stock instanceof StockWithAhVals
-                ret = new ConcreteAdvancedStockWithAhVals(state, stock.getTicker(), stock.getName(),
-                        price, changePoint, changePercent, ahPrice, ahChangePoint, ahChangePercent,
-                        todaysLow, todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap, prevClose,
-                        peRatio, eps, yield, avgVolume, description, chartPrices_1day, chartPrices_2weeks,
-                        chartPrices_1month, chartPrices_3months, chartPrices_1year,
-                        chartPrices_5years, chartDates_2weeks, chartDates_1month, chartDates_3months,
-                        chartDates_1year, chartDates_5years);
-            } else {
-                ret = new ConcreteAdvancedStock(state, stock.getTicker(), stock.getName(),
-                        price, changePoint, changePercent,
-                        todaysLow, todaysHigh, fiftyTwoWeekLow, fiftyTwoWeekHigh, marketCap,
-                        prevClose, peRatio, eps, yield, avgVolume, description, chartPrices_1day,
-                        chartPrices_2weeks, chartPrices_1month, chartPrices_3months,
-                        chartPrices_1year, chartPrices_5years, chartDates_2weeks, chartDates_1month,
-                        chartDates_3months, chartDates_1year, chartDates_5years);
-            }
-
-            return ret;
+            return Status.GOOD;
         }
 
         @Override
-        protected void onPostExecute(final AdvancedStock stock) {
-            completionListener.get().onDownloadStockTaskCompleted(stock, missingStats, missingChartPeriods);
+        protected void onPostExecute(final Integer status) {
+            completionListener.get().onDownloadStatsTaskCompleted(status, missingStats);
+        }
+
+
+        interface Status {
+
+            int GOOD = 0;
+            int IO_EXCEPTION = 0;
+
         }
 
     }

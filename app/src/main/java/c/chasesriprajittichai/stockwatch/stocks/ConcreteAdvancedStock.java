@@ -14,29 +14,29 @@ public final class ConcreteAdvancedStock extends ConcreteStock implements Advanc
             new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(),
             new ArrayList<>());
 
-    private final double priceAtOpen;
-    private final double todaysLow;
-    private final double todaysHigh;
-    private final double fiftyTwoWeekLow;
-    private final double fiftyTwoWeekHigh;
-    private final String marketCap;
-    private final double prevClose;
-    private final double peRatio;
-    private final double eps;
-    private final double yield;
-    private final String avgVolume;
-    private final String description;
-    private final List<Double> prices_1day;
-    private final List<Double> prices_2weeks;
-    private final List<Double> prices_1month;
-    private final List<Double> prices_3months;
-    private final List<Double> prices_1year;
-    private final List<Double> prices_5years;
-    private final List<String> dates_2weeks;
-    private final List<String> dates_1month;
-    private final List<String> dates_3months;
-    private final List<String> dates_1year;
-    private final List<String> dates_5years;
+    private double priceAtOpen;
+    private double todaysLow;
+    private double todaysHigh;
+    private double fiftyTwoWeekLow;
+    private double fiftyTwoWeekHigh;
+    private String marketCap;
+    private double prevClose;
+    private double peRatio;
+    private double eps;
+    private double yield;
+    private String avgVolume;
+    private String description;
+    private List<Double> prices_1day;
+    private List<Double> prices_2weeks;
+    private List<Double> prices_1month;
+    private List<Double> prices_3months;
+    private List<Double> prices_1year;
+    private List<Double> prices_5years;
+    private List<String> dates_2weeks;
+    private List<String> dates_1month;
+    private List<String> dates_3months;
+    private List<String> dates_1year;
+    private List<String> dates_5years;
 
     public ConcreteAdvancedStock(final State state, final String ticker, final String name,
                                  final double price, final double changePoint,
@@ -77,14 +77,64 @@ public final class ConcreteAdvancedStock extends ConcreteStock implements Advanc
         this.dates_5years = dates_5years;
     }
 
+    public ConcreteAdvancedStock(final Stock stock) {
+        super(stock);
+    }
+
+    public ConcreteAdvancedStock(final State state, final String ticker,
+                                 final String name, final double price,
+                                 final double changePoint, final double changePercent) {
+        super(state, ticker, name, price, changePoint, changePercent);
+    }
+
+    public ConcreteAdvancedStock(final AdvancedStock stock) {
+        super(stock.getState(), stock.getTicker(), stock.getName(),
+                stock.getPrice(), stock.getChangePoint(), stock.getChangePercent());
+        priceAtOpen = stock.getPriceAtOpen();
+        todaysLow = stock.getTodaysLow();
+        todaysHigh = stock.getTodaysHigh();
+        fiftyTwoWeekLow = stock.getFiftyTwoWeekLow();
+        fiftyTwoWeekHigh = stock.getFiftyTwoWeekHigh();
+        marketCap = stock.getMarketCap();
+        prevClose = stock.getPrevClose();
+        peRatio = stock.getPeRatio();
+        eps = stock.getEps();
+        yield = stock.getYield();
+        avgVolume = stock.getAverageVolume();
+        description = stock.getDescription();
+        prices_1day = stock.getPrices_1day();
+        prices_2weeks = stock.getPrices_2weeks();
+        prices_1month = stock.getPrices_1month();
+        prices_3months = stock.getPrices_3months();
+        prices_1year = stock.getPrices_1year();
+        prices_5years = stock.getPrices_5years();
+        dates_2weeks = stock.getDates_2weeks();
+        dates_1month = stock.getDates_1month();
+        dates_3months = stock.getDates_3months();
+        dates_1year = stock.getDates_1year();
+        dates_5years = stock.getDates_5years();
+    }
+
+
     @Override
     public double getPriceAtOpen() {
         return priceAtOpen;
     }
 
     @Override
+    public void setPriceAtOpen(final double priceAtOpen) {
+        this.priceAtOpen = priceAtOpen;
+    }
+
+
+    @Override
     public double getTodaysLow() {
         return todaysLow;
+    }
+
+    @Override
+    public void setTodaysLow(final double todaysLow) {
+        this.todaysLow = todaysLow;
     }
 
     @Override
@@ -93,8 +143,18 @@ public final class ConcreteAdvancedStock extends ConcreteStock implements Advanc
     }
 
     @Override
+    public void setTodaysHigh(final double todaysHigh) {
+        this.todaysHigh = todaysHigh;
+    }
+
+    @Override
     public double getFiftyTwoWeekLow() {
         return fiftyTwoWeekLow;
+    }
+
+    @Override
+    public void setFiftyTwoWeekLow(final double fiftyTwoWeekLow) {
+        this.fiftyTwoWeekLow = fiftyTwoWeekLow;
     }
 
     @Override
@@ -103,8 +163,18 @@ public final class ConcreteAdvancedStock extends ConcreteStock implements Advanc
     }
 
     @Override
+    public void setFiftyTwoWeekHigh(final double fiftyTwoWeekHigh) {
+        this.fiftyTwoWeekHigh = fiftyTwoWeekHigh;
+    }
+
+    @Override
     public String getMarketCap() {
         return marketCap;
+    }
+
+    @Override
+    public void setMarketCap(final String marketCap) {
+        this.marketCap = marketCap;
     }
 
     @Override
@@ -113,8 +183,18 @@ public final class ConcreteAdvancedStock extends ConcreteStock implements Advanc
     }
 
     @Override
+    public void setPrevClose(final double prevClose) {
+        this.prevClose = prevClose;
+    }
+
+    @Override
     public double getPeRatio() {
         return peRatio;
+    }
+
+    @Override
+    public void setPeRatio(final double peRatio) {
+        this.peRatio = peRatio;
     }
 
     @Override
@@ -123,8 +203,18 @@ public final class ConcreteAdvancedStock extends ConcreteStock implements Advanc
     }
 
     @Override
+    public void setEps(final double eps) {
+        this.eps = eps;
+    }
+
+    @Override
     public double getYield() {
         return yield;
+    }
+
+    @Override
+    public void setYield(final double yield) {
+        this.yield = yield;
     }
 
     @Override
@@ -133,8 +223,18 @@ public final class ConcreteAdvancedStock extends ConcreteStock implements Advanc
     }
 
     @Override
+    public void setAverageVolume(final String avgVolume) {
+        this.avgVolume = avgVolume;
+    }
+
+    @Override
     public String getDescription() {
         return description;
+    }
+
+    @Override
+    public void setDescription(final String description) {
+        this.description = description;
     }
 
     @Override
@@ -202,8 +302,18 @@ public final class ConcreteAdvancedStock extends ConcreteStock implements Advanc
     }
 
     @Override
+    public void setPrices_1day(final List<Double> prices) {
+        prices_1day = prices;
+    }
+
+    @Override
     public List<Double> getPrices_2weeks() {
         return prices_2weeks;
+    }
+
+    @Override
+    public void setPrices_2weeks(final List<Double> prices) {
+        prices_2weeks = prices;
     }
 
     @Override
@@ -212,8 +322,18 @@ public final class ConcreteAdvancedStock extends ConcreteStock implements Advanc
     }
 
     @Override
+    public void setPrices_1month(final List<Double> prices) {
+        prices_1month = prices;
+    }
+
+    @Override
     public List<Double> getPrices_3months() {
         return prices_3months;
+    }
+
+    @Override
+    public void setPrices_3months(final List<Double> prices) {
+        prices_3months = prices;
     }
 
     @Override
@@ -222,8 +342,18 @@ public final class ConcreteAdvancedStock extends ConcreteStock implements Advanc
     }
 
     @Override
+    public void setPrices_1year(final List<Double> prices) {
+        prices_1year = prices;
+    }
+
+    @Override
     public List<Double> getPrices_5years() {
         return prices_5years;
+    }
+
+    @Override
+    public void setPrices_5years(final List<Double> prices) {
+        prices_5years = prices;
     }
 
     @Override
@@ -232,8 +362,18 @@ public final class ConcreteAdvancedStock extends ConcreteStock implements Advanc
     }
 
     @Override
+    public void setDates_2weeks(final List<String> dates) {
+        dates_2weeks = dates;
+    }
+
+    @Override
     public List<String> getDates_1month() {
         return dates_1month;
+    }
+
+    @Override
+    public void setDates_1month(final List<String> dates) {
+        dates_1month = dates;
     }
 
     @Override
@@ -242,13 +382,28 @@ public final class ConcreteAdvancedStock extends ConcreteStock implements Advanc
     }
 
     @Override
+    public void setDates_3months(final List<String> dates) {
+        dates_3months = dates;
+    }
+
+    @Override
     public List<String> getDates_1year() {
         return dates_1year;
     }
 
     @Override
+    public void setDates_1year(final List<String> dates) {
+        dates_1year = dates;
+    }
+
+    @Override
     public List<String> getDates_5years() {
         return dates_5years;
+    }
+
+    @Override
+    public void setDates_5years(final List<String> dates) {
+        dates_5years = dates;
     }
 
 }

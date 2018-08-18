@@ -1,5 +1,8 @@
 package c.chasesriprajittichai.stockwatch.stocks;
 
+import android.text.NoCopySpan;
+
+
 /**
  * Some useful information about this class can be found at {@link
  * ConcreteStockWithAhVals}.
@@ -22,6 +25,15 @@ public class ConcreteStock implements Stock, StockInHomeActivity {
         this.price = price;
         this.changePoint = changePoint;
         this.changePercent = changePercent;
+    }
+
+    public ConcreteStock(final Stock stock) {
+        state = stock.getState();
+        ticker = stock.getTicker();
+        name = stock.getName();
+        price = stock.getPrice();
+        changePoint = stock.getChangePoint();
+        changePercent = stock.getChangePercent();
     }
 
     @Override

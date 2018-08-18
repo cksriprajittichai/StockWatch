@@ -86,54 +86,91 @@
 
         </LinearLayout>
 
-        <c.chasesriprajittichai.stockwatch.CustomSparkView
-            android:id="@+id/sparkView_individual"
-            android:layout_width="match_parent"
-            android:layout_height="220dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginTop="16dp"
-            app:layout_constraintTop_toTopOf="parent"
-            app:spark_lineColor="@color/colorAccent"
-            app:spark_scrubEnabled="true"
-            app:spark_scrubLineWidth="1dp" />
-
-        <TextView
-            android:id="@+id/textView_chartsUnavailable"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginBottom="24dp"
-            android:layout_marginTop="24dp"
-            android:text="@string/chartsUnavailable"
-            android:textAppearance="?android:textAppearanceSmall"
-            android:textColor="@android:color/white"
-            android:textSize="16sp" />
-
         <!--
-        Make height larger than wrap_content because if wrap_content is used, the HorizontalPicker
-        is too small, and can be difficult to interact with (difficult to touch because it's so
-        small). It can also be difficult to touch because it the same background color as it's
-        parent, making its bounds unclear.
+        Wrap the SparkView and "charts unavailable" TextView in a
+        constant-height linear layout, so that in case the SparkView isn't shown
+        (there are no charts), the other size that it occupied doesn't change;
+        prevent the layout below the SparkView from being shifted if the
+        SparkView isn't shown. A constant height LinearLayout allows us to
+        freely make views within the layout VISIBLE or GONE, without changing
+        the parent layout. 250dp = the height and vertical margins of each the
+        views that would be VISIBLE if the SparkView is shown.
         -->
-        <com.wefika.horizontalpicker.HorizontalPicker
-            android:id="@+id/horizontalPicker_chartPeriod_individual"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="24dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginTop="4dp"
-            android:textColor="@android:color/darker_gray"
-            android:textSize="14sp"
-            app:sideItems="2" />
+            android:layout_height="250dp"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical">
 
-        <!--Underline under selected chart period of horizontal picker-->
-        <View
-            android:id="@+id/view_chartPeriodPickerUnderline_individual"
-            android:layout_width="16dp"
-            android:layout_height="2dp"
-            android:layout_gravity="center"
-            android:background="@android:color/darker_gray" />
+            <!--
+            layout_gravity="center" centers it horizontally, but not vertically
+            -->
+            <ProgressBar
+                android:id="@+id/progressBar_loadingCharts"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="80dp" />
+
+            <!--Init as GONE-->
+            <!--
+            layout_gravity="center" centers it horizontally, but not vertically
+            -->
+            <TextView
+                android:id="@+id/textView_chartsUnavailable"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginTop="80dp"
+                android:text="@string/chartsUnavailable"
+                android:textAppearance="?android:textAppearanceSmall"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                android:visibility="gone" />
+
+            <!--Init as GONE-->
+            <c.chasesriprajittichai.stockwatch.CustomSparkView
+                android:id="@+id/sparkView_individual"
+                android:layout_width="match_parent"
+                android:layout_height="220dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginStart="8dp"
+                android:visibility="gone"
+                app:spark_lineColor="@color/colorAccent"
+                app:spark_scrubEnabled="true"
+                app:spark_scrubLineWidth="1dp" />
+
+            <!--Init as GONE-->
+            <!--
+            Make height larger than wrap_content because if wrap_content is used,
+            the HorizontalPicker is too small, and can be difficult to interact
+            with (difficult to touch because it's so small). It can also be
+            difficult to touch because it the same background color as it's
+            parent, making its bounds unclear.
+            -->
+            <com.wefika.horizontalpicker.HorizontalPicker
+                android:id="@+id/horizontalPicker_chartPeriod_individual"
+                android:layout_width="match_parent"
+                android:layout_height="24dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="4dp"
+                android:textColor="@android:color/darker_gray"
+                android:textSize="14sp"
+                android:visibility="gone"
+                app:sideItems="2" />
+
+            <!--Init as GONE-->
+            <!--Underline under selected chart period of horizontal picker-->
+            <View
+                android:id="@+id/view_chartPeriodPickerUnderline_individual"
+                android:layout_width="16dp"
+                android:layout_height="2dp"
+                android:layout_gravity="center"
+                android:background="@android:color/darker_gray"
+                android:visibility="gone" />
+
+        </LinearLayout>
 
         <View
             android:layout_width="match_parent"
@@ -162,8 +199,9 @@
             android:rowCount="5">
 
             <!--
-            To give two vertical LinearLayouts the same amount of horizontal space (creating two
-            columns), set both of their layout widths to 0, and their layout weights to 1
+            To give two vertical LinearLayouts the same amount of horizontal
+            space (creating two columns), set both of their layout widths to 0,
+            and their layout weights to 1
             -->
 
             <LinearLayout
@@ -188,6 +226,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:includeFontPadding="false"
+                    android:text="@string/tab_hyphen"
                     android:textAppearance="?android:textAppearanceMedium"
                     android:textColor="@android:color/white" />
 
@@ -217,6 +256,7 @@
                     android:layout_height="match_parent"
                     android:layout_marginTop="0dp"
                     android:includeFontPadding="false"
+                    android:text="@string/tab_hyphen"
                     android:textAppearance="?android:textAppearanceMedium"
                     android:textColor="@android:color/white" />
 
@@ -244,6 +284,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:includeFontPadding="false"
+                    android:text="@string/tab_hyphen"
                     android:textAppearance="?android:textAppearanceMedium"
                     android:textColor="@android:color/white" />
 
@@ -271,6 +312,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:includeFontPadding="false"
+                    android:text="@string/tab_hyphen"
                     android:textAppearance="?android:textAppearanceMedium"
                     android:textColor="@android:color/white" />
 
@@ -298,6 +340,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:includeFontPadding="false"
+                    android:text="@string/tab_hyphen"
                     android:textAppearance="?android:textAppearanceMedium"
                     android:textColor="@android:color/white" />
 
@@ -325,6 +368,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:includeFontPadding="false"
+                    android:text="@string/tab_hyphen"
                     android:textAppearance="?android:textAppearanceMedium"
                     android:textColor="@android:color/white" />
 
@@ -352,6 +396,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:includeFontPadding="false"
+                    android:text="@string/tab_hyphen"
                     android:textAppearance="?android:textAppearanceMedium"
                     android:textColor="@android:color/white" />
 
@@ -379,6 +424,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:includeFontPadding="false"
+                    android:text="@string/tab_hyphen"
                     android:textAppearance="?android:textAppearanceMedium"
                     android:textColor="@android:color/white" />
 
@@ -406,6 +452,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:includeFontPadding="false"
+                    android:text="@string/tab_hyphen"
                     android:textAppearance="?android:textAppearanceMedium"
                     android:textColor="@android:color/white" />
 
@@ -433,6 +480,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:includeFontPadding="false"
+                    android:text="@string/tab_hyphen"
                     android:textAppearance="?android:textAppearanceMedium"
                     android:textColor="@android:color/white" />
 
@@ -455,6 +503,7 @@
             android:layout_marginStart="8dp"
             android:layout_marginTop="8dp"
             android:gravity="start"
+            android:text="@string/loading_description_ellipsis"
             android:textAppearance="?android:textAppearanceSmall"
             android:textColor="@android:color/white"
             android:textSize="16sp" />

@@ -153,7 +153,6 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
     }
 
-
     @BindView(R.id.recyclerView_home) RecyclerView rv;
 
     private ConcreteStockWithAhValsList stocks;
@@ -576,7 +575,6 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
         }
         prefs.edit().putString("Data TSV", TextUtils.join("\t", dataArr)).apply();
     }
-
 
     @Override
     public void onDestroy() {

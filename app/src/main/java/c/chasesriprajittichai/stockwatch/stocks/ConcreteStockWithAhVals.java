@@ -37,6 +37,22 @@ public class ConcreteStockWithAhVals
         ahChangePercent = afterHoursChangePercent;
     }
 
+    public ConcreteStockWithAhVals(final Stock stock) {
+        super(stock.getState(), stock.getTicker(), stock.getName(),
+                stock.getPrice(), stock.getChangePoint(), stock.getChangePercent());
+        
+        if (stock instanceof StockWithAhVals) {
+            final StockWithAhVals ahStock = (StockWithAhVals) stock;
+            ahPrice = ahStock.getAfterHoursPrice();
+            ahChangePoint = ahStock.getAfterHoursChangePoint();
+            ahChangePercent = ahStock.getAfterHoursChangePercent();
+        } else {
+            ahPrice = 0;
+            ahChangePoint = 0;
+            ahChangePercent = 0;
+        }
+    }
+
     /**
      * Because this is the only non-AdvancedStock used in HomeActivity, this
      * class must be able to represent stocks that should have after hours

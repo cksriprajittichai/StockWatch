@@ -37,6 +37,8 @@
 
     <string name="chartsUnavailable">Charts unavailable</string>
     <string name="descriptionNotFound">Description not found</string>
+    <string name="tab_hyphen">\t-</string>
+    <string name="loading_description_ellipsis">Loading description\u2026</string>
 
     <string-array name="chartPeriods">
         <item>1D</item>
