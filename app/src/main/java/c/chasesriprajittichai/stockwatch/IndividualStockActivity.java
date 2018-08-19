@@ -14,6 +14,7 @@ import android.view.View;
 import android.view.ViewConfiguration;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.TextSwitcher;
 import android.widget.TextView;
 
 import com.jakewharton.threetenabp.AndroidThreeTen;
@@ -88,17 +89,17 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     @BindView(R.id.sparkView_individual) CustomSparkView sparkView;
     @BindView(R.id.horizontalPicker_chartPeriod_individual) HorizontalPicker chartPeriodPicker;
     @BindView(R.id.view_chartPeriodPickerUnderline_individual) View chartPeriodPickerUnderline;
-    @BindView(R.id.textView_todaysLow_individual) TextView todaysLow;
-    @BindView(R.id.textView_todaysHigh_individual) TextView todaysHigh;
-    @BindView(R.id.textView_fiftyTwoWeekLow_individual) TextView fiftyTwoWeekLow;
-    @BindView(R.id.textView_fiftyTwoWeekHigh_individual) TextView fiftyTwoWeekHigh;
-    @BindView(R.id.textView_marketCap_individual) TextView marketCap;
-    @BindView(R.id.textView_prevClose_individual) TextView prevClose;
-    @BindView(R.id.textView_peRatio_individual) TextView peRatio;
-    @BindView(R.id.textView_eps_individual) TextView eps;
-    @BindView(R.id.textView_yield_individual) TextView yield;
-    @BindView(R.id.textView_averageVolume_individual) TextView avgVolume;
-    @BindView(R.id.textView_description_individual) TextView description;
+    @BindView(R.id.textSwitcher_todaysLow) TextSwitcher todaysLow;
+    @BindView(R.id.textSwitcher_todaysHigh) TextSwitcher todaysHigh;
+    @BindView(R.id.textSwitcher_fiftyTwoWeekLow) TextSwitcher fiftyTwoWeekLow;
+    @BindView(R.id.textSwitcher_fiftyTwoWeekHigh) TextSwitcher fiftyTwoWeekHigh;
+    @BindView(R.id.textSwitcher_marketCap) TextSwitcher marketCap;
+    @BindView(R.id.textSwitcher_prevClose) TextSwitcher prevClose;
+    @BindView(R.id.textSwitcher_peRatio) TextSwitcher peRatio;
+    @BindView(R.id.textSwitcher_eps) TextSwitcher eps;
+    @BindView(R.id.textSwitcher_yield) TextSwitcher yield;
+    @BindView(R.id.textSwitcher_averageVolume) TextSwitcher avgVolume;
+    @BindView(R.id.textSwitcher_description) TextSwitcher description;
 
     private AdvancedStock stock;
     private boolean wasInFavoritesInitially;
@@ -181,51 +182,51 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     public void onDownloadStatsTaskCompleted(final int status,
                                              final Set<Stat> missingStats) {
         if (!missingStats.contains(Stat.TODAYS_RANGE)) {
-            todaysLow.setText(getString(R.string.double2dec, this.stock.getTodaysLow()));
-            todaysHigh.setText(getString(R.string.double2dec, this.stock.getTodaysHigh()));
+            todaysLow.setText(getString(R.string.double2dec, stock.getTodaysLow()));
+            todaysHigh.setText(getString(R.string.double2dec, stock.getTodaysHigh()));
         } else {
             todaysLow.setText("N/A");
             todaysHigh.setText("N/A");
         }
         if (!missingStats.contains(Stat.FIFTY_TWO_WEEK_RANGE)) {
-            fiftyTwoWeekLow.setText(getString(R.string.double2dec, this.stock.getFiftyTwoWeekLow()));
-            fiftyTwoWeekHigh.setText(getString(R.string.double2dec, this.stock.getFiftyTwoWeekHigh()));
+            fiftyTwoWeekLow.setText(getString(R.string.double2dec, stock.getFiftyTwoWeekLow()));
+            fiftyTwoWeekHigh.setText(getString(R.string.double2dec, stock.getFiftyTwoWeekHigh()));
         } else {
             fiftyTwoWeekLow.setText("N/A");
             fiftyTwoWeekHigh.setText("N/A");
         }
         if (!missingStats.contains(Stat.MARKET_CAP)) {
-            marketCap.setText(getString(R.string.string, this.stock.getMarketCap()));
+            marketCap.setText(getString(R.string.string, stock.getMarketCap()));
         } else {
             marketCap.setText(getString(R.string.string, "N/A"));
         }
         if (!missingStats.contains(Stat.PREV_CLOSE)) {
-            prevClose.setText(getString(R.string.double2dec, this.stock.getPrevClose()));
+            prevClose.setText(getString(R.string.double2dec, stock.getPrevClose()));
         } else {
             prevClose.setText(getString(R.string.string, "N/A"));
         }
         if (!missingStats.contains(Stat.PE_RATIO)) {
-            peRatio.setText(getString(R.string.double2dec, this.stock.getPeRatio()));
+            peRatio.setText(getString(R.string.double2dec, stock.getPeRatio()));
         } else {
             peRatio.setText(getString(R.string.string, "N/A"));
         }
         if (!missingStats.contains(Stat.EPS)) {
-            eps.setText(getString(R.string.double2dec, this.stock.getEps()));
+            eps.setText(getString(R.string.double2dec, stock.getEps()));
         } else {
             eps.setText(getString(R.string.string, "N/A"));
         }
         if (!missingStats.contains(Stat.YIELD)) {
-            yield.setText(getString(R.string.double2dec_percent, this.stock.getYield()));
+            yield.setText(getString(R.string.double2dec_percent, stock.getYield()));
         } else {
             yield.setText(getString(R.string.string, "N/A"));
         }
         if (!missingStats.contains(Stat.AVG_VOLUME)) {
-            avgVolume.setText(getString(R.string.string, this.stock.getAverageVolume()));
+            avgVolume.setText(getString(R.string.string, stock.getAverageVolume()));
         } else {
             avgVolume.setText(getString(R.string.string, "N/A"));
         }
         if (!missingStats.contains(Stat.DESCRIPTION)) {
-            description.setText(this.stock.getDescription());
+            description.setText(stock.getDescription());
         } else {
             description.setText(getString(R.string.descriptionNotFound));
         }

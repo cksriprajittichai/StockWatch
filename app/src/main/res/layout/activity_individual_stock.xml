@@ -221,14 +221,32 @@
                     android:textAppearance="?android:textAppearanceSmall"
                     android:textColor="@android:color/darker_gray" />
 
-                <TextView
-                    android:id="@+id/textView_todaysLow_individual"
+                <!--TextSwitcher needs two TextView children-->
+                <TextSwitcher
+                    android:id="@+id/textSwitcher_todaysLow"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:includeFontPadding="false"
-                    android:text="@string/tab_hyphen"
-                    android:textAppearance="?android:textAppearanceMedium"
-                    android:textColor="@android:color/white" />
+                    android:inAnimation="@android:anim/slide_in_left"
+                    android:outAnimation="@android:anim/slide_out_right">
+
+                    <!--Initially shown-->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="@string/tab_hyphen"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                    <!--Shown when stats are updated-->
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                </TextSwitcher>
 
             </LinearLayout>
 
@@ -250,15 +268,29 @@
                     android:textAppearance="?android:textAppearanceSmall"
                     android:textColor="@android:color/darker_gray" />
 
-                <TextView
-                    android:id="@+id/textView_todaysHigh_individual"
+                <TextSwitcher
+                    android:id="@+id/textSwitcher_todaysHigh"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:layout_marginTop="0dp"
-                    android:includeFontPadding="false"
-                    android:text="@string/tab_hyphen"
-                    android:textAppearance="?android:textAppearanceMedium"
-                    android:textColor="@android:color/white" />
+                    android:inAnimation="@android:anim/slide_in_left"
+                    android:outAnimation="@android:anim/slide_out_right">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="@string/tab_hyphen"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                </TextSwitcher>
 
             </LinearLayout>
 
@@ -279,14 +311,29 @@
                     android:textAppearance="?android:textAppearanceSmall"
                     android:textColor="@android:color/darker_gray" />
 
-                <TextView
-                    android:id="@+id/textView_fiftyTwoWeekLow_individual"
+                <TextSwitcher
+                    android:id="@+id/textSwitcher_fiftyTwoWeekLow"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:includeFontPadding="false"
-                    android:text="@string/tab_hyphen"
-                    android:textAppearance="?android:textAppearanceMedium"
-                    android:textColor="@android:color/white" />
+                    android:inAnimation="@android:anim/slide_in_left"
+                    android:outAnimation="@android:anim/slide_out_right">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="@string/tab_hyphen"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                </TextSwitcher>
 
             </LinearLayout>
 
@@ -307,14 +354,29 @@
                     android:textAppearance="?android:textAppearanceSmall"
                     android:textColor="@android:color/darker_gray" />
 
-                <TextView
-                    android:id="@+id/textView_fiftyTwoWeekHigh_individual"
+                <TextSwitcher
+                    android:id="@+id/textSwitcher_fiftyTwoWeekHigh"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:includeFontPadding="false"
-                    android:text="@string/tab_hyphen"
-                    android:textAppearance="?android:textAppearanceMedium"
-                    android:textColor="@android:color/white" />
+                    android:inAnimation="@android:anim/slide_in_left"
+                    android:outAnimation="@android:anim/slide_out_right">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="@string/tab_hyphen"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                </TextSwitcher>
 
             </LinearLayout>
 
@@ -335,14 +397,29 @@
                     android:textAppearance="?android:textAppearanceSmall"
                     android:textColor="@android:color/darker_gray" />
 
-                <TextView
-                    android:id="@+id/textView_marketCap_individual"
+                <TextSwitcher
+                    android:id="@+id/textSwitcher_marketCap"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:includeFontPadding="false"
-                    android:text="@string/tab_hyphen"
-                    android:textAppearance="?android:textAppearanceMedium"
-                    android:textColor="@android:color/white" />
+                    android:inAnimation="@android:anim/slide_in_left"
+                    android:outAnimation="@android:anim/slide_out_right">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="@string/tab_hyphen"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                </TextSwitcher>
 
             </LinearLayout>
 
@@ -363,14 +440,29 @@
                     android:textAppearance="?android:textAppearanceSmall"
                     android:textColor="@android:color/darker_gray" />
 
-                <TextView
-                    android:id="@+id/textView_prevClose_individual"
+                <TextSwitcher
+                    android:id="@+id/textSwitcher_prevClose"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:includeFontPadding="false"
-                    android:text="@string/tab_hyphen"
-                    android:textAppearance="?android:textAppearanceMedium"
-                    android:textColor="@android:color/white" />
+                    android:inAnimation="@android:anim/slide_in_left"
+                    android:outAnimation="@android:anim/slide_out_right">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="@string/tab_hyphen"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                </TextSwitcher>
 
             </LinearLayout>
 
@@ -391,14 +483,29 @@
                     android:textAppearance="?android:textAppearanceSmall"
                     android:textColor="@android:color/darker_gray" />
 
-                <TextView
-                    android:id="@+id/textView_peRatio_individual"
+                <TextSwitcher
+                    android:id="@+id/textSwitcher_peRatio"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:includeFontPadding="false"
-                    android:text="@string/tab_hyphen"
-                    android:textAppearance="?android:textAppearanceMedium"
-                    android:textColor="@android:color/white" />
+                    android:inAnimation="@android:anim/slide_in_left"
+                    android:outAnimation="@android:anim/slide_out_right">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="@string/tab_hyphen"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                </TextSwitcher>
 
             </LinearLayout>
 
@@ -419,14 +526,29 @@
                     android:textAppearance="?android:textAppearanceSmall"
                     android:textColor="@android:color/darker_gray" />
 
-                <TextView
-                    android:id="@+id/textView_eps_individual"
+                <TextSwitcher
+                    android:id="@+id/textSwitcher_eps"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:includeFontPadding="false"
-                    android:text="@string/tab_hyphen"
-                    android:textAppearance="?android:textAppearanceMedium"
-                    android:textColor="@android:color/white" />
+                    android:inAnimation="@android:anim/slide_in_left"
+                    android:outAnimation="@android:anim/slide_out_right">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="@string/tab_hyphen"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                </TextSwitcher>
 
             </LinearLayout>
 
@@ -447,14 +569,29 @@
                     android:textAppearance="?android:textAppearanceSmall"
                     android:textColor="@android:color/darker_gray" />
 
-                <TextView
-                    android:id="@+id/textView_yield_individual"
+                <TextSwitcher
+                    android:id="@+id/textSwitcher_yield"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:includeFontPadding="false"
-                    android:text="@string/tab_hyphen"
-                    android:textAppearance="?android:textAppearanceMedium"
-                    android:textColor="@android:color/white" />
+                    android:inAnimation="@android:anim/slide_in_left"
+                    android:outAnimation="@android:anim/slide_out_right">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="@string/tab_hyphen"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                </TextSwitcher>
 
             </LinearLayout>
 
@@ -475,14 +612,29 @@
                     android:textAppearance="?android:textAppearanceSmall"
                     android:textColor="@android:color/darker_gray" />
 
-                <TextView
-                    android:id="@+id/textView_averageVolume_individual"
+                <TextSwitcher
+                    android:id="@+id/textSwitcher_averageVolume"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:includeFontPadding="false"
-                    android:text="@string/tab_hyphen"
-                    android:textAppearance="?android:textAppearanceMedium"
-                    android:textColor="@android:color/white" />
+                    android:inAnimation="@android:anim/slide_in_left"
+                    android:outAnimation="@android:anim/slide_out_right">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:text="@string/tab_hyphen"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:includeFontPadding="false"
+                        android:textAppearance="?android:textAppearanceMedium"
+                        android:textColor="@android:color/white" />
+
+                </TextSwitcher>
 
             </LinearLayout>
 
@@ -494,19 +646,34 @@
             android:layout_marginTop="8dp"
             android:background="@color/colorCharcoal" />
 
-        <TextView
-            android:id="@+id/textView_description_individual"
+        <TextSwitcher
+            android:id="@+id/textSwitcher_description"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="4dp"
+            android:layout_marginBottom="32dp"
             android:layout_marginEnd="8dp"
             android:layout_marginStart="8dp"
             android:layout_marginTop="8dp"
             android:gravity="start"
-            android:text="@string/loading_description_ellipsis"
-            android:textAppearance="?android:textAppearanceSmall"
-            android:textColor="@android:color/white"
-            android:textSize="16sp" />
+            android:inAnimation="@android:anim/fade_in"
+            android:outAnimation="@android:anim/fade_out">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/loading_description_ellipsis"
+                android:textAppearance="?android:textAppearanceSmall"
+                android:textColor="@android:color/white"
+                android:textSize="16sp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="?android:textAppearanceSmall"
+                android:textColor="@android:color/white"
+                android:textSize="16sp" />
+
+        </TextSwitcher>
 
     </LinearLayout>
 
