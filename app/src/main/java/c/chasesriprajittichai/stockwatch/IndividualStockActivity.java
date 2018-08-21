@@ -837,7 +837,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                              * issue by manually setting the price at 4:00pm to the price at close.
                              * Recall that in the 1 day chart, the prices are taken every 5 minutes,
                              * starting at 9:30am - the 4:00pm price is at index 78. */
-                            if (chartPrices_1day.size() >= 78) {
+                            if (chartPrices_1day.size() >= 79) {
                                 chartPrices_1day.set(78, stock.getPrice());
                             }
 
