@@ -2,24 +2,31 @@ package c.chasesriprajittichai.stockwatch;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.SparseArray;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextSwitcher;
 import android.widget.TextView;
+import android.widget.ViewFlipper;
 
 import com.jakewharton.threetenabp.AndroidThreeTen;
 import com.wefika.horizontalpicker.HorizontalPicker;
 
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -43,7 +50,10 @@ import java.util.stream.Collectors;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import c.chasesriprajittichai.stockwatch.listeners.DownloadChartTaskListener;
+import c.chasesriprajittichai.stockwatch.listeners.DownloadNewsTaskListener;
 import c.chasesriprajittichai.stockwatch.listeners.DownloadStatsTaskListener;
+import c.chasesriprajittichai.stockwatch.recyclerviews.NewsRecyclerAdapter;
+import c.chasesriprajittichai.stockwatch.recyclerviews.NewsRecyclerDivider;
 import c.chasesriprajittichai.stockwatch.stocks.AdvancedStock;
 import c.chasesriprajittichai.stockwatch.stocks.AdvancedStock.ChartPeriod;
 import c.chasesriprajittichai.stockwatch.stocks.ConcreteAdvancedStock;
@@ -67,14 +77,12 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         HorizontalPicker.OnItemSelected,
         CustomScrubGestureDetector.ScrubIndexListener,
         DownloadChartTaskListener,
-        DownloadStatsTaskListener {
+        DownloadStatsTaskListener,
+        DownloadNewsTaskListener {
 
-    // Big ChartPeriods excludes 1D chart
-    private static final ChartPeriod[] BIG_CHART_PERIODS = {
-            ChartPeriod.FIVE_YEARS, ChartPeriod.ONE_YEAR,
-            ChartPeriod.THREE_MONTHS, ChartPeriod.ONE_MONTH,
-            ChartPeriod.TWO_WEEKS
-    };
+    @BindView(R.id.viewFlipper_overview_or_news_flipper) ViewFlipper viewFlipper;
+    @BindView(R.id.button_overview) Button overviewBtn;
+    @BindView(R.id.button_news) Button newsBtn;
 
     @BindView(R.id.textView_topPrice_individual) TextView top_price;
     @BindView(R.id.textView_topChangePoint_individual) TextView top_changePoint;
@@ -85,10 +93,11 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     @BindView(R.id.textView_topAfterHoursChangePercent_individual) TextView top_ah_changePercent;
     @BindView(R.id.textView_topAfterHoursTime_individual) TextView top_ah_time;
     @BindView(R.id.progressBar_loadingCharts) ProgressBar loadingChartsProgressBar;
-    @BindView(R.id.textView_chartsUnavailable) TextView chartsUnavailable;
+    @BindView(R.id.textView_chartsStatus) TextView chartsStatus;
     @BindView(R.id.sparkView_individual) CustomSparkView sparkView;
     @BindView(R.id.horizontalPicker_chartPeriod_individual) HorizontalPicker chartPeriodPicker;
     @BindView(R.id.view_chartPeriodPickerUnderline_individual) View chartPeriodPickerUnderline;
+    @BindView(R.id.textView_keyStatisticsHeader_individual) TextView keyStatisticsHeader;
     @BindView(R.id.textSwitcher_todaysLow) TextSwitcher todaysLow;
     @BindView(R.id.textSwitcher_todaysHigh) TextSwitcher todaysHigh;
     @BindView(R.id.textSwitcher_fiftyTwoWeekLow) TextSwitcher fiftyTwoWeekLow;
@@ -101,134 +110,198 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     @BindView(R.id.textSwitcher_averageVolume) TextSwitcher avgVolume;
     @BindView(R.id.textSwitcher_description) TextSwitcher description;
 
+    @BindView(R.id.recyclerView_newsRecycler) RecyclerView newsRv;
+    @BindView(R.id.progressBar_loadingNews) ProgressBar loadingNewsProgressBar;
+    @BindView(R.id.textView_newsStatus) TextView newsStatus;
+
+    // Big ChartPeriods excludes 1D chart
+    private static final ChartPeriod[] BIG_CHART_PERIODS = {
+            ChartPeriod.FIVE_YEARS, ChartPeriod.ONE_YEAR,
+            ChartPeriod.THREE_MONTHS, ChartPeriod.ONE_MONTH,
+            ChartPeriod.TWO_WEEKS
+    };
+
     private AdvancedStock stock;
     private boolean wasInFavoritesInitially;
     private boolean isInFavorites;
     private SparkViewAdapter sparkViewAdapter;
     private SharedPreferences prefs;
+    private NewsRecyclerAdapter newsRecyclerAdapter;
 
     /* Called from DownloadChartTask.onPostExecute(). */
     @Override
     public void onDownloadChartTaskCompleted(final int status,
                                              final Set<ChartPeriod> missingChartPeriods) {
-        // ChartPeriods from string-array resource are in increasing order (1D -> 5Y)
-        final List<CharSequence> displayChartPeriods = Arrays.stream(
-                getResources().getStringArray(R.array.chartPeriods)).collect(Collectors.toList());
+        switch (status) {
+            case DownloadChartTask.Status.GOOD:
+                // ChartPeriods from string-array resource are in increasing order (1D -> 5Y)
+                final List<CharSequence> displayChartPeriods = Arrays.stream(
+                        getResources().getStringArray(R.array.chartPeriods)).collect(Collectors.toList());
 
-        if (!missingChartPeriods.contains(ChartPeriod.ONE_DAY)) {
-            sparkViewAdapter.setChartPeriod(ChartPeriod.ONE_DAY);
-            sparkViewAdapter.setyData(this.stock.getPrices_1day());
-            // Don't set dates for sparkViewAdapter for 1D
-            sparkViewAdapter.notifyDataSetChanged();
-        } else {
-            displayChartPeriods.remove(0); // 1D is at index 0 of chartPeriods
-        }
-
-        for (final ChartPeriod p : BIG_CHART_PERIODS) {
-            if (missingChartPeriods.contains(p)) {
-                /* Always remove last node because displayChartPeriods is in
-                 * increasing order (1D -> 5Y), unlike BIG_CHART_PERIODS which
-                 * is in decreasing order. */
-                displayChartPeriods.remove(displayChartPeriods.size() - 1);
-            } else {
-                if (missingChartPeriods.contains(ChartPeriod.ONE_DAY)) {
-                    /* If the 1D chart is filled, the current ChartPeriod will
-                     * be set to ONE_DAY. Otherwise, if the 1D chart is not
-                     * filled, the initially selected ChartPeriod should be the
-                     * smallest big ChartPeriod (TWO_WEEKS). By the way that
-                     * we're filling the charts, if at least one big ChartPeriod
-                     * is filled, that guarantees that the 2W chart is filled. */
-                    sparkViewAdapter.setChartPeriod(ChartPeriod.TWO_WEEKS);
-                    sparkViewAdapter.setyData(this.stock.getPrices_2weeks());
-                    sparkViewAdapter.setDates(this.stock.getDates_2weeks());
+                if (!missingChartPeriods.contains(ChartPeriod.ONE_DAY)) {
+                    sparkViewAdapter.setChartPeriod(ChartPeriod.ONE_DAY);
+                    sparkViewAdapter.setyData(this.stock.getPrices_1day());
+                    // Don't set dates for sparkViewAdapter for 1D
                     sparkViewAdapter.notifyDataSetChanged();
+                } else {
+                    displayChartPeriods.remove(0); // 1D is at index 0 of chartPeriods
                 }
 
-                /* Smaller charts (shorter ChartPeriods) take their data from
-                 * the largest chart that is filled. So once a filled chart is
-                 * found, there is no need to check if the smaller charts are
-                 * filled. */
+                for (final ChartPeriod p : BIG_CHART_PERIODS) {
+                    if (missingChartPeriods.contains(p)) {
+                        /* Always remove last node because displayChartPeriods is in
+                         * increasing order (1D -> 5Y), unlike BIG_CHART_PERIODS which
+                         * is in decreasing order. */
+                        displayChartPeriods.remove(displayChartPeriods.size() - 1);
+                    } else {
+                        if (missingChartPeriods.contains(ChartPeriod.ONE_DAY)) {
+                            /* If the 1D chart is filled, the current ChartPeriod will
+                             * be set to ONE_DAY. Otherwise, if the 1D chart is not
+                             * filled, the initially selected ChartPeriod should be the
+                             * smallest big ChartPeriod (TWO_WEEKS). By the way that
+                             * we're filling the charts, if at least one big ChartPeriod
+                             * is filled, that guarantees that the 2W chart is filled. */
+                            sparkViewAdapter.setChartPeriod(ChartPeriod.TWO_WEEKS);
+                            sparkViewAdapter.setyData(this.stock.getPrices_2weeks());
+                            sparkViewAdapter.setDates(this.stock.getDates_2weeks());
+                            sparkViewAdapter.notifyDataSetChanged();
+                        }
+
+                        /* Smaller charts (shorter ChartPeriods) take their data from
+                         * the largest chart that is filled. So once a filled chart is
+                         * found, there is no need to check if the smaller charts are
+                         * filled. */
+                        break;
+                    }
+                }
+
+                if (missingChartPeriods.size() == ChartPeriod.values().length) {
+                    // If there are no filled charts
+                    initTopViewsStatic();
+                    chartsStatus.setText(getString(R.string.chartsUnavailable));
+
+                    chartsStatus.setVisibility(View.VISIBLE);
+                } else {
+                    // If there is at least 1 filled chart
+                    initTopViewsDynamic();
+
+                    final CharSequence[] displayChartPeriodsArr = new CharSequence[displayChartPeriods.size()];
+                    displayChartPeriods.toArray(displayChartPeriodsArr);
+                    chartPeriodPicker.setValues(displayChartPeriodsArr);
+
+                    sparkView.setVisibility(View.VISIBLE);
+                    chartPeriodPicker.setVisibility(View.VISIBLE);
+                    chartPeriodPickerUnderline.setVisibility(View.VISIBLE);
+                }
                 break;
-            }
+            case DownloadChartTask.Status.IO_EXCEPTION_FOR_MW_AND_WSJ:
+            case DownloadChartTask.Status.IO_EXCEPTION_FOR_MW_ONLY:
+            case DownloadChartTask.Status.IO_EXCEPTION_FOR_WSJ_ONLY:
+                initTopViewsStatic();
+                chartsStatus.setText(getString(R.string.ioException_loadingCharts));
+
+                chartsStatus.setVisibility(View.VISIBLE);
+                break;
         }
 
-        if (missingChartPeriods.size() == ChartPeriod.values().length) {
-            // If there are no filled charts
-            initTopViewsStatic();
-
-            loadingChartsProgressBar.setVisibility(View.GONE);
-            chartsUnavailable.setVisibility(View.VISIBLE);
-            sparkView.setVisibility(View.GONE);
-            chartPeriodPicker.setVisibility(View.GONE);
-            chartPeriodPickerUnderline.setVisibility(View.GONE);
-        } else {
-            // If there is at least 1 filled chart
-            initTopViewsDynamic();
-
-            final CharSequence[] displayChartPeriodsArr = new CharSequence[displayChartPeriods.size()];
-            displayChartPeriods.toArray(displayChartPeriodsArr);
-            chartPeriodPicker.setValues(displayChartPeriodsArr);
-
-            loadingChartsProgressBar.setVisibility(View.GONE);
-            chartsUnavailable.setVisibility(View.GONE);
-            sparkView.setVisibility(View.VISIBLE);
-            chartPeriodPicker.setVisibility(View.VISIBLE);
-            chartPeriodPickerUnderline.setVisibility(View.VISIBLE);
-        }
+        loadingChartsProgressBar.setVisibility(View.GONE);
     }
 
     /* Called from DownloadStatsTask.onPostExecute(). */
     @Override
     public void onDownloadStatsTaskCompleted(final int status,
                                              final Set<Stat> missingStats) {
-        if (!missingStats.contains(Stat.TODAYS_RANGE)) {
-            todaysLow.setText(getString(R.string.double2dec, stock.getTodaysLow()));
-            todaysHigh.setText(getString(R.string.double2dec, stock.getTodaysHigh()));
-        } else {
-            todaysLow.setText("N/A");
-            todaysHigh.setText("N/A");
+        switch (status) {
+            case DownloadStatsTask.Status.GOOD:
+                if (!missingStats.contains(Stat.TODAYS_RANGE)) {
+                    todaysLow.setText(getString(R.string.double2dec, stock.getTodaysLow()));
+                    todaysHigh.setText(getString(R.string.double2dec, stock.getTodaysHigh()));
+                } else {
+                    todaysLow.setText(getString(R.string.na));
+                    todaysHigh.setText(getString(R.string.na));
+                }
+                if (!missingStats.contains(Stat.FIFTY_TWO_WEEK_RANGE)) {
+                    fiftyTwoWeekLow.setText(getString(R.string.double2dec, stock.getFiftyTwoWeekLow()));
+                    fiftyTwoWeekHigh.setText(getString(R.string.double2dec, stock.getFiftyTwoWeekHigh()));
+                } else {
+                    fiftyTwoWeekLow.setText(getString(R.string.na));
+                    fiftyTwoWeekHigh.setText(getString(R.string.na));
+                }
+                if (!missingStats.contains(Stat.MARKET_CAP)) {
+                    marketCap.setText(getString(R.string.string, stock.getMarketCap()));
+                } else {
+                    marketCap.setText(getString(R.string.na));
+                }
+                if (!missingStats.contains(Stat.PREV_CLOSE)) {
+                    prevClose.setText(getString(R.string.double2dec, stock.getPrevClose()));
+                } else {
+                    prevClose.setText(getString(R.string.na));
+                }
+                if (!missingStats.contains(Stat.PE_RATIO)) {
+                    peRatio.setText(getString(R.string.double2dec, stock.getPeRatio()));
+                } else {
+                    peRatio.setText(getString(R.string.na));
+                }
+                if (!missingStats.contains(Stat.EPS)) {
+                    eps.setText(getString(R.string.double2dec, stock.getEps()));
+                } else {
+                    eps.setText(getString(R.string.na));
+                }
+                if (!missingStats.contains(Stat.YIELD)) {
+                    yield.setText(getString(R.string.double2dec_percent, stock.getYield()));
+                } else {
+                    yield.setText(getString(R.string.na));
+                }
+                if (!missingStats.contains(Stat.AVG_VOLUME)) {
+                    avgVolume.setText(getString(R.string.string, stock.getAverageVolume()));
+                } else {
+                    avgVolume.setText(getString(R.string.na));
+                }
+                if (!missingStats.contains(Stat.DESCRIPTION)) {
+                    description.setText(stock.getDescription());
+                } else {
+                    description.setText(getString(R.string.descriptionNotFound));
+                }
+                break;
+            case DownloadStatsTask.Status.IO_EXCEPTION:
+                todaysLow.setText(getString(R.string.x));
+                todaysHigh.setText(getString(R.string.x));
+                fiftyTwoWeekLow.setText(getString(R.string.x));
+                fiftyTwoWeekHigh.setText(getString(R.string.x));
+                marketCap.setText(getString(R.string.x));
+                prevClose.setText(getString(R.string.x));
+                peRatio.setText(getString(R.string.x));
+                eps.setText(getString(R.string.x));
+                yield.setText(getString(R.string.x));
+                avgVolume.setText(getString(R.string.x));
+
+                description.setText(getString(R.string.ioException_loadingDescription));
+                break;
         }
-        if (!missingStats.contains(Stat.FIFTY_TWO_WEEK_RANGE)) {
-            fiftyTwoWeekLow.setText(getString(R.string.double2dec, stock.getFiftyTwoWeekLow()));
-            fiftyTwoWeekHigh.setText(getString(R.string.double2dec, stock.getFiftyTwoWeekHigh()));
-        } else {
-            fiftyTwoWeekLow.setText("N/A");
-            fiftyTwoWeekHigh.setText("N/A");
-        }
-        if (!missingStats.contains(Stat.MARKET_CAP)) {
-            marketCap.setText(getString(R.string.string, stock.getMarketCap()));
-        } else {
-            marketCap.setText(getString(R.string.string, "N/A"));
-        }
-        if (!missingStats.contains(Stat.PREV_CLOSE)) {
-            prevClose.setText(getString(R.string.double2dec, stock.getPrevClose()));
-        } else {
-            prevClose.setText(getString(R.string.string, "N/A"));
-        }
-        if (!missingStats.contains(Stat.PE_RATIO)) {
-            peRatio.setText(getString(R.string.double2dec, stock.getPeRatio()));
-        } else {
-            peRatio.setText(getString(R.string.string, "N/A"));
-        }
-        if (!missingStats.contains(Stat.EPS)) {
-            eps.setText(getString(R.string.double2dec, stock.getEps()));
-        } else {
-            eps.setText(getString(R.string.string, "N/A"));
-        }
-        if (!missingStats.contains(Stat.YIELD)) {
-            yield.setText(getString(R.string.double2dec_percent, stock.getYield()));
-        } else {
-            yield.setText(getString(R.string.string, "N/A"));
-        }
-        if (!missingStats.contains(Stat.AVG_VOLUME)) {
-            avgVolume.setText(getString(R.string.string, stock.getAverageVolume()));
-        } else {
-            avgVolume.setText(getString(R.string.string, "N/A"));
-        }
-        if (!missingStats.contains(Stat.DESCRIPTION)) {
-            description.setText(stock.getDescription());
-        } else {
-            description.setText(getString(R.string.descriptionNotFound));
+    }
+
+    /* Called from DownloadNewsTask.onPostExecute(). */
+    @Override
+    public void onDownloadNewsTaskCompleted(final Integer status) {
+        switch (status) {
+            case DownloadNewsTask.Status.GOOD:
+                loadingNewsProgressBar.setVisibility(View.GONE);
+                newsRv.setVisibility(View.VISIBLE);
+
+                newsRecyclerAdapter.notifyDataSetChanged();
+                break;
+            case DownloadNewsTask.Status.NO_NEWS_ARTICLES:
+                loadingNewsProgressBar.setVisibility(View.GONE);
+                newsRv.setVisibility(View.GONE);
+
+                newsStatus.setText(getString(R.string.noNewsArticlesFound));
+                break;
+            case DownloadNewsTask.Status.IO_EXCEPTION:
+                loadingNewsProgressBar.setVisibility(View.GONE);
+                newsRv.setVisibility(View.GONE);
+
+                newsStatus.setText(getString(R.string.ioException_loadingNews));
+                break;
         }
     }
 
@@ -443,27 +516,21 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         initStockFromHomeActivity();
         setTitle(stock.getName());
         initTopViewsStatic();
-
-        // Start task ASAP
-        new DownloadChartTask(stock, this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-        new DownloadStatsTask(stock, this).executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-
-        AndroidThreeTen.init(this); // Init, timezone not actually used
+        initOverviewAndNewsButtons();
+        initNewsRecyclerView();
+        initSparkView();
+        AndroidThreeTen.init(this); // Used in DownloadChartTask
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        sparkViewAdapter = new SparkViewAdapter(); // Init as empty
-        sparkView.setAdapter(sparkViewAdapter);
-        /* SparkView needs its OnScrubListener member variable to non-null in
-         * order for the scrubbing line to work properly. The purpose of this
-         * line is to make the scrubbing line work. All the scrub listening is
-         * handled in onScrubbed(). */
-        sparkView.setScrubListener(value -> {
-        });
-        final float touchSlop = ViewConfiguration.get(this).getScaledTouchSlop();
-        sparkView.setOnTouchListener(
-                new CustomScrubGestureDetector(sparkView, this, touchSlop));
-        chartPeriodPicker.setOnItemSelectedListener(this);
         isInFavorites = getIntent().getBooleanExtra("Is in favorites", false);
         wasInFavoritesInitially = isInFavorites;
+
+        // Start tasks
+        new DownloadChartTask(stock, this)
+                .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        new DownloadStatsTask(stock, this)
+                .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        new DownloadNewsTask(stock.getTicker(), newsRecyclerAdapter.getArticleSparseArray(), this)
+                .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     /**
@@ -505,6 +572,48 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             stock = new ConcreteAdvancedStock(state, ticker, name,
                     price, changePoint, changePercent);
         }
+    }
+
+    private void initOverviewAndNewsButtons() {
+        overviewBtn.setTextColor(Color.WHITE); // Selected initially
+        overviewBtn.setOnClickListener(view -> {
+            overviewBtn.setTextColor(Color.WHITE);
+            newsBtn.setTextColor(Color.DKGRAY);
+
+            viewFlipper.setDisplayedChild(0);
+        });
+        newsBtn.setOnClickListener(view -> {
+            overviewBtn.setTextColor(Color.DKGRAY);
+            newsBtn.setTextColor(Color.WHITE);
+
+            viewFlipper.setDisplayedChild(1);
+        });
+    }
+
+    private void initSparkView() {
+        sparkViewAdapter = new SparkViewAdapter(); // Init as empty
+        sparkView.setAdapter(sparkViewAdapter);
+        /* SparkView needs its OnScrubListener member variable to non-null in
+         * order for the scrubbing line to work properly. The purpose of this
+         * line is to make the scrubbing line work. All the scrub listening is
+         * handled in onScrubbed(). */
+        sparkView.setScrubListener(value -> {
+        });
+        final float touchSlop = ViewConfiguration.get(this).getScaledTouchSlop();
+        sparkView.setOnTouchListener(
+                new CustomScrubGestureDetector(sparkView, this, touchSlop));
+        chartPeriodPicker.setOnItemSelectedListener(this);
+    }
+
+    private void initNewsRecyclerView() {
+        newsRv.setLayoutManager(new LinearLayoutManager(this));
+        newsRv.addItemDecoration(new NewsRecyclerDivider(this));
+        newsRecyclerAdapter = new NewsRecyclerAdapter(article -> {
+            final Intent webViewIntent = new Intent(this, WebViewActivity.class);
+            webViewIntent.putExtra("URL", article.getUrl());
+            startActivity(webViewIntent);
+        });
+        newsRv.setAdapter(newsRecyclerAdapter);
     }
 
     @Override
@@ -722,6 +831,22 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             this.completionListener = new WeakReference<>(completionListener);
         }
 
+        /**
+         * Gets the prices and dates needed for all the charts of {@link #stock}.
+         * The one day chart is taken from the MarketWatch multiple-stock-page,
+         * and all other "big" charts are taken from the Wall Street Journal.
+         * This function calls {@link Jsoup#connect(String)} three times: once
+         * to the MarketWatch multiple-stock-page, and twice to Wall Street
+         * Journal pages. The {@link DownloadChartTask.Status} code returned
+         * tells us which website is causing thrown IOExceptions.
+         * <p>
+         * The one day chart and big charts are treated separately. Meaning that
+         * the loading of the big charts is unaffected by the status of the one
+         * day chart, and vice versa.
+         *
+         * @param voids Take no parameters
+         * @return The {@link DownloadChartTask.Status} of the function
+         */
         @Override
         protected Integer doInBackground(final Void... voids) {
             int status = Status.GOOD;
@@ -729,7 +854,9 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             Document multiDoc;
             try {
                 multiDoc = Jsoup.connect(
-                        "https://www.marketwatch.com/investing/multi?tickers=" + stock.getTicker()).get();
+                        "https://www.marketwatch.com/investing/multi?tickers=" + stock.getTicker())
+                        .timeout(20000)
+                        .get();
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
                 multiDoc = null;
@@ -852,11 +979,16 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     missingChartPeriods.add(ChartPeriod.ONE_DAY);
                 }
             }
+            // Done with one day chart
+            // Code below is for the big charts
 
 
             Document individualDoc;
             try {
-                individualDoc = Jsoup.connect("https://quotes.wsj.com/" + stock.getTicker()).get();
+                individualDoc = Jsoup.connect(
+                        "https://quotes.wsj.com/" + stock.getTicker())
+                        .timeout(20000)
+                        .get();
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
                 individualDoc = null;
@@ -909,27 +1041,11 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                         period_5years, period_5years, wsj_5yearsAgoDateStr, wsj_todayDateStr);
 
 
-                final List<Double> chartPrices_5years = new ArrayList<>();
-                final List<Double> chartPrices_1year = new ArrayList<>();
-                final List<Double> chartPrices_3months = new ArrayList<>();
-                final List<Double> chartPrices_1month = new ArrayList<>();
-                final List<Double> chartPrices_2weeks = new ArrayList<>();
-                final List<List<Double>> chartPricesList = new ArrayList<>(Arrays.asList(
-                        chartPrices_5years, chartPrices_1year, chartPrices_3months,
-                        chartPrices_1month, chartPrices_2weeks));
-                final List<String> chartDates_5years = new ArrayList<>();
-                final List<String> chartDates_1year = new ArrayList<>();
-                final List<String> chartDates_3months = new ArrayList<>();
-                final List<String> chartDates_1month = new ArrayList<>();
-                final List<String> chartDates_2weeks = new ArrayList<>();
-                final List<List<String>> chartDatesList = new ArrayList<>(Arrays.asList(
-                        chartDates_5years, chartDates_1year, chartDates_3months,
-                        chartDates_1month, chartDates_2weeks));
-
-
                 Document fiveYearDoc;
                 try {
-                    fiveYearDoc = Jsoup.connect(wsj_url_5years).get();
+                    fiveYearDoc = Jsoup.connect(wsj_url_5years)
+                            .timeout(20000)
+                            .get();
                 } catch (final IOException ioe) {
                     Log.e("IOException", ioe.getLocalizedMessage());
                     fiveYearDoc = null;
@@ -940,6 +1056,23 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 }
 
                 if (fiveYearDoc != null) {
+                    final List<Double> chartPrices_5years = new ArrayList<>();
+                    final List<Double> chartPrices_1year = new ArrayList<>();
+                    final List<Double> chartPrices_3months = new ArrayList<>();
+                    final List<Double> chartPrices_1month = new ArrayList<>();
+                    final List<Double> chartPrices_2weeks = new ArrayList<>();
+                    final List<List<Double>> chartPricesList = new ArrayList<>(Arrays.asList(
+                            chartPrices_5years, chartPrices_1year, chartPrices_3months,
+                            chartPrices_1month, chartPrices_2weeks));
+                    final List<String> chartDates_5years = new ArrayList<>();
+                    final List<String> chartDates_1year = new ArrayList<>();
+                    final List<String> chartDates_3months = new ArrayList<>();
+                    final List<String> chartDates_1month = new ArrayList<>();
+                    final List<String> chartDates_2weeks = new ArrayList<>();
+                    final List<List<String>> chartDatesList = new ArrayList<>(Arrays.asList(
+                            chartDates_5years, chartDates_1year, chartDates_3months,
+                            chartDates_1month, chartDates_2weeks));
+
                     int reverseNdx, periodNdx, i;
 
                     /* This is the number of data points needed for each period. The
@@ -1000,20 +1133,19 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                             missingChartPeriods.add(BIG_CHART_PERIODS[periodNdx]);
                         }
                     }
+
+                    // Update stock's charts for the "big" ChartPeriods
+                    stock.setPrices_2weeks(chartPrices_2weeks);
+                    stock.setPrices_1month(chartPrices_1month);
+                    stock.setPrices_3months(chartPrices_3months);
+                    stock.setPrices_1year(chartPrices_1year);
+                    stock.setPrices_5years(chartPrices_5years);
+                    stock.setDates_2weeks(chartDates_2weeks);
+                    stock.setDates_1month(chartDates_1month);
+                    stock.setDates_3months(chartDates_3months);
+                    stock.setDates_1year(chartDates_1year);
+                    stock.setDates_5years(chartDates_5years);
                 }
-
-
-                // Update stock's charts for the "big" ChartPeriods
-                stock.setPrices_2weeks(chartPrices_2weeks);
-                stock.setPrices_1month(chartPrices_1month);
-                stock.setPrices_3months(chartPrices_3months);
-                stock.setPrices_1year(chartPrices_1year);
-                stock.setPrices_5years(chartPrices_5years);
-                stock.setDates_2weeks(chartDates_2weeks);
-                stock.setDates_1month(chartDates_1month);
-                stock.setDates_3months(chartDates_3months);
-                stock.setDates_1year(chartDates_1year);
-                stock.setDates_5years(chartDates_5years);
             }
 
             return status;
@@ -1051,202 +1183,210 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
         @Override
         protected Integer doInBackground(final Void... voids) {
-            final Document individualDoc;
+            int status = Status.GOOD;
+
+            Document individualDoc;
             try {
-                individualDoc = Jsoup.connect("https://quotes.wsj.com/" + stock.getTicker()).get();
+                individualDoc = Jsoup.connect(
+                        "https://quotes.wsj.com/" + stock.getTicker())
+                        .timeout(8000)
+                        .get();
             } catch (final IOException ioe) {
                 Log.e("IOException", ioe.getLocalizedMessage());
-                return Status.IO_EXCEPTION;
+                individualDoc = null;
+                status = Status.IO_EXCEPTION;
             }
 
-            /* Get chart data for periods greater than one day from Wall Street
-             * Journal. Certain values from WSJ page are needed for the URL of
-             * the WSJ database of historical prices. */
-            final Element contentFrame = individualDoc.selectFirst(
-                    ":root > body > div.pageFrame > div.contentFrame");
-            final Element module2 = contentFrame.selectFirst(
-                    ":root > section[class$=section_1] > div.zonedModule[data-module-id=2]");
+            if (individualDoc != null) {
+                /* Get chart data for periods greater than one day from Wall Street
+                 * Journal. Certain values from WSJ page are needed for the URL of
+                 * the WSJ database of historical prices. */
+                final Element contentFrame = individualDoc.selectFirst(
+                        ":root > body > div.pageFrame > div.contentFrame");
+                final Element module2 = contentFrame.selectFirst(
+                        ":root > section[class$=section_1] > div.zonedModule[data-module-id=2]");
 
 
-            /* Get non-chart data. */
-            final Element mainData = module2.selectFirst(
-                    "ul[class$=info_main]");
-            final double price, changePoint, changePercent, prevClose;
-            // Remove ',' or '%' that could be in strings
-            price = parseDouble(mainData.selectFirst(
-                    ":root > li[class$=quote] > span.curr_price > " +
-                            "span > span#quote_val").ownText().replaceAll("[^0-9.]+", ""));
-            final Elements diffs = mainData.select(
-                    ":root > li[class$=diff] > span > span");
-            changePoint = parseDouble(
-                    diffs.get(0).ownText().replaceAll("[^0-9.-]+", ""));
-            changePercent = parseDouble(
-                    diffs.get(1).ownText().replaceAll("[^0-9.-]+", ""));
-            prevClose = parseDouble(
-                    module2.selectFirst(
-                            ":root > div > div[id$=divId] > div[class$=compare] > " +
-                                    "div[class$=compare_data] > ul > li:eq(1) > " +
-                                    "span.data_data").ownText().replaceAll("[^0-9.]+", ""));
-            /* If previous close isn't applicable (stock just had IPO), element
-             * exists and has value 0. */
-            if (prevClose == 0) {
-                missingStats.add(Stat.PREV_CLOSE);
-            } else {
-                stock.setPrevClose(prevClose);
-            }
-            stock.setPrice(price);
-            stock.setChangePoint(changePoint);
-            stock.setChangePercent(changePercent);
-
-
-            final Element subData = mainData.nextElementSibling();
-            boolean stockHasAhVals = subData.className().endsWith("info_sub");
-
-            final Stock.State state;
-            final String stateStr;
-            if (stockHasAhVals) {
-                // Ensure stock is the correct type
-                if (!(stock instanceof StockWithAhVals)) {
-                    stock = new ConcreteAdvancedStockWithAhVals(stock);
-                }
-
-                final double ahPrice, ahChangePoint, ahChangePercent;
+                /* Get non-chart data. */
+                final Element mainData = module2.selectFirst(
+                        "ul[class$=info_main]");
+                final double price, changePoint, changePercent, prevClose;
                 // Remove ',' or '%' that could be in strings
-                ahPrice = parseDouble(subData.selectFirst(
-                        "span#ms_quote_val").ownText().replaceAll("[^0-9.]+", ""));
-                final Elements ah_diffs = subData.select(
-                        "span[id] > span");
-                ahChangePoint = parseDouble(ah_diffs.get(0).ownText().replaceAll("[^0-9.-]+", ""));
-                ahChangePercent = parseDouble(ah_diffs.get(1).ownText().replaceAll("[^0-9.-]+", ""));
-                final StockWithAhVals ahStock = (StockWithAhVals) stock;
-                ahStock.setAfterHoursPrice(ahPrice);
-                ahStock.setAfterHoursChangePoint(ahChangePoint);
-                ahStock.setAfterHoursChangePercent(ahChangePercent);
+                price = parseDouble(mainData.selectFirst(
+                        ":root > li[class$=quote] > span.curr_price > " +
+                                "span > span#quote_val").ownText().replaceAll("[^0-9.]+", ""));
+                final Elements diffs = mainData.select(
+                        ":root > li[class$=diff] > span > span");
+                changePoint = parseDouble(
+                        diffs.get(0).ownText().replaceAll("[^0-9.-]+", ""));
+                changePercent = parseDouble(
+                        diffs.get(1).ownText().replaceAll("[^0-9.-]+", ""));
+                prevClose = parseDouble(
+                        module2.selectFirst(
+                                ":root > div > div[id$=divId] > div[class$=compare] > " +
+                                        "div[class$=compare_data] > ul > li:eq(1) > " +
+                                        "span.data_data").ownText().replaceAll("[^0-9.]+", ""));
+                /* If previous close isn't applicable (stock just had IPO), element
+                 * exists and has value 0. */
+                if (prevClose == 0) {
+                    missingStats.add(Stat.PREV_CLOSE);
+                } else {
+                    stock.setPrevClose(prevClose);
+                }
+                stock.setPrice(price);
+                stock.setChangePoint(changePoint);
+                stock.setChangePercent(changePercent);
 
-                stateStr = subData.selectFirst("span").ownText();
-                state = stateStr.equals("AFTER HOURS") ? AFTER_HOURS : PREMARKET;
-            } else {
-                // Ensure stock is the correct type
-                if (stock instanceof StockWithAhVals) {
-                    stock = new ConcreteAdvancedStock(stock);
+
+                final Element subData = mainData.nextElementSibling();
+                boolean stockHasAhVals = subData.className().endsWith("info_sub");
+
+                final Stock.State state;
+                final String stateStr;
+                if (stockHasAhVals) {
+                    // Ensure stock is the correct type
+                    if (!(stock instanceof StockWithAhVals)) {
+                        stock = new ConcreteAdvancedStockWithAhVals(stock);
+                    }
+
+                    final double ahPrice, ahChangePoint, ahChangePercent;
+                    // Remove ',' or '%' that could be in strings
+                    ahPrice = parseDouble(subData.selectFirst(
+                            "span#ms_quote_val").ownText().replaceAll("[^0-9.]+", ""));
+                    final Elements ah_diffs = subData.select(
+                            "span[id] > span");
+                    ahChangePoint = parseDouble(ah_diffs.get(0).ownText().replaceAll("[^0-9.-]+", ""));
+                    ahChangePercent = parseDouble(ah_diffs.get(1).ownText().replaceAll("[^0-9.-]+", ""));
+                    final StockWithAhVals ahStock = (StockWithAhVals) stock;
+                    ahStock.setAfterHoursPrice(ahPrice);
+                    ahStock.setAfterHoursChangePoint(ahChangePoint);
+                    ahStock.setAfterHoursChangePercent(ahChangePercent);
+
+                    stateStr = subData.selectFirst("span").ownText();
+                    state = stateStr.equals("AFTER HOURS") ? AFTER_HOURS : PREMARKET;
+                } else {
+                    // Ensure stock is the correct type
+                    if (stock instanceof StockWithAhVals) {
+                        stock = new ConcreteAdvancedStock(stock);
+                    }
+
+                    stateStr = mainData.selectFirst("span.timestamp_label").ownText();
+                    state = stateStr.equals("REAL TIME") ? OPEN : CLOSED;
+                }
+                stock.setState(state);
+
+
+                String strBuff;
+
+                /* Values in the table (keyData1) can be either a real value (i.e.
+                 * "310,540 - 313,799"), or something else (i.e. empty string). It
+                 * is difficult to find examples of irregular values in this table.
+                 * All the values are numeric and positive, and some of the values
+                 * could start with a decimal, so check if the first char in the
+                 * value is a digit or '.'. */
+                final Elements keyData1 = module2.select(
+                        "ul[class$=charts_info] > li > div > span.data_data");
+
+                final String avgVolume;
+                strBuff = keyData1.get(1).ownText();
+                if (!strBuff.isEmpty() && Util.Char.isDigitOrDec(strBuff.charAt(0))) {
+                    avgVolume = strBuff;
+                    stock.setAverageVolume(avgVolume);
+                } else {
+                    missingStats.add(Stat.AVG_VOLUME);
                 }
 
-                stateStr = mainData.selectFirst("span.timestamp_label").ownText();
-                state = stateStr.equals("REAL TIME") ? OPEN : CLOSED;
-            }
-            stock.setState(state);
+                final double todaysLow, todaysHigh;
+                strBuff = keyData1.get(2).ownText();
+                if (!strBuff.isEmpty() && Util.Char.isDigitOrDec(strBuff.charAt(0))) {
+                    // " - " is between low and high values
+                    final String[] todaysRange = strBuff.split("\\s-\\s");
+                    todaysLow = parseDouble(todaysRange[0].replaceAll("[^0-9.]+", ""));
+                    todaysHigh = parseDouble(todaysRange[1].replaceAll("[^0-9.]+", ""));
+                    stock.setTodaysLow(todaysLow);
+                    stock.setTodaysHigh(todaysHigh);
+                } else {
+                    missingStats.add(Stat.TODAYS_RANGE);
+                }
+
+                final double fiftyTwoWeekLow, fiftyTwoWeekHigh;
+                strBuff = keyData1.get(3).ownText();
+                if (!strBuff.isEmpty() && Util.Char.isDigitOrDec(strBuff.charAt(0))) {
+                    // " - " is between low and high values
+                    final String[] fiftyTwoWeekRange = strBuff.split("\\s-\\s");
+                    fiftyTwoWeekLow = parseDouble(fiftyTwoWeekRange[0].replaceAll("[^0-9.]+", ""));
+                    fiftyTwoWeekHigh = parseDouble(fiftyTwoWeekRange[1].replaceAll("[^0-9.]+", ""));
+                    stock.setFiftyTwoWeekLow(fiftyTwoWeekLow);
+                    stock.setFiftyTwoWeekHigh(fiftyTwoWeekHigh);
+                } else {
+                    missingStats.add(Stat.FIFTY_TWO_WEEK_RANGE);
+                }
 
 
-            String strBuff;
+                /* Values in the table (keyData2) can be either a real value (i.e.
+                 * "366,452"), a missing value (i.e. "N/A"), or something else (i.e.
+                 * "BRK.A has not issued dividends in more than 1 year"). All the
+                 * values are numeric, and some values could be negative, or start
+                 * with a decimal, so check if the first char in the value is a
+                 * digit, '.', or '-'. */
+                final Element module6 = contentFrame.selectFirst(
+                        ":root > section[class$=section_2] > div#contentCol > " +
+                                "div:eq(1) > div.zonedModule[data-module-id=6]");
+                final Elements keyData2 = module6.select(
+                        "div > div[class$=keystock_drawer] > div > ul > li > div > span");
 
-            /* Values in the table (keyData1) can be either a real value (i.e.
-             * "310,540 - 313,799"), or something else (i.e. empty string). It
-             * is difficult to find examples of irregular values in this table.
-             * All the values are numeric and positive, and some of the values
-             * could start with a decimal, so check if the first char in the
-             * value is a digit or '.'. */
-            final Elements keyData1 = module2.select(
-                    "ul[class$=charts_info] > li > div > span.data_data");
+                final double peRatio; // P/E ratio can be negative
+                strBuff = keyData2.get(0).ownText();
+                if (Util.Char.isDigitOrDecOrMinus(strBuff.charAt(0))) {
+                    peRatio = parseDouble(strBuff.replaceAll("[^0-9.-]+", ""));
+                    stock.setPeRatio(peRatio);
+                } else {
+                    missingStats.add(Stat.PE_RATIO);
+                }
 
-            final String avgVolume;
-            strBuff = keyData1.get(1).ownText();
-            if (!strBuff.isEmpty() && Util.Char.isDigitOrDec(strBuff.charAt(0))) {
-                avgVolume = strBuff;
-                stock.setAverageVolume(avgVolume);
-            } else {
-                missingStats.add(Stat.AVG_VOLUME);
-            }
+                final double eps; // EPS can be negative
+                strBuff = keyData2.get(1).ownText();
+                if (Util.Char.isDigitOrDecOrMinus(strBuff.charAt(0))) {
+                    eps = parseDouble(strBuff.replaceAll("[^0-9.-]+", ""));
+                    stock.setEps(eps);
+                } else {
+                    missingStats.add(Stat.EPS);
+                }
 
-            final double todaysLow, todaysHigh;
-            strBuff = keyData1.get(2).ownText();
-            if (!strBuff.isEmpty() && Util.Char.isDigitOrDec(strBuff.charAt(0))) {
-                // " - " is between low and high values
-                final String[] todaysRange = strBuff.split("\\s-\\s");
-                todaysLow = parseDouble(todaysRange[0].replaceAll("[^0-9.]+", ""));
-                todaysHigh = parseDouble(todaysRange[1].replaceAll("[^0-9.]+", ""));
-                stock.setTodaysLow(todaysLow);
-                stock.setTodaysHigh(todaysHigh);
-            } else {
-                missingStats.add(Stat.TODAYS_RANGE);
-            }
+                final String marketCap;
+                // Example market cap value: "1.4 T"
+                strBuff = keyData2.get(2).ownText();
+                if (Util.Char.isDigitOrDec(strBuff.charAt(0))) {
+                    marketCap = strBuff;
+                    stock.setMarketCap(marketCap);
+                } else {
+                    missingStats.add(Stat.MARKET_CAP);
+                }
 
-            final double fiftyTwoWeekLow, fiftyTwoWeekHigh;
-            strBuff = keyData1.get(3).ownText();
-            if (!strBuff.isEmpty() && Util.Char.isDigitOrDec(strBuff.charAt(0))) {
-                // " - " is between low and high values
-                final String[] fiftyTwoWeekRange = strBuff.split("\\s-\\s");
-                fiftyTwoWeekLow = parseDouble(fiftyTwoWeekRange[0].replaceAll("[^0-9.]+", ""));
-                fiftyTwoWeekHigh = parseDouble(fiftyTwoWeekRange[1].replaceAll("[^0-9.]+", ""));
-                stock.setFiftyTwoWeekLow(fiftyTwoWeekLow);
-                stock.setFiftyTwoWeekHigh(fiftyTwoWeekHigh);
-            } else {
-                missingStats.add(Stat.FIFTY_TWO_WEEK_RANGE);
-            }
+                final double yield; // Yield can be negative
+                strBuff = keyData2.get(5).ownText();
+                if (Util.Char.isDigitOrDecOrMinus(strBuff.charAt(0))) {
+                    yield = parseDouble(strBuff.replaceAll("[^0-9.-]+", ""));
+                    stock.setYield(yield);
+                } else {
+                    missingStats.add(Stat.YIELD);
+                }
 
-
-            /* Values in the table (keyData2) can be either a real value (i.e.
-             * "366,452"), a missing value (i.e. "N/A"), or something else (i.e.
-             * "BRK.A has not issued dividends in more than 1 year"). All the
-             * values are numeric, and some values could be negative, or start
-             * with a decimal, so check if the first char in the value is a
-             * digit, '.', or '-'. */
-            final Element module6 = contentFrame.selectFirst(
-                    ":root > section[class$=section_2] > div#contentCol > " +
-                            "div:eq(1) > div.zonedModule[data-module-id=6]");
-            final Elements keyData2 = module6.select(
-                    "div > div[class$=keystock_drawer] > div > ul > li > div > span");
-
-            final double peRatio; // P/E ratio can be negative
-            strBuff = keyData2.get(0).ownText();
-            if (Util.Char.isDigitOrDecOrMinus(strBuff.charAt(0))) {
-                peRatio = parseDouble(strBuff.replaceAll("[^0-9.-]+", ""));
-                stock.setPeRatio(peRatio);
-            } else {
-                missingStats.add(Stat.PE_RATIO);
-            }
-
-            final double eps; // EPS can be negative
-            strBuff = keyData2.get(1).ownText();
-            if (Util.Char.isDigitOrDecOrMinus(strBuff.charAt(0))) {
-                eps = parseDouble(strBuff.replaceAll("[^0-9.-]+", ""));
-                stock.setEps(eps);
-            } else {
-                missingStats.add(Stat.EPS);
-            }
-
-            final String marketCap;
-            // Example market cap value: "1.4 T"
-            strBuff = keyData2.get(2).ownText();
-            if (Util.Char.isDigitOrDec(strBuff.charAt(0))) {
-                marketCap = strBuff;
-                stock.setMarketCap(marketCap);
-            } else {
-                missingStats.add(Stat.MARKET_CAP);
+                final String description;
+                final Element descriptionElmnt = contentFrame.selectFirst(
+                        ":root > section[class$=section_2] > div#contentCol + div > " +
+                                "div:eq(1) > div.zonedModule[data-module-id=11] > div > " +
+                                "div[class$=data] > div[class$=description] > p.txtBody");
+                // If there is no description, the description element (p.txtBody) doesn't exist
+                if (descriptionElmnt != null) {
+                    description = descriptionElmnt.ownText();
+                    stock.setDescription(description);
+                } else {
+                    missingStats.add(Stat.DESCRIPTION);
+                }
             }
 
-            final double yield; // Yield can be negative
-            strBuff = keyData2.get(5).ownText();
-            if (Util.Char.isDigitOrDecOrMinus(strBuff.charAt(0))) {
-                yield = parseDouble(strBuff.replaceAll("[^0-9.-]+", ""));
-                stock.setYield(yield);
-            } else {
-                missingStats.add(Stat.YIELD);
-            }
-
-            final String description;
-            final Element descriptionElmnt = contentFrame.selectFirst(
-                    ":root > section[class$=section_2] > div#contentCol + div > " +
-                            "div:eq(1) > div.zonedModule[data-module-id=11] > div > " +
-                            "div[class$=data] > div[class$=description] > p.txtBody");
-            // If there is no description, the description element (p.txtBody) doesn't exist
-            if (descriptionElmnt != null) {
-                description = descriptionElmnt.ownText();
-                stock.setDescription(description);
-            } else {
-                missingStats.add(Stat.DESCRIPTION);
-            }
-
-            return Status.GOOD;
+            return status;
         }
 
         @Override
@@ -1258,7 +1398,110 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         interface Status {
 
             int GOOD = 0;
-            int IO_EXCEPTION = 0;
+            int IO_EXCEPTION = 1;
+
+        }
+
+    }
+
+
+    private static final class DownloadNewsTask extends AsyncTask<Void, Integer, Integer> {
+
+        private final String ticker;
+        private final SparseArray<Article> sparseArray;
+        private final WeakReference<DownloadNewsTaskListener> completionListener;
+
+        private DownloadNewsTask(final String ticker, final SparseArray<Article> sparseArray,
+                                 final DownloadNewsTaskListener completionListener) {
+            this.ticker = ticker;
+            this.sparseArray = sparseArray;
+            this.completionListener = new WeakReference<>(completionListener);
+        }
+
+        @Override
+        protected Integer doInBackground(Void... voids) {
+            int status = Status.GOOD;
+
+            final String base_url = "https://finviz.com/quote.ashx?t=";
+            final String url = base_url + ticker;
+
+            Document doc;
+            try {
+                doc = Jsoup.connect(url)
+                        .timeout(20000)
+                        .get();
+            } catch (final IOException ioe) {
+                ioe.printStackTrace();
+                doc = null;
+                status = Status.IO_EXCEPTION;
+            }
+
+            if (doc != null) {
+                final Element tableBody = doc.selectFirst("table#news-table > tbody");
+
+                final Elements articleElmnts = tableBody.children();
+
+                /* The HTML table that lists these values only displays the date
+                 * when it is has not been seen before. For example, if an
+                 * article from "Aug-20" has not been seen, the row will have
+                 * a td[style] element that could be "Aug-20-18 08:46pm. But if
+                 * an article from "Aug-20" has already been seen, the row does
+                 * not have a td[style] element. The date values have a lot of
+                 * extra whitespace - trim it off. */
+                String curTitle, curSource, curDate, curUrl;
+                String prevDate;
+                if (articleElmnts.size() > 0) {
+                    Element dateElmnt;
+                    dateElmnt = articleElmnts.get(0).selectFirst("td[style]");
+                    // Trim off the time; get the date only
+                    curDate = StringUtils.substringBefore(dateElmnt.ownText().trim(), " ");
+                    prevDate = curDate;
+
+                    curTitle = articleElmnts.get(0).selectFirst("a").ownText();
+                    curUrl = articleElmnts.get(0).selectFirst("a").attr("href");
+                    curSource = articleElmnts.get(0).selectFirst("span").ownText();
+
+                    /* Everytime a new date is found, that takes a spot in the
+                     * sparse array. */
+                    int sparseNdx = 1; // Index 0 is a date
+                    sparseArray.append(sparseNdx++, new Article(curDate, curTitle, curSource, curUrl));
+
+                    for (int articleNdx = 1; articleNdx < articleElmnts.size(); articleNdx++, sparseNdx++) {
+                        dateElmnt = articleElmnts.get(articleNdx).selectFirst("td[style]");
+                        if (dateElmnt == null) {
+                            curDate = prevDate;
+                        } else {
+                            curDate = StringUtils.substringBefore(dateElmnt.ownText().trim(), " ");
+                            prevDate = curDate;
+
+                            sparseNdx++; // Date added, pushing sparseNdx back 1
+                        }
+
+                        curTitle = articleElmnts.get(articleNdx).selectFirst("a").ownText();
+                        curUrl = articleElmnts.get(articleNdx).selectFirst("a").attr("href");
+                        curSource = articleElmnts.get(articleNdx).selectFirst("td > span").ownText();
+
+                        sparseArray.append(sparseNdx, new Article(curDate, curTitle, curSource, curUrl));
+                    }
+                } else {
+                    status = Status.NO_NEWS_ARTICLES;
+                }
+            }
+
+            return status;
+        }
+
+        @Override
+        protected void onPostExecute(final Integer status) {
+            completionListener.get().onDownloadNewsTaskCompleted(status);
+        }
+
+
+        public interface Status {
+
+            int GOOD = 0;
+            int NO_NEWS_ARTICLES = 1;
+            int IO_EXCEPTION = 2;
 
         }
 

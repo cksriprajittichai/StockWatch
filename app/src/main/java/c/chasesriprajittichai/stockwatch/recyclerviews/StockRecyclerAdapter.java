@@ -1,4 +1,4 @@
-package c.chasesriprajittichai.stockwatch.recyclerview;
+package c.chasesriprajittichai.stockwatch.recyclerviews;
 
 import android.graphics.Color;
 import android.support.annotation.NonNull;
@@ -17,7 +17,7 @@ import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhValsList;
 import c.chasesriprajittichai.stockwatch.stocks.Stock;
 
 
-public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.ViewHolder> {
+public final class StockRecyclerAdapter extends RecyclerView.Adapter<StockRecyclerAdapter.ViewHolder> {
 
 
     class ViewHolder extends RecyclerView.ViewHolder {
@@ -30,10 +30,10 @@ public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.
         ViewHolder(final View v) {
             super(v);
 
-            state = v.findViewById(R.id.textView_state_homeRecyclerItem);
-            ticker = v.findViewById(R.id.textView_ticker_homeRecyclerItem);
-            price = v.findViewById(R.id.textView_price_homeRecyclerItem);
-            changePercent = v.findViewById(R.id.textView_changePercent_homeRecyclerItem);
+            state = v.findViewById(R.id.textView_state_stockRecyclerItem);
+            ticker = v.findViewById(R.id.textView_ticker_stockRecyclerItem);
+            price = v.findViewById(R.id.textView_price_stockRecyclerItem);
+            changePercent = v.findViewById(R.id.textView_changePercent_stockRecyclerItem);
         }
 
         void bind(final ConcreteStockWithAhVals stock, final OnItemClickListener listener) {
@@ -67,7 +67,7 @@ public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.
     private final OnItemClickListener onItemClickListener;
     private boolean isDragging;
 
-    public RecyclerAdapter(final ConcreteStockWithAhValsList stocks, final OnItemClickListener listener) {
+    public StockRecyclerAdapter(final ConcreteStockWithAhValsList stocks, final OnItemClickListener listener) {
         this.stocks = stocks;
         onItemClickListener = listener;
         isDragging = false;
@@ -85,10 +85,10 @@ public final class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.
 
     @NonNull
     @Override
-    public RecyclerAdapter.ViewHolder onCreateViewHolder(@NonNull final ViewGroup parent, final int viewType) {
+    public StockRecyclerAdapter.ViewHolder onCreateViewHolder(@NonNull final ViewGroup parent, final int viewType) {
         final LayoutInflater inflater = LayoutInflater.from(parent.getContext());
 
-        final View stockView = inflater.inflate(R.layout.recycler_item_home, parent, false);
+        final View stockView = inflater.inflate(R.layout.recycler_item_stock_stock_recycler, parent, false);
 
         return new ViewHolder(stockView);
     }

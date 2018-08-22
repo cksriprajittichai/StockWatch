@@ -1,680 +1,773 @@
 <?xml version="1.0" encoding="utf-8"?>
 
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    android:background="@android:color/black">
+    android:orientation="vertical">
 
-    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingLeft="16dp"
-        android:paddingRight="16dp">
+        android:background="@android:color/black"
+        android:orientation="horizontal">
 
-        <TextView
-            android:id="@+id/textView_topPrice_individual"
-            android:layout_width="wrap_content"
+        <Button
+            android:id="@+id/button_overview"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginTop="8dp"
-            android:textAppearance="?android:titleTextAppearance"
-            android:textColor="@android:color/white"
-            android:textSize="36sp" />
+            android:layout_weight="1"
+            android:text="@string/overview"
+            android:textAppearance="?android:textAppearanceSmall"
+            android:textColor="@color/colorCharcoal"
+            android:textSize="14sp"
+            android:textStyle="bold" />
 
-        <LinearLayout
-            android:layout_width="wrap_content"
+        <Button
+            android:id="@+id/button_news"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/textView_topChangePoint_individual"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textAppearance="?android:textAppearanceSmall"
-                android:textColor="@color/colorAccent" />
-
-            <TextView
-                android:id="@+id/textView_topChangePercent_individual"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:textAppearance="?android:textAppearanceSmall"
-                android:textColor="@color/colorAccent" />
-
-            <TextView
-                android:id="@+id/textView_topTime_individual"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:textAppearance="?android:textAppearanceSmall"
-                android:textColor="@android:color/white" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:id="@+id/linearLayout_afterHoursData_individual"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:orientation="horizontal">
-
-            <TextView
-                android:id="@+id/textView_topAfterHoursChangePoint_individual"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:textAppearance="?android:textAppearanceSmall"
-                android:textColor="@android:color/white" />
-
-            <TextView
-                android:id="@+id/textView_topAfterHoursChangePercent_individual"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:textAppearance="?android:textAppearanceSmall"
-                android:textColor="@android:color/white" />
-
-            <TextView
-                android:id="@+id/textView_topAfterHoursTime_individual"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="4dp"
-                android:textAppearance="?android:textAppearanceSmall"
-                android:textColor="@android:color/white" />
-
-        </LinearLayout>
-
-        <!--
-        Wrap the SparkView and "charts unavailable" TextView in a
-        constant-height linear layout, so that in case the SparkView isn't shown
-        (there are no charts), the other size that it occupied doesn't change;
-        prevent the layout below the SparkView from being shifted if the
-        SparkView isn't shown. A constant height LinearLayout allows us to
-        freely make views within the layout VISIBLE or GONE, without changing
-        the parent layout. 250dp = the height and vertical margins of each the
-        views that would be VISIBLE if the SparkView is shown.
-        -->
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="250dp"
-            android:layout_marginTop="16dp"
-            android:orientation="vertical">
-
-            <!--
-            layout_gravity="center" centers it horizontally, but not vertically
-            -->
-            <ProgressBar
-                android:id="@+id/progressBar_loadingCharts"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:layout_marginTop="80dp" />
-
-            <!--Init as GONE-->
-            <!--
-            layout_gravity="center" centers it horizontally, but not vertically
-            -->
-            <TextView
-                android:id="@+id/textView_chartsUnavailable"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:layout_marginTop="80dp"
-                android:text="@string/chartsUnavailable"
-                android:textAppearance="?android:textAppearanceSmall"
-                android:textColor="@android:color/white"
-                android:textSize="16sp"
-                android:visibility="gone" />
-
-            <!--Init as GONE-->
-            <c.chasesriprajittichai.stockwatch.CustomSparkView
-                android:id="@+id/sparkView_individual"
-                android:layout_width="match_parent"
-                android:layout_height="220dp"
-                android:layout_marginEnd="8dp"
-                android:layout_marginStart="8dp"
-                android:visibility="gone"
-                app:spark_lineColor="@color/colorAccent"
-                app:spark_scrubEnabled="true"
-                app:spark_scrubLineWidth="1dp" />
-
-            <!--Init as GONE-->
-            <!--
-            Make height larger than wrap_content because if wrap_content is used,
-            the HorizontalPicker is too small, and can be difficult to interact
-            with (difficult to touch because it's so small). It can also be
-            difficult to touch because it the same background color as it's
-            parent, making its bounds unclear.
-            -->
-            <com.wefika.horizontalpicker.HorizontalPicker
-                android:id="@+id/horizontalPicker_chartPeriod_individual"
-                android:layout_width="match_parent"
-                android:layout_height="24dp"
-                android:layout_marginEnd="8dp"
-                android:layout_marginStart="8dp"
-                android:layout_marginTop="4dp"
-                android:textColor="@android:color/darker_gray"
-                android:textSize="14sp"
-                android:visibility="gone"
-                app:sideItems="2" />
-
-            <!--Init as GONE-->
-            <!--Underline under selected chart period of horizontal picker-->
-            <View
-                android:id="@+id/view_chartPeriodPickerUnderline_individual"
-                android:layout_width="16dp"
-                android:layout_height="2dp"
-                android:layout_gravity="center"
-                android:background="@android:color/darker_gray"
-                android:visibility="gone" />
-
-        </LinearLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="4dp"
-            android:layout_marginTop="8dp"
-            android:background="@color/colorCharcoal" />
-
-        <TextView
-            android:id="@+id/textView_keyStatisticsHeader_individual"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_marginTop="8dp"
-            android:gravity="start"
-            android:text="@string/keyStatistics"
-            android:textAppearance="?android:textAppearanceMedium"
-            android:textColor="@android:color/white"
-            android:textSize="20sp" />
-
-        <GridLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
-            android:layout_marginStart="8dp"
-            android:columnCount="2"
-            android:rowCount="5">
-
-            <!--
-            To give two vertical LinearLayouts the same amount of horizontal
-            space (creating two columns), set both of their layout widths to 0,
-            and their layout weights to 1
-            -->
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_column="0"
-                android:layout_columnWeight="1"
-                android:layout_marginTop="12dp"
-                android:layout_row="0"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:includeFontPadding="false"
-                    android:text="@string/todaysLow"
-                    android:textAppearance="?android:textAppearanceSmall"
-                    android:textColor="@android:color/darker_gray" />
-
-                <!--TextSwitcher needs two TextView children-->
-                <TextSwitcher
-                    android:id="@+id/textSwitcher_todaysLow"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:inAnimation="@android:anim/slide_in_left"
-                    android:outAnimation="@android:anim/slide_out_right">
-
-                    <!--Initially shown-->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:text="@string/tab_hyphen"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                    <!--Shown when stats are updated-->
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                </TextSwitcher>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_column="1"
-                android:layout_columnWeight="1"
-                android:layout_marginTop="12dp"
-                android:layout_row="0"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_marginBottom="0dp"
-                    android:includeFontPadding="false"
-                    android:text="@string/todaysHigh"
-                    android:textAppearance="?android:textAppearanceSmall"
-                    android:textColor="@android:color/darker_gray" />
-
-                <TextSwitcher
-                    android:id="@+id/textSwitcher_todaysHigh"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:inAnimation="@android:anim/slide_in_left"
-                    android:outAnimation="@android:anim/slide_out_right">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:text="@string/tab_hyphen"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                </TextSwitcher>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_column="0"
-                android:layout_columnWeight="1"
-                android:layout_marginTop="12dp"
-                android:layout_row="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:includeFontPadding="false"
-                    android:text="@string/fiftyTwoWeekLow"
-                    android:textAppearance="?android:textAppearanceSmall"
-                    android:textColor="@android:color/darker_gray" />
-
-                <TextSwitcher
-                    android:id="@+id/textSwitcher_fiftyTwoWeekLow"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:inAnimation="@android:anim/slide_in_left"
-                    android:outAnimation="@android:anim/slide_out_right">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:text="@string/tab_hyphen"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                </TextSwitcher>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_column="1"
-                android:layout_columnWeight="1"
-                android:layout_marginTop="12dp"
-                android:layout_row="1"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:includeFontPadding="false"
-                    android:text="@string/fiftyTwoWeekHigh"
-                    android:textAppearance="?android:textAppearanceSmall"
-                    android:textColor="@android:color/darker_gray" />
-
-                <TextSwitcher
-                    android:id="@+id/textSwitcher_fiftyTwoWeekHigh"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:inAnimation="@android:anim/slide_in_left"
-                    android:outAnimation="@android:anim/slide_out_right">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:text="@string/tab_hyphen"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                </TextSwitcher>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_column="0"
-                android:layout_columnWeight="1"
-                android:layout_marginTop="12dp"
-                android:layout_row="2"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:includeFontPadding="false"
-                    android:text="@string/marketCap"
-                    android:textAppearance="?android:textAppearanceSmall"
-                    android:textColor="@android:color/darker_gray" />
-
-                <TextSwitcher
-                    android:id="@+id/textSwitcher_marketCap"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:inAnimation="@android:anim/slide_in_left"
-                    android:outAnimation="@android:anim/slide_out_right">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:text="@string/tab_hyphen"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                </TextSwitcher>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_column="1"
-                android:layout_columnWeight="1"
-                android:layout_marginTop="12dp"
-                android:layout_row="2"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:includeFontPadding="false"
-                    android:text="@string/previousClose"
-                    android:textAppearance="?android:textAppearanceSmall"
-                    android:textColor="@android:color/darker_gray" />
-
-                <TextSwitcher
-                    android:id="@+id/textSwitcher_prevClose"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:inAnimation="@android:anim/slide_in_left"
-                    android:outAnimation="@android:anim/slide_out_right">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:text="@string/tab_hyphen"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                </TextSwitcher>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_column="0"
-                android:layout_columnWeight="1"
-                android:layout_marginTop="12dp"
-                android:layout_row="3"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:includeFontPadding="false"
-                    android:text="@string/peRatio"
-                    android:textAppearance="?android:textAppearanceSmall"
-                    android:textColor="@android:color/darker_gray" />
-
-                <TextSwitcher
-                    android:id="@+id/textSwitcher_peRatio"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:inAnimation="@android:anim/slide_in_left"
-                    android:outAnimation="@android:anim/slide_out_right">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:text="@string/tab_hyphen"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                </TextSwitcher>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_column="1"
-                android:layout_columnWeight="1"
-                android:layout_marginTop="12dp"
-                android:layout_row="3"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:includeFontPadding="false"
-                    android:text="@string/eps"
-                    android:textAppearance="?android:textAppearanceSmall"
-                    android:textColor="@android:color/darker_gray" />
-
-                <TextSwitcher
-                    android:id="@+id/textSwitcher_eps"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:inAnimation="@android:anim/slide_in_left"
-                    android:outAnimation="@android:anim/slide_out_right">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:text="@string/tab_hyphen"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                </TextSwitcher>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_column="0"
-                android:layout_columnWeight="1"
-                android:layout_marginTop="12dp"
-                android:layout_row="4"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:includeFontPadding="false"
-                    android:text="@string/yield"
-                    android:textAppearance="?android:textAppearanceSmall"
-                    android:textColor="@android:color/darker_gray" />
-
-                <TextSwitcher
-                    android:id="@+id/textSwitcher_yield"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:inAnimation="@android:anim/slide_in_left"
-                    android:outAnimation="@android:anim/slide_out_right">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:text="@string/tab_hyphen"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                </TextSwitcher>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_column="1"
-                android:layout_columnWeight="1"
-                android:layout_marginTop="12dp"
-                android:layout_row="4"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:includeFontPadding="false"
-                    android:text="@string/avgVolume"
-                    android:textAppearance="?android:textAppearanceSmall"
-                    android:textColor="@android:color/darker_gray" />
-
-                <TextSwitcher
-                    android:id="@+id/textSwitcher_averageVolume"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:inAnimation="@android:anim/slide_in_left"
-                    android:outAnimation="@android:anim/slide_out_right">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:text="@string/tab_hyphen"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:includeFontPadding="false"
-                        android:textAppearance="?android:textAppearanceMedium"
-                        android:textColor="@android:color/white" />
-
-                </TextSwitcher>
-
-            </LinearLayout>
-
-        </GridLayout>
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="4dp"
-            android:layout_marginTop="8dp"
-            android:background="@color/colorCharcoal" />
-
-        <TextSwitcher
-            android:id="@+id/textSwitcher_description"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="32dp"
-            android:layout_marginEnd="8dp"
-            android:layout_marginStart="8dp"
-            android:layout_marginTop="8dp"
-            android:gravity="start"
-            android:inAnimation="@android:anim/fade_in"
-            android:outAnimation="@android:anim/fade_out">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="@string/loading_description_ellipsis"
-                android:textAppearance="?android:textAppearanceSmall"
-                android:textColor="@android:color/white"
-                android:textSize="16sp" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:textAppearance="?android:textAppearanceSmall"
-                android:textColor="@android:color/white"
-                android:textSize="16sp" />
-
-        </TextSwitcher>
+            android:layout_weight="1"
+            android:text="@string/news"
+            android:textAppearance="?android:textAppearanceSmall"
+            android:textColor="@color/colorCharcoal"
+            android:textSize="14sp"
+            android:textStyle="bold" />
 
     </LinearLayout>
 
-</ScrollView>
+    <ViewFlipper
+        android:id="@+id/viewFlipper_overview_or_news_flipper"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/black">
+
+            <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp">
+
+                <TextView
+                    android:id="@+id/textView_topPrice_individual"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="12dp"
+                    android:textAppearance="?android:titleTextAppearance"
+                    android:textColor="@android:color/white"
+                    android:textSize="40sp" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/textView_topChangePoint_individual"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="?android:textAppearanceSmall"
+                        android:textColor="@color/colorAccent" />
+
+                    <TextView
+                        android:id="@+id/textView_topChangePercent_individual"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:textAppearance="?android:textAppearanceSmall"
+                        android:textColor="@color/colorAccent" />
+
+                    <TextView
+                        android:id="@+id/textView_topTime_individual"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:textAppearance="?android:textAppearanceSmall"
+                        android:textColor="@android:color/white" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/linearLayout_afterHoursData_individual"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/textView_topAfterHoursChangePoint_individual"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="?android:textAppearanceSmall"
+                        android:textColor="@android:color/white" />
+
+                    <TextView
+                        android:id="@+id/textView_topAfterHoursChangePercent_individual"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:textAppearance="?android:textAppearanceSmall"
+                        android:textColor="@android:color/white" />
+
+                    <TextView
+                        android:id="@+id/textView_topAfterHoursTime_individual"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:textAppearance="?android:textAppearanceSmall"
+                        android:textColor="@android:color/white" />
+
+                </LinearLayout>
+
+                <!--
+                Wrap the SparkView and "charts unavailable" TextView in a
+                constant-height linear layout, so that in case the SparkView isn't shown
+                (there are no charts), the other size that it occupied doesn't change;
+                prevent the layout below the SparkView from being shifted if the
+                SparkView isn't shown. A constant height LinearLayout allows us to
+                freely make views within the layout VISIBLE or GONE, without changing
+                the parent layout. 250dp = the height and vertical margins of each the
+                views that would be VISIBLE if the SparkView is shown.
+                -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="250dp"
+                    android:layout_marginTop="16dp"
+                    android:orientation="vertical">
+
+                    <!--
+                    layout_gravity="center" centers it horizontally, but not vertically
+                    -->
+                    <ProgressBar
+                        android:id="@+id/progressBar_loadingCharts"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:layout_marginTop="80dp" />
+
+                    <!--Init as GONE-->
+                    <!--
+                    layout_gravity="center" centers it horizontally, but not vertically
+                    -->
+                    <TextView
+                        android:id="@+id/textView_chartsStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="80dp"
+                        android:gravity="center"
+                        android:textAppearance="?android:textAppearanceSmall"
+                        android:textColor="@android:color/white"
+                        android:textSize="16sp"
+                        android:visibility="gone" />
+
+                    <!--Init as GONE-->
+                    <c.chasesriprajittichai.stockwatch.CustomSparkView
+                        android:id="@+id/sparkView_individual"
+                        android:layout_width="match_parent"
+                        android:layout_height="220dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginStart="8dp"
+                        android:visibility="gone"
+                        app:spark_lineColor="@color/colorAccent"
+                        app:spark_scrubEnabled="true"
+                        app:spark_scrubLineWidth="1dp" />
+
+                    <!--Init as GONE-->
+                    <!--
+                    Make height larger than wrap_content because if wrap_content is used,
+                    the HorizontalPicker is too small, and can be difficult to interact
+                    with (difficult to touch because it's so small). It can also be
+                    difficult to touch because it the same background color as it's
+                    parent, making its bounds unclear.
+                    -->
+                    <com.wefika.horizontalpicker.HorizontalPicker
+                        android:id="@+id/horizontalPicker_chartPeriod_individual"
+                        android:layout_width="match_parent"
+                        android:layout_height="24dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginTop="4dp"
+                        android:textColor="@android:color/darker_gray"
+                        android:textSize="14sp"
+                        android:visibility="gone"
+                        app:sideItems="2" />
+
+                    <!--Init as GONE-->
+                    <!--Underline under selected chart period of horizontal picker-->
+                    <View
+                        android:id="@+id/view_chartPeriodPickerUnderline_individual"
+                        android:layout_width="16dp"
+                        android:layout_height="2dp"
+                        android:layout_gravity="center"
+                        android:background="@android:color/darker_gray"
+                        android:visibility="gone" />
+
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@color/colorCharcoal" />
+
+                <TextView
+                    android:id="@+id/textView_keyStatisticsHeader_individual"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginTop="8dp"
+                    android:gravity="start"
+                    android:text="@string/keyStatistics"
+                    android:textAppearance="?android:textAppearanceMedium"
+                    android:textColor="@android:color/white"
+                    android:textSize="20sp" />
+
+                <GridLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:layout_marginStart="8dp"
+                    android:columnCount="2"
+                    android:rowCount="5">
+
+                    <!--
+                    To give two vertical LinearLayouts the same amount of
+                    horizontal space (creating two columns), set both of their
+                    layout widths to 0, and their layout weights to 1
+                    -->
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_column="0"
+                        android:layout_columnWeight="1"
+                        android:layout_marginTop="12dp"
+                        android:layout_row="0"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:includeFontPadding="false"
+                            android:text="@string/todaysLow"
+                            android:textAppearance="?android:textAppearanceSmall"
+                            android:textColor="@android:color/darker_gray" />
+
+                        <!--TextSwitcher needs two TextView children-->
+                        <TextSwitcher
+                            android:id="@+id/textSwitcher_todaysLow"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:inAnimation="@android:anim/slide_in_left"
+                            android:outAnimation="@android:anim/slide_out_right">
+
+                            <!--Initially shown-->
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:text="@string/tab_hyphen"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                            <!--Shown when stats are updated-->
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                        </TextSwitcher>
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_column="1"
+                        android:layout_columnWeight="1"
+                        android:layout_marginTop="12dp"
+                        android:layout_row="0"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:layout_marginBottom="0dp"
+                            android:includeFontPadding="false"
+                            android:text="@string/todaysHigh"
+                            android:textAppearance="?android:textAppearanceSmall"
+                            android:textColor="@android:color/darker_gray" />
+
+                        <TextSwitcher
+                            android:id="@+id/textSwitcher_todaysHigh"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:inAnimation="@android:anim/slide_in_left"
+                            android:outAnimation="@android:anim/slide_out_right">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:text="@string/tab_hyphen"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                        </TextSwitcher>
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_column="0"
+                        android:layout_columnWeight="1"
+                        android:layout_marginTop="12dp"
+                        android:layout_row="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:includeFontPadding="false"
+                            android:text="@string/fiftyTwoWeekLow"
+                            android:textAppearance="?android:textAppearanceSmall"
+                            android:textColor="@android:color/darker_gray" />
+
+                        <TextSwitcher
+                            android:id="@+id/textSwitcher_fiftyTwoWeekLow"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:inAnimation="@android:anim/slide_in_left"
+                            android:outAnimation="@android:anim/slide_out_right">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:text="@string/tab_hyphen"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                        </TextSwitcher>
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_column="1"
+                        android:layout_columnWeight="1"
+                        android:layout_marginTop="12dp"
+                        android:layout_row="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:includeFontPadding="false"
+                            android:text="@string/fiftyTwoWeekHigh"
+                            android:textAppearance="?android:textAppearanceSmall"
+                            android:textColor="@android:color/darker_gray" />
+
+                        <TextSwitcher
+                            android:id="@+id/textSwitcher_fiftyTwoWeekHigh"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:inAnimation="@android:anim/slide_in_left"
+                            android:outAnimation="@android:anim/slide_out_right">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:text="@string/tab_hyphen"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                        </TextSwitcher>
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_column="0"
+                        android:layout_columnWeight="1"
+                        android:layout_marginTop="12dp"
+                        android:layout_row="2"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:includeFontPadding="false"
+                            android:text="@string/marketCap"
+                            android:textAppearance="?android:textAppearanceSmall"
+                            android:textColor="@android:color/darker_gray" />
+
+                        <TextSwitcher
+                            android:id="@+id/textSwitcher_marketCap"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:inAnimation="@android:anim/slide_in_left"
+                            android:outAnimation="@android:anim/slide_out_right">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:text="@string/tab_hyphen"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                        </TextSwitcher>
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_column="1"
+                        android:layout_columnWeight="1"
+                        android:layout_marginTop="12dp"
+                        android:layout_row="2"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:includeFontPadding="false"
+                            android:text="@string/previousClose"
+                            android:textAppearance="?android:textAppearanceSmall"
+                            android:textColor="@android:color/darker_gray" />
+
+                        <TextSwitcher
+                            android:id="@+id/textSwitcher_prevClose"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:inAnimation="@android:anim/slide_in_left"
+                            android:outAnimation="@android:anim/slide_out_right">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:text="@string/tab_hyphen"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                        </TextSwitcher>
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_column="0"
+                        android:layout_columnWeight="1"
+                        android:layout_marginTop="12dp"
+                        android:layout_row="3"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:includeFontPadding="false"
+                            android:text="@string/peRatio"
+                            android:textAppearance="?android:textAppearanceSmall"
+                            android:textColor="@android:color/darker_gray" />
+
+                        <TextSwitcher
+                            android:id="@+id/textSwitcher_peRatio"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:inAnimation="@android:anim/slide_in_left"
+                            android:outAnimation="@android:anim/slide_out_right">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:text="@string/tab_hyphen"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                        </TextSwitcher>
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_column="1"
+                        android:layout_columnWeight="1"
+                        android:layout_marginTop="12dp"
+                        android:layout_row="3"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:includeFontPadding="false"
+                            android:text="@string/eps"
+                            android:textAppearance="?android:textAppearanceSmall"
+                            android:textColor="@android:color/darker_gray" />
+
+                        <TextSwitcher
+                            android:id="@+id/textSwitcher_eps"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:inAnimation="@android:anim/slide_in_left"
+                            android:outAnimation="@android:anim/slide_out_right">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:text="@string/tab_hyphen"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                        </TextSwitcher>
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_column="0"
+                        android:layout_columnWeight="1"
+                        android:layout_marginTop="12dp"
+                        android:layout_row="4"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:includeFontPadding="false"
+                            android:text="@string/yield"
+                            android:textAppearance="?android:textAppearanceSmall"
+                            android:textColor="@android:color/darker_gray" />
+
+                        <TextSwitcher
+                            android:id="@+id/textSwitcher_yield"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:inAnimation="@android:anim/slide_in_left"
+                            android:outAnimation="@android:anim/slide_out_right">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:text="@string/tab_hyphen"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                        </TextSwitcher>
+
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_column="1"
+                        android:layout_columnWeight="1"
+                        android:layout_marginTop="12dp"
+                        android:layout_row="4"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:includeFontPadding="false"
+                            android:text="@string/avgVolume"
+                            android:textAppearance="?android:textAppearanceSmall"
+                            android:textColor="@android:color/darker_gray" />
+
+                        <TextSwitcher
+                            android:id="@+id/textSwitcher_averageVolume"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:inAnimation="@android:anim/slide_in_left"
+                            android:outAnimation="@android:anim/slide_out_right">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:text="@string/tab_hyphen"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:includeFontPadding="false"
+                                android:textAppearance="?android:textAppearanceMedium"
+                                android:textColor="@android:color/white" />
+
+                        </TextSwitcher>
+
+                    </LinearLayout>
+
+                </GridLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="4dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@color/colorCharcoal" />
+
+                <TextSwitcher
+                    android:id="@+id/textSwitcher_description"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="32dp"
+                    android:layout_marginEnd="8dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginTop="8dp"
+                    android:gravity="start"
+                    android:inAnimation="@android:anim/fade_in"
+                    android:outAnimation="@android:anim/fade_out">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/loading_description_ellipsis"
+                        android:textAppearance="?android:textAppearanceSmall"
+                        android:textColor="@android:color/white"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="?android:textAppearanceSmall"
+                        android:textColor="@android:color/white"
+                        android:textSize="16sp" />
+
+                </TextSwitcher>
+
+            </LinearLayout>
+
+        </ScrollView>
+
+        <android.support.constraint.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/black">
+
+            <ProgressBar
+                android:id="@+id/progressBar_loadingNews"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <!--Init as GONE-->
+            <!--
+            Don't constrain bottom, so if there aren't enough articles to make
+            the recycler view's height fit the screen height, the recycler view
+            will still sit at the top of the screen, rather than in the middle.
+            -->
+            <android.support.v7.widget.RecyclerView
+                android:id="@+id/recyclerView_newsRecycler"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:scrollbarThumbVertical="@color/colorCharcoal"
+                android:scrollbars="vertical"
+                android:visibility="gone"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <!--Init as GONE-->
+            <TextView
+                android:id="@+id/textView_newsStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_margin="24dp"
+                android:gravity="center"
+                android:textAppearance="?android:textAppearanceSmall"
+                android:textColor="@android:color/white"
+                android:textSize="16sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+        </android.support.constraint.ConstraintLayout>
+
+    </ViewFlipper>
+
+</LinearLayout>

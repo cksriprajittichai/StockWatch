@@ -1,4 +1,4 @@
-package c.chasesriprajittichai.stockwatch.recyclerview;
+package c.chasesriprajittichai.stockwatch.recyclerviews;
 
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -19,7 +19,7 @@ import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhValsList;
 public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallback {
 
     private final HomeActivity homeActivity;
-    private final RecyclerAdapter recyclerAdapter;
+    private final StockRecyclerAdapter recyclerAdapter;
     private final ConcreteStockWithAhValsList stocks;
     private final Map<String, Integer> tickerToIndexMap;
 
@@ -31,7 +31,7 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
     private final int whiteMarginSize = 4;
 
     public StockSwipeAndDragCallback(final HomeActivity homeActivity,
-                                     final RecyclerAdapter recyclerAdapter,
+                                     final StockRecyclerAdapter recyclerAdapter,
                                      final ConcreteStockWithAhValsList stocks,
                                      final Map<String, Integer> tickerToIndexMap) {
         super(0, ItemTouchHelper.LEFT | ItemTouchHelper.DOWN |
@@ -51,8 +51,8 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
     /**
      * Called when a viewHolder is swiped iv_left.
      *
-     * @param viewHolder The ViewHolder which has been swiped by the user
-     * @param direction  The direction to which the ViewHolder is swiped.
+     * @param viewHolder The ArticleViewHolder which has been swiped by the user
+     * @param direction  The direction to which the ArticleViewHolder is swiped.
      *                   Should always be {@link ItemTouchHelper#LEFT}.
      */
     @Override
@@ -68,12 +68,12 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
      * position to the new position.
      * <p>
      * If this method returns true, ItemTouchHelper assumes {@code viewHolder}
-     * has been moved to the adapter position of {@code target} ViewHolder.
+     * has been moved to the adapter position of {@code target} ArticleViewHolder.
      *
      * @param rv         The RecyclerView to which ItemTouchHelper is attached
      *                   to
-     * @param viewHolder The ViewHolder which is being dragged by the user
-     * @param target     The ViewHolder over which the currently active item is
+     * @param viewHolder The ArticleViewHolder which is being dragged by the user
+     * @param target     The ArticleViewHolder over which the currently active item is
      *                   being dragged
      * @return True if the {@code viewHolder} has been moved to the adapter
      * position of {@code target}
@@ -96,7 +96,7 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
      *                          children
      * @param rv                The RecyclerView to which ItemTouchHelper is
      *                          attached to
-     * @param viewHolder        The ViewHolder which is being interacted by the
+     * @param viewHolder        The ArticleViewHolder which is being interacted by the
      *                          User or it was interacted and simply animating
      *                          to its original position
      * @param dX                The amount of horizontal displacement caused by
@@ -165,13 +165,13 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
      * #onMove(RecyclerView, RecyclerView.ViewHolder, RecyclerView.ViewHolder)}
      * to always return true. This function also notifies {@code
      * recyclerAdapter} if cells are being dragged, by setting {@link
-     * RecyclerAdapter#setDragging(boolean)} to true.
+     * StockRecyclerAdapter#setDragging(boolean)} to true.
      *
      * @param c                 The canvas which RecyclerView is drawing its
      *                          children
      * @param rv                The RecyclerView to which ItemTouchHelper is
      *                          attached to
-     * @param viewHolder        The ViewHolder which is being interacted by the
+     * @param viewHolder        The ArticleViewHolder which is being interacted by the
      *                          User or it was
      *                          interacted and simply animating to its original
      *                          position

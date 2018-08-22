@@ -41,9 +41,9 @@ import java.util.TimerTask;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import c.chasesriprajittichai.stockwatch.listeners.FindStockTaskListener;
-import c.chasesriprajittichai.stockwatch.recyclerview.RecyclerAdapter;
-import c.chasesriprajittichai.stockwatch.recyclerview.RecyclerDivider;
-import c.chasesriprajittichai.stockwatch.recyclerview.StockSwipeAndDragCallback;
+import c.chasesriprajittichai.stockwatch.recyclerviews.StockRecyclerAdapter;
+import c.chasesriprajittichai.stockwatch.recyclerviews.StockRecyclerDivider;
+import c.chasesriprajittichai.stockwatch.recyclerviews.StockSwipeAndDragCallback;
 import c.chasesriprajittichai.stockwatch.stocks.ConcreteStock;
 import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhVals;
 import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhValsList;
@@ -58,11 +58,14 @@ import static c.chasesriprajittichai.stockwatch.stocks.Stock.State.PREMARKET;
 import static java.lang.Double.parseDouble;
 
 
-public final class HomeActivity extends AppCompatActivity implements FindStockTaskListener,
-        Response.Listener<ConcreteStockWithAhValsList>, Response.ErrorListener {
+public final class HomeActivity
+        extends AppCompatActivity
+        implements FindStockTaskListener,
+        Response.Listener<ConcreteStockWithAhValsList>,
+        Response.ErrorListener {
 
 
-    private static class FindStockTask extends AsyncTask<Void, Integer, StockInHomeActivity> {
+    private static class FindStockTask extends AsyncTask<Void, Integer, Integer> {
 
         private final String searchTicker;
         private StockInHomeActivity stock;
@@ -74,13 +77,23 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
         }
 
         @Override
-        protected StockInHomeActivity doInBackground(final Void... params) {
+        protected Integer doInBackground(final Void... params) {
+            int status = -1;
+
             final String URL = "https://quotes.wsj.com/" + searchTicker;
 
-            final boolean stockExists;
+            Document doc;
             try {
-                final Document doc = Jsoup.connect(URL).get();
+                doc = Jsoup.connect(URL)
+                        .timeout(20000)
+                        .get();
+            } catch (final IOException ioe) {
+                Log.e("IOException", ioe.getLocalizedMessage());
+                doc = null;
+                status = Status.IO_EXCEPTION;
+            }
 
+            if (doc != null) {
                 final Element contentFrame = doc.selectFirst(
                         "html > body > div.pageFrame > div.contentFrame");
 
@@ -88,9 +101,9 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
                 final Element flagElmnt = contentFrame.selectFirst(
                         "div[class$=notfound_header module]");
 
-                stockExists = (flagElmnt == null);
+                status = (flagElmnt == null) ? Status.STOCK_EXISTS : Status.STOCK_DOES_NOT_EXIST;
 
-                if (stockExists) {
+                if (status == Status.STOCK_EXISTS) {
                     final String name = contentFrame.selectFirst(
                             "span.companyName").ownText();
 
@@ -139,24 +152,31 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
                                 price, changePoint, changePercent);
                     }
                 }
-            } catch (final IOException ioe) {
-                Log.e("IOException", ioe.getLocalizedMessage());
             }
 
-            return stock;
+            return status;
         }
 
         @Override
-        protected void onPostExecute(final StockInHomeActivity stock) {
-            completionListener.get().onFindStockTaskCompleted(searchTicker, stock);
+        protected void onPostExecute(final Integer status) {
+            completionListener.get().onFindStockTaskCompleted(status, searchTicker, stock);
+        }
+
+
+        interface Status {
+
+            int STOCK_EXISTS = 1;
+            int STOCK_DOES_NOT_EXIST = 2;
+            int IO_EXCEPTION = 3;
+
         }
 
     }
 
-    @BindView(R.id.recyclerView_home) RecyclerView rv;
+    @BindView(R.id.recyclerView_stockRecycler) RecyclerView rv;
 
     private ConcreteStockWithAhValsList stocks;
-    private RecyclerAdapter rvAdapter;
+    private StockRecyclerAdapter rvAdapter;
     private SearchView searchView;
     private SharedPreferences prefs;
     private RequestQueue requestQueue;
@@ -167,21 +187,28 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
 
     /* Called from FindStockTask.onPostExecute(). */
     @Override
-    public void onFindStockTaskCompleted(final String searchTicker, final StockInHomeActivity stock) {
-        if (stock != null) {
-            // Go to individual stock activity
-            final Intent intent = new Intent(this, IndividualStockActivity.class);
-            intent.putExtra("Ticker", stock.getTicker());
-            intent.putExtra("Name", stock.getName());
-            intent.putExtra("Data", stock.getDataAsArray());
+    public void onFindStockTaskCompleted(final int status, final String searchTicker,
+                                         final StockInHomeActivity stock) {
+        switch (status) {
+            case FindStockTask.Status.STOCK_EXISTS:
+                // Go to individual stock activity
+                final Intent intent = new Intent(this, IndividualStockActivity.class);
+                intent.putExtra("Ticker", stock.getTicker());
+                intent.putExtra("Name", stock.getName());
+                intent.putExtra("Data", stock.getDataAsArray());
 
-            // Equivalent to checking if searchTicker is in stocks
-            intent.putExtra("Is in favorites", tickerToIndexMap.containsKey(stock.getTicker()));
-            startActivity(intent);
-        } else {
-            searchView.setQuery("", false);
-            Toast.makeText(HomeActivity.this,
-                    searchTicker + " couldn't be found", Toast.LENGTH_SHORT).show();
+                // Equivalent to checking if searchTicker is in stocks
+                intent.putExtra("Is in favorites", tickerToIndexMap.containsKey(stock.getTicker()));
+                startActivity(intent);
+                break;
+            case FindStockTask.Status.STOCK_DOES_NOT_EXIST:
+                Toast.makeText(HomeActivity.this,
+                        searchTicker + " couldn't be found", Toast.LENGTH_SHORT).show();
+                break;
+            case FindStockTask.Status.IO_EXCEPTION:
+                Toast.makeText(HomeActivity.this,
+                        "No internet connection", Toast.LENGTH_SHORT).show();
+                break;
         }
     }
 
@@ -189,15 +216,19 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
-        setTitle("Stock Watch");
         ButterKnife.bind(this);
+        setTitle("Stock Watch");
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
         requestQueue = Volley.newRequestQueue(this);
         stocks = new ConcreteStockWithAhValsList();
+//        fillPreferencesWithRandomStocks(0); // Starter kit
+        initStocksFromPreferences();
+        initRecyclerView();
 
-        /* Starter kit */
-//        fillPreferencesWithRandomStocks(0);
+        checkForUpdates();
+    }
 
+    private void initStocksFromPreferences() {
         final String[] tickerArr = prefs.getString("Tickers TSV", "").split("\t");
         final String[] nameArr = prefs.getString("Names TSV", "").split("\t");
         final String[] dataArr = prefs.getString("Data TSV", "").split("\t");
@@ -242,10 +273,12 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
                 tickerToIndexMap.put(curTicker, tickerNdx);
             }
         }
+    }
 
+    private void initRecyclerView() {
         rv.setLayoutManager(new LinearLayoutManager(this));
-        rv.addItemDecoration(new RecyclerDivider(this));
-        rvAdapter = new RecyclerAdapter(stocks, (ConcreteStockWithAhVals stock) -> {
+        rv.addItemDecoration(new StockRecyclerDivider(this));
+        rvAdapter = new StockRecyclerAdapter(stocks, (ConcreteStockWithAhVals stock) -> {
             // Go to individual stock activity
             final Intent intent = new Intent(this, IndividualStockActivity.class);
             intent.putExtra("Ticker", stock.getTicker());
@@ -261,8 +294,6 @@ public final class HomeActivity extends AppCompatActivity implements FindStockTa
         final StockSwipeAndDragCallback stockSwipeAndDragCallback =
                 new StockSwipeAndDragCallback(this, rvAdapter, stocks, tickerToIndexMap);
         new ItemTouchHelper(stockSwipeAndDragCallback).attachToRecyclerView(rv);
-
-        checkForUpdates();
     }
 
     @Override

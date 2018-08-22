@@ -5,6 +5,7 @@ import c.chasesriprajittichai.stockwatch.stocks.StockInHomeActivity;
 
 public interface FindStockTaskListener {
 
-    void onFindStockTaskCompleted(final String searchTicker, final StockInHomeActivity stock);
+    void onFindStockTaskCompleted(final int status, final String searchTicker,
+                                  final StockInHomeActivity stock);
 
 }

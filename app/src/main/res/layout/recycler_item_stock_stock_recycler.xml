@@ -11,7 +11,7 @@
 
     <!--Don't constrain to price TextView or change percent TextView so that values will be in a column-->
     <TextView
-        android:id="@+id/textView_ticker_homeRecyclerItem"
+        android:id="@+id/textView_ticker_stockRecyclerItem"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
@@ -29,7 +29,7 @@
 
     <!--Constrain to top left corner of parent-->
     <TextView
-        android:id="@+id/textView_state_homeRecyclerItem"
+        android:id="@+id/textView_state_stockRecyclerItem"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
@@ -41,9 +41,9 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!--Don't constrain to tickerTextView, so that values will be in a column-->
+    <!--Don't constrain to tickerTextView so that values will be in a column-->
     <TextView
-        android:id="@+id/textView_price_homeRecyclerItem"
+        android:id="@+id/textView_price_stockRecyclerItem"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="2dp"
@@ -53,13 +53,13 @@
         android:textColor="@android:color/white"
         android:textSize="24sp"
         android:typeface="monospace"
-        app:layout_constraintBottom_toTopOf="@id/textView_changePercent_homeRecyclerItem"
+        app:layout_constraintBottom_toTopOf="@id/textView_changePercent_stockRecyclerItem"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!--Don't constrain to tickerTextView, so that values will be in a column-->
+    <!--Don't constrain to tickerTextView so that values will be in a column-->
     <TextView
-        android:id="@+id/textView_changePercent_homeRecyclerItem"
+        android:id="@+id/textView_changePercent_stockRecyclerItem"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
@@ -70,6 +70,6 @@
         android:typeface="monospace"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/textView_price_homeRecyclerItem" />
+        app:layout_constraintTop_toBottomOf="@id/textView_price_stockRecyclerItem" />
 
 </android.support.constraint.ConstraintLayout>

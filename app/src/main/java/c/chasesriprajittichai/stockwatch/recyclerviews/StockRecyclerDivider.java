@@ -1,4 +1,4 @@
-package c.chasesriprajittichai.stockwatch.recyclerview;
+package c.chasesriprajittichai.stockwatch.recyclerviews;
 
 import android.content.Context;
 import android.graphics.Canvas;
@@ -10,12 +10,12 @@ import android.view.View;
 import c.chasesriprajittichai.stockwatch.R;
 
 
-public final class RecyclerDivider extends RecyclerView.ItemDecoration {
+public final class StockRecyclerDivider extends RecyclerView.ItemDecoration {
 
     private final Drawable divider;
 
-    public RecyclerDivider(final Context context) {
-        divider = ContextCompat.getDrawable(context, R.drawable.recycler_divider_home);
+    public StockRecyclerDivider(final Context context) {
+        divider = ContextCompat.getDrawable(context, R.drawable.recycler_divider_stock_home);
     }
 
     @Override
