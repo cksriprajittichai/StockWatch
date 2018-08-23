@@ -8,7 +8,7 @@ public final class ConcreteAdvancedStockWithAhVals
         extends ConcreteStockWithAhVals
         implements AdvancedStock, StockWithAhVals {
 
-    private double priceAtOpen;
+    private double open;
     private double todaysLow;
     private double todaysHigh;
     private double fiftyTwoWeekLow;
@@ -18,6 +18,7 @@ public final class ConcreteAdvancedStockWithAhVals
     private double peRatio;
     private double eps;
     private double yield;
+    private String volume;
     private String avgVolume;
     private String description;
     private List<Double> prices_1day;
@@ -32,52 +33,6 @@ public final class ConcreteAdvancedStockWithAhVals
     private List<String> dates_1year;
     private List<String> dates_5years;
 
-    public ConcreteAdvancedStockWithAhVals(final State state, final String ticker, final String name,
-                                           final double price, final double changePoint,
-                                           final double changePercent, final double afterHoursPrice,
-                                           final double afterHoursChangePoint,
-                                           final double afterHoursChangePercent, final double todaysLow,
-                                           final double todaysHigh, final double fiftyTwoWeekLow,
-                                           final double fiftyTwoWeekHigh, final String marketCap,
-                                           final double prevClose, final double peRatio, final double eps,
-                                           final double yield, final String averageVolume,
-                                           final String description, final List<Double> prices_1day,
-                                           final List<Double> prices_2weeks, final List<Double> prices_1month,
-                                           final List<Double> prices_3months, final List<Double> prices_1year,
-                                           final List<Double> prices_5years, final List<String> dates_2weeks,
-                                           final List<String> dates_1month, final List<String> dates_3months,
-                                           final List<String> dates_1year, final List<String> dates_5years) {
-        super(state, ticker, name, price, changePoint, changePercent,
-                afterHoursPrice, afterHoursChangePoint, afterHoursChangePercent);
-        this.todaysLow = todaysLow;
-        this.todaysHigh = todaysHigh;
-        this.fiftyTwoWeekLow = fiftyTwoWeekLow;
-        this.fiftyTwoWeekHigh = fiftyTwoWeekHigh;
-        this.marketCap = marketCap;
-        this.prevClose = prevClose;
-        this.peRatio = peRatio;
-        this.eps = eps;
-        this.yield = yield;
-        avgVolume = averageVolume;
-        this.description = description;
-        this.prices_1day = prices_1day;
-        priceAtOpen = !this.prices_1day.isEmpty() ? this.prices_1day.get(0) : -1;
-        this.prices_2weeks = prices_2weeks;
-        this.prices_1month = prices_1month;
-        this.prices_3months = prices_3months;
-        this.prices_1year = prices_1year;
-        this.prices_5years = prices_5years;
-        this.dates_2weeks = dates_2weeks;
-        this.dates_1month = dates_1month;
-        this.dates_3months = dates_3months;
-        this.dates_1year = dates_1year;
-        this.dates_5years = dates_5years;
-    }
-
-    public ConcreteAdvancedStockWithAhVals(final Stock stock) {
-        super(stock);
-    }
-
     public ConcreteAdvancedStockWithAhVals(final State state, final String ticker,
                                            final String name, final double price,
                                            final double changePoint,
@@ -91,7 +46,7 @@ public final class ConcreteAdvancedStockWithAhVals
 
     public ConcreteAdvancedStockWithAhVals(final AdvancedStock stock) {
         super(stock);
-        priceAtOpen = stock.getPriceAtOpen();
+        open = stock.getOpen();
         todaysLow = stock.getTodaysLow();
         todaysHigh = stock.getTodaysHigh();
         fiftyTwoWeekLow = stock.getFiftyTwoWeekLow();
@@ -101,7 +56,9 @@ public final class ConcreteAdvancedStockWithAhVals
         peRatio = stock.getPeRatio();
         eps = stock.getEps();
         yield = stock.getYield();
+        volume = stock.getVolume();
         avgVolume = stock.getAverageVolume();
+        open = stock.getOpen();
         description = stock.getDescription();
         prices_1day = stock.getPrices_1day();
         prices_2weeks = stock.getPrices_2weeks();
@@ -117,15 +74,14 @@ public final class ConcreteAdvancedStockWithAhVals
     }
 
     @Override
-    public double getPriceAtOpen() {
-        return priceAtOpen;
+    public double getOpen() {
+        return open;
     }
 
     @Override
-    public void setPriceAtOpen(final double priceAtOpen) {
-        this.priceAtOpen = priceAtOpen;
+    public void setOpen(final double open) {
+        this.open = open;
     }
-
 
     @Override
     public double getTodaysLow() {
@@ -215,6 +171,16 @@ public final class ConcreteAdvancedStockWithAhVals
     @Override
     public void setYield(final double yield) {
         this.yield = yield;
+    }
+
+    @Override
+    public String getVolume() {
+        return volume;
+    }
+
+    @Override
+    public void setVolume(final String volume) {
+        this.volume = volume;
     }
 
     @Override

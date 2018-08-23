@@ -1,8 +1,5 @@
 package c.chasesriprajittichai.stockwatch.stocks;
 
-import android.text.NoCopySpan;
-
-
 /**
  * Some useful information about this class can be found at {@link
  * ConcreteStockWithAhVals}.

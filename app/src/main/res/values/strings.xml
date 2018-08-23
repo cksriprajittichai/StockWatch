@@ -35,10 +35,12 @@
     <string name="fiftyTwoWeekHigh">52 Week High</string>
     <string name="marketCap">Market Cap</string>
     <string name="previousClose">Previous Close</string>
+    <string name="open">Open</string>
     <string name="peRatio">P/E Ratio</string>
     <string name="eps">EPS</string>
     <string name="yield">Yield</string>
-    <string name="avgVolume">Average Volume</string>
+    <string name="volume">Volume</string>
+    <string name="avgVolume">65 Day Avg Vol</string>
 
     <string name="na">N/A</string>
     <string name="x">x</string>

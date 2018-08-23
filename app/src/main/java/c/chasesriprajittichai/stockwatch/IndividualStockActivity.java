@@ -80,7 +80,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         DownloadStatsTaskListener,
         DownloadNewsTaskListener {
 
-    @BindView(R.id.viewFlipper_overview_or_news_flipper) ViewFlipper viewFlipper;
+    @BindView(R.id.viewFlipper_overviewOrNewsFlipper) ViewFlipper viewFlipper;
     @BindView(R.id.button_overview) Button overviewBtn;
     @BindView(R.id.button_news) Button newsBtn;
 
@@ -88,16 +88,16 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     @BindView(R.id.textView_topChangePoint_individual) TextView top_changePoint;
     @BindView(R.id.textView_topChangePercent_individual) TextView top_changePercent;
     @BindView(R.id.textView_topTime_individual) TextView top_time;
-    @BindView(R.id.linearLayout_afterHoursData_individual) LinearLayout ah_linearLayout;
+    @BindView(R.id.linearLayout_topAfterHoursData_individual) LinearLayout ah_linearLayout;
     @BindView(R.id.textView_topAfterHoursChangePoint_individual) TextView top_ah_changePoint;
     @BindView(R.id.textView_topAfterHoursChangePercent_individual) TextView top_ah_changePercent;
     @BindView(R.id.textView_topAfterHoursTime_individual) TextView top_ah_time;
     @BindView(R.id.progressBar_loadingCharts) ProgressBar loadingChartsProgressBar;
     @BindView(R.id.textView_chartsStatus) TextView chartsStatus;
-    @BindView(R.id.sparkView_individual) CustomSparkView sparkView;
-    @BindView(R.id.horizontalPicker_chartPeriod_individual) HorizontalPicker chartPeriodPicker;
-    @BindView(R.id.view_chartPeriodPickerUnderline_individual) View chartPeriodPickerUnderline;
-    @BindView(R.id.textView_keyStatisticsHeader_individual) TextView keyStatisticsHeader;
+    @BindView(R.id.sparkView) CustomSparkView sparkView;
+    @BindView(R.id.horizontalPicker_chartPeriod) HorizontalPicker chartPeriodPicker;
+    @BindView(R.id.view_chartPeriodPickerUnderline) View chartPeriodPickerUnderline;
+    @BindView(R.id.textView_keyStatisticsHeader) TextView keyStatisticsHeader;
     @BindView(R.id.textSwitcher_todaysLow) TextSwitcher todaysLow;
     @BindView(R.id.textSwitcher_todaysHigh) TextSwitcher todaysHigh;
     @BindView(R.id.textSwitcher_fiftyTwoWeekLow) TextSwitcher fiftyTwoWeekLow;
@@ -108,6 +108,8 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     @BindView(R.id.textSwitcher_eps) TextSwitcher eps;
     @BindView(R.id.textSwitcher_yield) TextSwitcher yield;
     @BindView(R.id.textSwitcher_averageVolume) TextSwitcher avgVolume;
+    @BindView(R.id.textSwitcher_volume) TextSwitcher volume;
+    @BindView(R.id.textSwitcher_open) TextSwitcher open;
     @BindView(R.id.textSwitcher_description) TextSwitcher description;
 
     @BindView(R.id.recyclerView_newsRecycler) RecyclerView newsRv;
@@ -252,10 +254,20 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 } else {
                     yield.setText(getString(R.string.na));
                 }
+                if (!missingStats.contains(Stat.VOLUME)) {
+                    volume.setText(getString(R.string.string, stock.getVolume()));
+                } else {
+                    volume.setText(getString(R.string.na));
+                }
                 if (!missingStats.contains(Stat.AVG_VOLUME)) {
                     avgVolume.setText(getString(R.string.string, stock.getAverageVolume()));
                 } else {
                     avgVolume.setText(getString(R.string.na));
+                }
+                if (!missingStats.contains(Stat.OPEN)) {
+                    open.setText(getString(R.string.double2dec, stock.getOpen()));
+                } else {
+                    open.setText(getString(R.string.na));
                 }
                 if (!missingStats.contains(Stat.DESCRIPTION)) {
                     description.setText(stock.getDescription());
@@ -273,6 +285,8 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 peRatio.setText(getString(R.string.x));
                 eps.setText(getString(R.string.x));
                 yield.setText(getString(R.string.x));
+                volume.setText(getString(R.string.x));
+                open.setText(getString(R.string.x));
                 avgVolume.setText(getString(R.string.x));
 
                 description.setText(getString(R.string.ioException_loadingDescription));
@@ -1210,7 +1224,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 /* Get non-chart data. */
                 final Element mainData = module2.selectFirst(
                         "ul[class$=info_main]");
-                final double price, changePoint, changePercent, prevClose;
+                final double price, changePoint, changePercent, open, prevClose;
                 // Remove ',' or '%' that could be in strings
                 price = parseDouble(mainData.selectFirst(
                         ":root > li[class$=quote] > span.curr_price > " +
@@ -1221,21 +1235,37 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                         diffs.get(0).ownText().replaceAll("[^0-9.-]+", ""));
                 changePercent = parseDouble(
                         diffs.get(1).ownText().replaceAll("[^0-9.-]+", ""));
-                prevClose = parseDouble(
-                        module2.selectFirst(
-                                ":root > div > div[id$=divId] > div[class$=compare] > " +
-                                        "div[class$=compare_data] > ul > li:eq(1) > " +
-                                        "span.data_data").ownText().replaceAll("[^0-9.]+", ""));
-                /* If previous close isn't applicable (stock just had IPO), element
-                 * exists and has value 0. */
+                stock.setPrice(price);
+                stock.setChangePoint(changePoint);
+                stock.setChangePercent(changePercent);
+
+                final Elements openAndPrevClose = module2.select(
+                        ":root > div > div[id=chart_divId] > div[class$=compare] > " +
+                                "div[class$=compare_data] > ul > li > span.data_data");
+                open = parseDouble(openAndPrevClose.get(0).ownText().replaceAll("[^0-9.]+", ""));
+                prevClose = parseDouble(openAndPrevClose.get(1).ownText().replaceAll("[^0-9.]+", ""));
+//                open = parseDouble(
+//                        module2.selectFirst(
+//                                ":root > div > div[id=chart_divId] > div[class$=compare] > " +
+//                                        "div[class$=compare_data] > ul > li:eq(0) > " +
+//                                        "span.data_data").ownText().replaceAll("[^0-9.]+", ""));
+//                prevClose = parseDouble(
+//                        module2.selectFirst(
+//                                ":root > div > div[id=chart_divId] > div[class$=compare] > " +
+//                                        "div[class$=compare_data] > ul > li:eq(1) > " +
+//                                        "span.data_data").ownText().replaceAll("[^0-9.]+", ""));
+                /* If previous close isn't applicable (stock just had IPO),
+                 * element exists and has value 0. Same applies for open. */
+                if (open == 0) {
+                    missingStats.add(Stat.OPEN);
+                } else {
+                    stock.setOpen(open);
+                }
                 if (prevClose == 0) {
                     missingStats.add(Stat.PREV_CLOSE);
                 } else {
                     stock.setPrevClose(prevClose);
                 }
-                stock.setPrice(price);
-                stock.setChangePoint(changePoint);
-                stock.setChangePercent(changePercent);
 
 
                 final Element subData = mainData.nextElementSibling();
@@ -1286,6 +1316,15 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                  * value is a digit or '.'. */
                 final Elements keyData1 = module2.select(
                         "ul[class$=charts_info] > li > div > span.data_data");
+
+                final String volume;
+                strBuff = keyData1.get(0).ownText();
+                if (!strBuff.isEmpty() && Util.Char.isDigitOrDec(strBuff.charAt(0))) {
+                    volume = strBuff;
+                    stock.setVolume(volume);
+                } else {
+                    missingStats.add(Stat.VOLUME);
+                }
 
                 final String avgVolume;
                 strBuff = keyData1.get(1).ownText();

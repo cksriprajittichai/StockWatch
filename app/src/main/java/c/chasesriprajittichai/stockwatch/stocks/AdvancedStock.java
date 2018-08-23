@@ -11,12 +11,12 @@ public interface AdvancedStock extends Stock {
 
     enum Stat {
         TODAYS_RANGE, FIFTY_TWO_WEEK_RANGE, MARKET_CAP, PREV_CLOSE, PE_RATIO,
-        EPS, YIELD, AVG_VOLUME, DESCRIPTION
+        EPS, YIELD, VOLUME, AVG_VOLUME, OPEN, DESCRIPTION
     }
 
-    double getPriceAtOpen();
+    double getOpen();
 
-    void setPriceAtOpen(final double priceAtOpen);
+    void setOpen(final double open);
 
     double getTodaysLow();
 
@@ -53,6 +53,10 @@ public interface AdvancedStock extends Stock {
     double getYield();
 
     void setYield(final double yield);
+
+    String getVolume();
+
+    void setVolume(final String volume);
 
     String getAverageVolume();
 
