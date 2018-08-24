@@ -30,21 +30,30 @@ import static java.lang.Double.parseDouble;
 public final class MultiStockRequest extends Request<ConcreteStockWithAhValsList> {
 
     /**
-     * Lock to guard mListener as it is cleared on cancel() and read on
-     * delivery.
+     * Lock to guard {@link #responseListener} as it is cleared on {@link
+     * #cancel()} and read on delivery.
      */
     private final Object lock = new Object();
 
-    // Guarded by lock
+    /**
+     * Guarded by {@link #lock}.
+     */
     private Response.Listener<ConcreteStockWithAhValsList> responseListener;
 
+    /**
+     * This MultiStockRequest's ConcreteStockWithAhVals with a maximum size of
+     * 10. This reference contains the same ConcreteStockWithAhVals that are in
+     * {@link HomeActivity#stocks}. This way, we can update the
+     * ConcreteStockWithAhVals in HomeActivity.
+     */
     private final ConcreteStockWithAhValsList stocks;
 
     /**
-     * @param url              The URL of the multiple-stock site to get data
-     *                         from
+     * @param url              The URL of the MarketWatch multiple-stock site to
+     *                         get data from
      * @param stocks           The stocks that should be updated
-     * @param responseListener Listener to receive the ConcreteStockWithAhValsList response
+     * @param responseListener Listener to receive the
+     *                         ConcreteStockWithAhValsList response
      * @param errorListener    Error responseListener, or null to ignore errors
      */
     MultiStockRequest(final String url, final ConcreteStockWithAhValsList stocks,
@@ -55,7 +64,19 @@ public final class MultiStockRequest extends Request<ConcreteStockWithAhValsList
         this.stocks = new ConcreteStockWithAhValsList(stocks);
     }
 
-    /* Does not run on the UI thread. */
+    /**
+     * This method parses the HTML response of the MarketWatch multiple-stock
+     * website that displays up to 10 stocks. From the response, the fields
+     * defined in {@link Stock} are retrieved for each of the stocks represented
+     * in the website/response. Each {@link ConcreteStockWithAhVals} in
+     * {@link #stocks} is then updated with the parsed information.
+     * <p>
+     * This method will be called from a worker thread.
+     *
+     * @param response Response from the network
+     * @return The parsed {@code Response<ConcreteStockWithAhValsList>}, or null
+     * in the case of an error
+     */
     @Override
     protected Response<ConcreteStockWithAhValsList> parseNetworkResponse(final NetworkResponse response) {
         ConcreteStockWithAhVals curStock;
@@ -156,6 +177,7 @@ public final class MultiStockRequest extends Request<ConcreteStockWithAhValsList
                 curChangePercent = parseDouble(
                         live_changePercents.get(i).ownText().replaceAll("[^0-9.-]+", ""));
 
+                // Ensure that after hours values are 0
                 curAhPrice = 0;
                 curAhChangePoint = 0;
                 curAhChangePercent = 0;
@@ -172,6 +194,13 @@ public final class MultiStockRequest extends Request<ConcreteStockWithAhValsList
         return Response.success(stocks, HttpHeaderParser.parseCacheHeaders(response));
     }
 
+    /**
+     * Callback method to {@link #responseListener}. Pass the update {@link
+     * #stocks} to the responseListener as a parameter.
+     *
+     * @param responseStocks The ConcreteStockWithAhValsList to pass to
+     *                       responseListener; same as {@link #stocks}
+     */
     @Override
     protected void deliverResponse(final ConcreteStockWithAhValsList responseStocks) {
         final Response.Listener<ConcreteStockWithAhValsList> listener;

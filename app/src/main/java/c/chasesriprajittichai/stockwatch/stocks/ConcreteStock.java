@@ -1,8 +1,11 @@
 package c.chasesriprajittichai.stockwatch.stocks;
 
+import c.chasesriprajittichai.stockwatch.HomeActivity;
+
+
 /**
- * Some useful information about this class can be found at {@link
- * ConcreteStockWithAhVals}.
+ * Information about why this class is not used in {@link HomeActivity#rv} can
+ * be found at {@link ConcreteStockWithAhVals}.
  */
 public class ConcreteStock implements Stock, StockInHomeActivity {
 
@@ -24,28 +27,51 @@ public class ConcreteStock implements Stock, StockInHomeActivity {
         this.changePercent = changePercent;
     }
 
-    public ConcreteStock(final Stock stock) {
-        state = stock.getState();
-        ticker = stock.getTicker();
-        name = stock.getName();
-        price = stock.getPrice();
-        changePoint = stock.getChangePoint();
-        changePercent = stock.getChangePercent();
-    }
-
+    /**
+     * @return The price of the Stock
+     */
     @Override
     public double getLivePrice() {
         return price;
     }
 
+    /**
+     * @return The change point from the open trading hours
+     */
     @Override
     public double getLiveChangePoint() {
         return changePoint;
     }
 
+    /**
+     * @return The change percent from the open trading hours
+     */
     @Override
     public double getLiveChangePercent() {
         return changePercent;
+    }
+
+    /**
+     * @return The change percent during the open trading hours
+     */
+    @Override
+    public double getNetChangePercent() {
+        return changePercent;
+    }
+
+    /**
+     * @return A four element string array containing the {@link
+     * StockInHomeActivity}'s {@link Stock.State}, price, change point, and
+     * change percent.
+     */
+    @Override
+    public String[] getDataAsArray() {
+        final String[] data = new String[4];
+        data[0] = state.toString();
+        data[1] = String.valueOf(price);
+        data[2] = String.valueOf(changePoint);
+        data[3] = String.valueOf(changePercent);
+        return data;
     }
 
     @Override
@@ -98,23 +124,4 @@ public class ConcreteStock implements Stock, StockInHomeActivity {
         this.changePercent = changePercent;
     }
 
-    @Override
-    public double getNetChangePoint() {
-        return changePoint;
-    }
-
-    @Override
-    public double getNetChangePercent() {
-        return changePercent;
-    }
-
-    @Override
-    public String[] getDataAsArray() {
-        String[] data = new String[4];
-        data[0] = state.toString();
-        data[1] = String.valueOf(price);
-        data[2] = String.valueOf(changePoint);
-        data[3] = String.valueOf(changePercent);
-        return data;
-    }
 }

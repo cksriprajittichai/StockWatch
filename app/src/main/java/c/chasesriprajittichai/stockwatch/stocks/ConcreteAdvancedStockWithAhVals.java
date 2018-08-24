@@ -3,23 +3,25 @@ package c.chasesriprajittichai.stockwatch.stocks;
 import java.util.ArrayList;
 import java.util.List;
 
+import c.chasesriprajittichai.stockwatch.IndividualStockActivity;
+
 
 public final class ConcreteAdvancedStockWithAhVals
         extends ConcreteStockWithAhVals
         implements AdvancedStock, StockWithAhVals {
 
+    private double prevClose;
     private double open;
+    private String volume;
+    private String avgVolume;
     private double todaysLow;
     private double todaysHigh;
     private double fiftyTwoWeekLow;
     private double fiftyTwoWeekHigh;
     private String marketCap;
-    private double prevClose;
     private double peRatio;
     private double eps;
     private double yield;
-    private String volume;
-    private String avgVolume;
     private String description;
     private List<Double> prices_1day;
     private List<Double> prices_2weeks;
@@ -33,6 +35,7 @@ public final class ConcreteAdvancedStockWithAhVals
     private List<String> dates_1year;
     private List<String> dates_5years;
 
+
     public ConcreteAdvancedStockWithAhVals(final State state, final String ticker,
                                            final String name, final double price,
                                            final double changePoint,
@@ -44,21 +47,27 @@ public final class ConcreteAdvancedStockWithAhVals
                 afterHoursPrice, afterHoursChangePoint, afterHoursChangePercent);
     }
 
+    /**
+     * Copy constructor. Used in {@link IndividualStockActivity} to convert
+     * {@link IndividualStockActivity#stock} - which was a {@link
+     * ConcreteAdvancedStock} - into a ConcreteAdvancedStockWithAhVals.
+     *
+     * @param stock The AdvancedStock to copy
+     */
     public ConcreteAdvancedStockWithAhVals(final AdvancedStock stock) {
         super(stock);
+        prevClose = stock.getPrevClose();
         open = stock.getOpen();
+        volume = stock.getVolume();
+        avgVolume = stock.getAverageVolume();
         todaysLow = stock.getTodaysLow();
         todaysHigh = stock.getTodaysHigh();
         fiftyTwoWeekLow = stock.getFiftyTwoWeekLow();
         fiftyTwoWeekHigh = stock.getFiftyTwoWeekHigh();
         marketCap = stock.getMarketCap();
-        prevClose = stock.getPrevClose();
         peRatio = stock.getPeRatio();
         eps = stock.getEps();
         yield = stock.getYield();
-        volume = stock.getVolume();
-        avgVolume = stock.getAverageVolume();
-        open = stock.getOpen();
         description = stock.getDescription();
         prices_1day = stock.getPrices_1day();
         prices_2weeks = stock.getPrices_2weeks();
@@ -74,6 +83,16 @@ public final class ConcreteAdvancedStockWithAhVals
     }
 
     @Override
+    public double getPrevClose() {
+        return prevClose;
+    }
+
+    @Override
+    public void setPrevClose(final double prevClose) {
+        this.prevClose = prevClose;
+    }
+
+    @Override
     public double getOpen() {
         return open;
     }
@@ -81,6 +100,26 @@ public final class ConcreteAdvancedStockWithAhVals
     @Override
     public void setOpen(final double open) {
         this.open = open;
+    }
+
+    @Override
+    public String getVolume() {
+        return volume;
+    }
+
+    @Override
+    public void setVolume(final String volume) {
+        this.volume = volume;
+    }
+
+    @Override
+    public String getAverageVolume() {
+        return avgVolume;
+    }
+
+    @Override
+    public void setAverageVolume(final String avgVolume) {
+        this.avgVolume = avgVolume;
     }
 
     @Override
@@ -134,16 +173,6 @@ public final class ConcreteAdvancedStockWithAhVals
     }
 
     @Override
-    public double getPrevClose() {
-        return prevClose;
-    }
-
-    @Override
-    public void setPrevClose(final double prevClose) {
-        this.prevClose = prevClose;
-    }
-
-    @Override
     public double getPeRatio() {
         return peRatio;
     }
@@ -171,26 +200,6 @@ public final class ConcreteAdvancedStockWithAhVals
     @Override
     public void setYield(final double yield) {
         this.yield = yield;
-    }
-
-    @Override
-    public String getVolume() {
-        return volume;
-    }
-
-    @Override
-    public void setVolume(final String volume) {
-        this.volume = volume;
-    }
-
-    @Override
-    public String getAverageVolume() {
-        return avgVolume;
-    }
-
-    @Override
-    public void setAverageVolume(final String avgVolume) {
-        this.avgVolume = avgVolume;
     }
 
     @Override

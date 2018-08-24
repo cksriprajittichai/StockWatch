@@ -19,21 +19,26 @@ public final class SparkViewAdapter extends SparkAdapter {
         dates = new ArrayList<>();
     }
 
-    SparkViewAdapter(final List<Double> yData, final List<String> dates) {
-        prices = yData;
-        this.dates = dates;
-    }
-
+    /**
+     * @return the number of points to be drawn
+     */
     @Override
     public int getCount() {
         return prices.size();
     }
 
+    /**
+     * @return the object at the given index
+     */
     @Override
     public Object getItem(final int index) {
         return prices.get(index);
     }
 
+    /**
+     * @return the float representation of the Y value of the point at the given
+     * index
+     */
     @Override
     public float getY(final int index) {
         return (float) prices.get(index).doubleValue();
@@ -43,12 +48,20 @@ public final class SparkViewAdapter extends SparkAdapter {
         return dates.get(index);
     }
 
-    /* Does not call notifyDataSetChanged(). */
+    /**
+     * This function does not call {@link #notifyDataSetChanged()}.
+     *
+     * @param yData To set prices to
+     */
     public void setyData(final List<Double> yData) {
         prices = yData;
     }
 
-    /* Does not call notifyDataSetChanged(). */
+    /**
+     * This function does not call {@link #notifyDataSetChanged()}.
+     *
+     * @param dates To set dates to
+     */
     public void setDates(final List<String> dates) {
         this.dates = dates;
     }

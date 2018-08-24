@@ -8,8 +8,8 @@ import java.util.List;
 
 
 /**
- * Some useful information about this class can be found at {@link
- * ConcreteStockWithAhVals}.
+ * Information about why this class contains only ConcreteStockWithAhVals can
+ * be found at {@link ConcreteStockWithAhVals}.
  */
 public final class ConcreteStockWithAhValsList extends ArrayList<ConcreteStockWithAhVals> {
 
@@ -22,26 +22,28 @@ public final class ConcreteStockWithAhValsList extends ArrayList<ConcreteStockWi
     }
 
     /**
-     * @return A TSV string of the tickers of the stocks in mstocks
+     * @return A TSV string of the tickers of the Stocks in this list
      */
     public String getStockTickersAsTSV() {
         return TextUtils.join("\t", getStockTickers());
     }
 
     /**
-     * @return A TSV string of the tickers of the stocks in mstocks
+     * @return A TSV string of the tickers of the Stocks in this list
      */
     public String getStockNamesAsTSV() {
         return TextUtils.join("\t", getStockNames());
     }
 
     /**
-     * Stock data includes the stock's state, price, change point, change
-     * percent, after hours price, after hours change point, and after hours
-     * change percent. If a stock is not instance of StockWithAhVals, the after
-     * hours values of that stock should be 0.
+     * Returns a list containing the data of the Stocks in this list. Stock data
+     * includes the Stock's state, price, change point, change percent, after
+     * hours price, after hours change point, and after hours change percent. If
+     * a Stock should not have after hours values, the after hours values of
+     * that Stock should be 0.
      *
      * @return A TSV String of the data of the stocks in mstocks
+     * @see ConcreteStockWithAhVals#ConcreteStockWithAhVals(Stock)
      */
     public String getStockDataAsTSV() {
         final List<Stock.State> states = getStockStates();

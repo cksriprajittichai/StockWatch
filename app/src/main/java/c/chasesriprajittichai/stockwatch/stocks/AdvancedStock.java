@@ -1,17 +1,33 @@
 package c.chasesriprajittichai.stockwatch.stocks;
 
 import java.util.List;
+import java.util.Set;
+
+import c.chasesriprajittichai.stockwatch.CustomSparkView;
+import c.chasesriprajittichai.stockwatch.IndividualStockActivity;
 
 
 public interface AdvancedStock extends Stock {
 
+    /**
+     * These are the different time periods that can be shown in the {@link
+     * CustomSparkView} in {@link IndividualStockActivity}. This enum is used
+     * very often to specify a Stock's chart.
+     */
     enum ChartPeriod {
         ONE_DAY, TWO_WEEKS, ONE_MONTH, THREE_MONTHS, ONE_YEAR, FIVE_YEARS
     }
 
+    /**
+     * These represent the member variables of an AdvancedStock, excluding the
+     * chart data (prices and dates). This enum is used in {@link
+     * IndividualStockActivity.DownloadStatsTask} and {@link
+     * IndividualStockActivity#onDownloadStatsTaskCompleted(int, Set)} to keep
+     * track of which Stats are missing or have irregular values.
+     */
     enum Stat {
-        TODAYS_RANGE, FIFTY_TWO_WEEK_RANGE, MARKET_CAP, PREV_CLOSE, PE_RATIO,
-        EPS, YIELD, VOLUME, AVG_VOLUME, OPEN, DESCRIPTION
+        PREV_CLOSE, OPEN, VOLUME, AVG_VOLUME, TODAYS_RANGE,
+        FIFTY_TWO_WEEK_RANGE, MARKET_CAP, PE_RATIO, EPS, YIELD, DESCRIPTION
     }
 
     double getOpen();

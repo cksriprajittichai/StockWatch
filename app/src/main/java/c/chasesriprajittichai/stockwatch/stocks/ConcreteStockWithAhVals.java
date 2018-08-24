@@ -1,27 +1,34 @@
 package c.chasesriprajittichai.stockwatch.stocks;
 
+import c.chasesriprajittichai.stockwatch.HomeActivity;
+
+
 /**
- * Regarding the recycler view in {@link
- * c.chasesriprajittichai.stockwatch.HomeActivity}, operations on the recycler
- * view will be much faster if the recycler view only contains one type
- * of object. If an element at an index in the recycler view changes type,
- * expensive operations must be done to account for it. For this reason, the
- * recycler view in HomeActivity only uses ConcreteStockWithAhVals,
- * rather than using both {@link ConcreteStock}) and {@link
- * ConcreteStockWithAhVals}. Additionally, ConcreteStockList has been converted
- * to {@link ConcreteStockWithAhValsList} because of this.
+ * Regarding the {@link HomeActivity#rv}, operations on rv will be much faster
+ * if rv only contains one type of object. If an element at an index in rv
+ * changes type, expensive operations must be done to account for it. For this
+ * reason, rv in HomeActivity only uses ConcreteStockWithAhVals, rather than
+ * using both {@link ConcreteStock} and ConcreteStockWithAhVals. Additionally,
+ * ConcreteStockList has been converted to {@link ConcreteStockWithAhValsList}
+ * because of this.
  */
 public class ConcreteStockWithAhVals
         extends ConcreteStock
         implements Stock, StockWithAhVals, StockInHomeActivity {
 
-    // Price in after hours; live price
+    /**
+     * Price in after hours; live price
+     */
     private double ahPrice;
 
-    // The change point that has occurred during after hours
+    /**
+     * The change point that has occurred during after hours trading
+     */
     private double ahChangePoint;
 
-    // The change percent that has occurred during after hours
+    /**
+     * The change percent that has occurred during after hours trading
+     */
     private double ahChangePercent;
 
     public ConcreteStockWithAhVals(final State state, final String ticker,
@@ -37,10 +44,18 @@ public class ConcreteStockWithAhVals
         ahChangePercent = afterHoursChangePercent;
     }
 
+    /**
+     * Copy constructor. If stock instanceof {@link StockWithAhVals},
+     * this ConcreteStockWithAhVals' after hours values are set to the after
+     * hours values of stock. Otherwise, this ConcreteStockWithAhVals' after
+     * hours values are set to 0.
+     *
+     * @param stock The Stock to copy
+     */
     public ConcreteStockWithAhVals(final Stock stock) {
         super(stock.getState(), stock.getTicker(), stock.getName(),
                 stock.getPrice(), stock.getChangePoint(), stock.getChangePercent());
-        
+
         if (stock instanceof StockWithAhVals) {
             final StockWithAhVals ahStock = (StockWithAhVals) stock;
             ahPrice = ahStock.getAfterHoursPrice();
@@ -101,16 +116,20 @@ public class ConcreteStockWithAhVals
         return ahPrice == 0 ? getChangePercent() : ahChangePercent;
     }
 
-    @Override
-    public final double getNetChangePoint() {
-        return getChangePoint() + ahChangePoint;
-    }
-
+    /**
+     * @return The sum of the change percent during the open trading hours and
+     * after hours trading
+     */
     @Override
     public final double getNetChangePercent() {
         return getChangePercent() + ahChangePercent;
     }
 
+    /**
+     * @return A four element string array containing the {@link
+     * StockInHomeActivity}'s {@link Stock.State}, price, change point, and
+     * change percent.
+     */
     @Override
     public String[] getDataAsArray() {
         String[] data = new String[7];

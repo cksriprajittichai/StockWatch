@@ -18,6 +18,15 @@ public final class NewsRecyclerDivider extends RecyclerView.ItemDecoration {
         divider = ContextCompat.getDrawable(context, R.drawable.recycler_divider_news_individual);
     }
 
+    /**
+     * Draw any appropriate decorations into the Canvas supplied to the
+     * RecyclerView. Any content drawn by this method will be drawn after the
+     * item views are drawn and will thus appear over the views.
+     *
+     * @param c      Canvas to draw into
+     * @param parent RecyclerView this ItemDecoration is drawing into
+     * @param state  The current state of RecyclerView
+     */
     @Override
     public void onDrawOver(final Canvas c, final RecyclerView parent, final RecyclerView.State state) {
         final int left = parent.getPaddingLeft();

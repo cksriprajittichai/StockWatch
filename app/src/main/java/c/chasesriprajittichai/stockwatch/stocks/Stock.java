@@ -2,12 +2,40 @@ package c.chasesriprajittichai.stockwatch.stocks;
 
 public interface Stock {
 
-    enum State {ERROR, PREMARKET, OPEN, AFTER_HOURS, CLOSED}
+    /**
+     * A Stock's State does not represent the current state of the market. The
+     * primary purpose of a Stock's State is to be used to determine whether or
+     * not a Stock is a {@link StockWithAhVals}.
+     * <p>
+     * The most common example of a Stock's State not representing the state of
+     * the market is if you were to look at a Stock on a weekend day. If the
+     * Stock participated in after hours trading on the last trading day, then
+     * the Stock will have the day's open trading hours values, as well as that
+     * day's after hours values. Because the Stock has after hours values, its
+     * State will be {@code AFTER_HOURS}, but the market will be closed,
+     * because it is a weekend day.
+     */
+    enum State {
+        ERROR, PREMARKET, OPEN, AFTER_HOURS, CLOSED
+    }
 
+    /**
+     * @return The most current price of the Stock
+     */
     double getLivePrice();
 
+    /**
+     * @return If Stock instanceof {@link StockWithAhVals}, return the change
+     * point from the open trading hours. Otherwise, return the change point
+     * that has occurred during after hours trading.
+     */
     double getLiveChangePoint();
 
+    /**
+     * @return If Stock instanceof {@link StockWithAhVals}, return the change
+     * percent from the open trading hours. Otherwise, return the change percent
+     * that has occurred during after hours trading.
+     */
     double getLiveChangePercent();
 
     String getTicker();

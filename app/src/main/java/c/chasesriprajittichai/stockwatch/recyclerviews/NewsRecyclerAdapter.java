@@ -8,22 +8,29 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import java.util.List;
+
 import c.chasesriprajittichai.stockwatch.Article;
+import c.chasesriprajittichai.stockwatch.IndividualStockActivity;
 import c.chasesriprajittichai.stockwatch.R;
 
 
-/**
- * The news {@link RecyclerView} contains two different types of {@link View}:
- * {@link DateViewHolder} and {@link ArticleViewHolder}. Many of the news
- * articles that will be displayed, were published on the same date. So, it can
- * be redundant to display a repetitive date for many adjacent articles.
- * Instead, DateViewHolder occupies a smaller cell than ArticleViewHolder, and
- * only displays the date. Below a DateViewHolder cell, one or more
- * ArticleViewHolders display the articles published on that day.
- */
 public final class NewsRecyclerAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
 
+    /**
+     * A {@link RecyclerView.ViewHolder} that will represent the date of
+     * one or more {@link Article}.
+     * <p>
+     * The {@link IndividualStockActivity#newsRv} contains two different types
+     * of View: {@link DateViewHolder} and {@link ArticleViewHolder}. Many of
+     * the news articles that will be displayed, were published on the same
+     * date. So, it can be redundant to display a repetitive date for many
+     * adjacent articles. Instead, DateViewHolder occupies a cell with a
+     * different layout than ArticleViewHolder, and only displays the date.
+     * Below a DateViewHolder cell, one or more ArticleViewHolders display the
+     * articles published on that day.
+     */
     private final class DateViewHolder extends RecyclerView.ViewHolder {
 
         private final static int TYPE_ID = 1;
@@ -42,6 +49,9 @@ public final class NewsRecyclerAdapter extends RecyclerView.Adapter<RecyclerView
     }
 
 
+    /**
+     * A {@link RecyclerView.ViewHolder} that will represent a {@link Article}.
+     */
     private final class ArticleViewHolder extends RecyclerView.ViewHolder {
 
         private final static int TYPE_ID = 2;
@@ -72,10 +82,12 @@ public final class NewsRecyclerAdapter extends RecyclerView.Adapter<RecyclerView
         this.onItemClickListener = listener;
     }
 
-    public SparseArray<Article> getArticleSparseArray() {
-        return articleSparseArray;
-    }
-
+    /**
+     * @param position The position of the item within the adapter's data set
+     * @return {@link ArticleViewHolder#TYPE_ID} if articleSparseArray has a
+     * mapping for this position. Otherwise, return {@link
+     * DateViewHolder#TYPE_ID}.
+     */
     @Override
     public int getItemViewType(int position) {
         int type;
@@ -89,6 +101,24 @@ public final class NewsRecyclerAdapter extends RecyclerView.Adapter<RecyclerView
         return type;
     }
 
+    /**
+     * Called when RecyclerView needs a new {@link RecyclerView.ViewHolder} of
+     * the given type to represent an item.
+     * <p>
+     * This new ViewHolder should be constructed with a new View that can
+     * represent the items of the given type. You can either create a new View
+     * manually or inflate it from an XML layout file.
+     * <p>
+     * The new ViewHolder will be used to display items of the adapter using
+     * {@link #onBindViewHolder(RecyclerView.ViewHolder, int, List)}.
+     *
+     * @param parent   The ViewGroup into which the new View will be added after
+     *                 it is bound to an adapter position
+     * @param viewType The view type of the new View
+     * @return A new ViewHolder that holds a View of the given view type
+     * @see #getItemViewType(int)
+     * @see #onBindViewHolder(RecyclerView.ViewHolder, int)
+     */
     @NonNull
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -106,6 +136,16 @@ public final class NewsRecyclerAdapter extends RecyclerView.Adapter<RecyclerView
         return holder;
     }
 
+    /**
+     * Called by RecyclerView to display the data at the specified position.
+     * This method should update the contents of the {@link
+     * RecyclerView.ViewHolder#itemView} to reflect the item at the given
+     * position.
+     *
+     * @param holder   The ViewHolder which should be updated to represent the
+     *                 contents of the item at the given position in the data set
+     * @param position The position of the item within the adapter's data set
+     */
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         if (holder.getItemViewType() == ArticleViewHolder.TYPE_ID) {
@@ -123,11 +163,27 @@ public final class NewsRecyclerAdapter extends RecyclerView.Adapter<RecyclerView
         }
     }
 
+    /**
+     * Returns the total number of items in the data set held by the adapter.
+     *
+     * @return The total number of items in this adapter
+     */
     @Override
     public int getItemCount() {
         // Return the highest key (highest mapped index) + 1
         // size() returns the number of mappings, skipping missing mappings
         return articleSparseArray.keyAt(articleSparseArray.size() - 1) + 1;
+    }
+
+    /**
+     * This method is used in {@link IndividualStockActivity} to pass {@link
+     * #articleSparseArray} to the {@link
+     * IndividualStockActivity.DownloadNewsTask}.
+     *
+     * @return articleSparseArray
+     */
+    public SparseArray<Article> getArticleSparseArray() {
+        return articleSparseArray;
     }
 
 

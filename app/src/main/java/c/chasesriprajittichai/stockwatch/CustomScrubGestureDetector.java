@@ -4,62 +4,71 @@ import android.os.Handler;
 import android.view.MotionEvent;
 import android.view.View;
 
+import com.robinhood.spark.SparkView;
+
 import java.util.Collections;
 import java.util.List;
 
 
 /**
- * This class is modeled after com.robinhood.spark.ScrubGestureDetector.
+ * This class is modeled after {@link com.robinhood.spark.ScrubGestureDetector}.
  * <p>
- * In order to dynamically display the time at the current scrubbing position
- * while scrubbing, we need to send the index of the scrubbing line to the
- * IndividualStockActivity. Given the index of the scrubbing line, the
+ * While scrubbing, in order to dynamically display time values at the current
+ * scrubbing position, we need to send the index of the scrubbing line to the
+ * {@link IndividualStockActivity}. Given the index of the scrubbing line, the
  * IndividualStockActivity can determine the time at that moment because the
  * time scale of each chart period is a constant and known period, which
- * therefore has a constant and known step-size. This class and CustomSparkView
- * have been created in order to do this.
+ * therefore has a constant and known step-size. This class and {@link
+ * CustomSparkView} have been created in order to do this.
  * <p>
- * The encapsulation of com.robinhood.spark makes it difficult to get the index
- * of the scrubbing line to an IndividualStockActivity.
- * CustomScrubGestureDetector extends View.OnTouchListener and should be set as
- * the View.onTouchListener of the SparkView being used in
- * IndividualStockActivity, instead of com.robinhood.spark.ScrubGestureDetector.
- * This class copies the behavior of com.robinhood.spark.ScrubGestureDetector.
- * The main difference between them is that the CustomScrubGestureDetector
- * defines a ScrubIndexListener interface that provides callback methods that
- * provide the index of the scrubbing line as a parameter. The
- * IndividualStockActivity should implement the ScrubIndexListener interface in
- * order to receive callbacks about the index of the scrubbing line.
+ * This class should be set as the OnTouchListener of the CustomSparkView being
+ * used in IndividualStockActivity, instead of robinhood's ScrubGestureDetector.
+ * The IndividualStockActivity should implement the ScrubIndexListener interface
+ * in order to receive callbacks about the index of the scrubbing line.
  * <p>
- * The com.robinhood.spark.ScrubGestureDetector is only used by
- * com.robinhood.SparkView in the following ways:
- * 1) in com.robinhood.spark.SparkView.setScrubEnabled() the
- * ScrubGestureDetector is enabled/disabled;
- * 2) com.robinhood.spark.SparkView implements
- * com.robinhood.spark.ScrubGestureDetector.ScrubListener - the methods declared
- * in the interface are onScrubbed(float x, float y), and onScrubEnded(). When
- * creating CustomScrubGestureDetector, we know that we must consider these two
- * usages in order to keep the SparkView's scrubbing feature working. We are not
- * using the com.robinhood.spark.ScrubGestureDetector's enabled boolean, so it
- * has been removed (always true) from this class.
- * com.robinhood.spark.ScrubGestureDetector has a member variable of type
- * com.robinhood.spark.ScrubGestureDetector.ScrubListener that it makes function
- * calls to in various functions defined in the class.
- * com.robinhood.spark.ScrubGestureDetector and
- * com.robinhood.spark.ScrubGestureDetector.ScrubListener are package private,
- * meaning that CustomScrubGestureDetector cannot implement/extend either
- * interface/class. Instead, CustomScrubGestureDetector defines the
- * CustomScrubGestureDetector.ScrubListener interface which declare
- * onScrubbed(final float x, final float y), and onScrubEnded(). These two
- * function signatures are the same as the function signatures of the two
- * functions declared by com.robinhood.spark.ScrubGestureDetector.ScrubListener.
- * CustomSparkView implements CustomScrubGestureDetector. The definitions of
- * onScrubbed(float x, float y) and onScrubEnded() in
- * com.robinhood.spark.SparkView do not use either CustomScrubGestureDetector or
- * com.robinhood.spark.ScrubGestureDetector. Therefore, there is no need for
- * CustomSparkView to override onScrubbed(float x, float y) or onScrubEnded(),
- * because the parent definitions from com.robinhood.spark.SparkView are
- * sufficient.
+ * This class mainly copies the behavior of robinhood's ScrubGestureDetector,
+ * but contains callbacks to {@link ScrubIndexListener} whenever a callback to
+ * {@link com.robinhood.spark.ScrubGestureDetector.ScrubListener} is made.
+ * Through the ScrubIndexListener callbacks, the index of the scrubbing line can
+ * be passed as a parameter to the listener. The callbacks contained in
+ * inherited code to robinhood's ScrubListener work properly - the only reason
+ * that {@link ScrubListener} exists - with identical methods defined as those
+ * defined in robinhood's ScrubListener - is that CustomScrubGestureDetector
+ * cannot reference robinhood's ScrubListener because of the way it is
+ * encapsulated, and therefore cannot make the same ScrubListener callbacks that
+ * ScrubGestureDetector makes. By defining our own ScrubListener, from this
+ * class, we can declare (and make calls to) the methods that are defined
+ * (declared in robinhood's ScrubListener, and our ScrubListener) in SparkView,
+ * without ever overriding SparkView's definition of the methods.
+ * <p>
+ * ScrubGestureDetector is only used by SparkView in the following two ways:
+ * <ul>
+ * <li> in {@link SparkView#setScrubEnabled(boolean)}, the ScrubGestureDetector
+ * is enabled/disabled
+ * <li> SparkView implements robinhood's ScrubListener - the methods declared in
+ * the interface are {@link SparkView#onScrubbed(float x, float y)}, and {@link
+ * SparkView#onScrubEnded()}
+ * </ul>
+ * When creating this class, we know that we must account for these two usages
+ * in order to keep the CustomSparkView's (which extends SparkView) scrubbing
+ * feature working. We are not using ScrubGestureDetector's enabled (boolean)
+ * member variable (always true for us), so it has been removed from this class.
+ * ScrubGestureDetector has a reference to a robinhood ScrubListener that it
+ * makes function calls to from multiple functions in the class.
+ * ScrubGestureDetector and robinhood's ScrubListener are package private, which
+ * means that CustomScrubGestureDetector cannot implement or extend either
+ * interface or class. Instead, CustomScrubGestureDetector defines the
+ * ScrubListener interface which declares {@link
+ * ScrubListener#onScrubbed(float, float)} and {@link
+ * ScrubListener#onScrubEnded()}. These two function signatures are the same as
+ * the two function signatures declared by robinhood's ScrubListener. For our
+ * purposes, a callback to a ScrubIndexListener should not occur within
+ * onScrubbed(float x, float y) or onScrubEnded(), meaning that we do not need
+ * to change (override) the inherited functionality from SparkView. Therefore,
+ * CustomSparkView does not need to override these methods because its
+ * inherited definitions from SparkView are sufficient.
+ *
+ * @see CustomSparkView
  */
 public final class CustomScrubGestureDetector implements View.OnTouchListener {
 

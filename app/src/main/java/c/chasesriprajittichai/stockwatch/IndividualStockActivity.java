@@ -14,6 +14,7 @@ import android.util.Log;
 import android.util.SparseArray;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.widget.Button;
@@ -61,6 +62,7 @@ import c.chasesriprajittichai.stockwatch.stocks.ConcreteAdvancedStockWithAhVals;
 import c.chasesriprajittichai.stockwatch.stocks.ConcreteStock;
 import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhVals;
 import c.chasesriprajittichai.stockwatch.stocks.Stock;
+import c.chasesriprajittichai.stockwatch.stocks.StockInHomeActivity;
 import c.chasesriprajittichai.stockwatch.stocks.StockWithAhVals;
 
 import static c.chasesriprajittichai.stockwatch.stocks.AdvancedStock.Stat;
@@ -73,8 +75,9 @@ import static java.lang.Double.parseDouble;
 import static org.apache.commons.lang3.StringUtils.substringBetween;
 
 
-public final class IndividualStockActivity extends AppCompatActivity implements
-        HorizontalPicker.OnItemSelected,
+public final class IndividualStockActivity
+        extends AppCompatActivity
+        implements HorizontalPicker.OnItemSelected,
         CustomScrubGestureDetector.ScrubIndexListener,
         DownloadChartTaskListener,
         DownloadStatsTaskListener,
@@ -116,7 +119,9 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     @BindView(R.id.progressBar_loadingNews) ProgressBar loadingNewsProgressBar;
     @BindView(R.id.textView_newsStatus) TextView newsStatus;
 
-    // Big ChartPeriods excludes 1D chart
+    /**
+     * Big ChartPeriods excludes 1D chart.
+     */
     private static final ChartPeriod[] BIG_CHART_PERIODS = {
             ChartPeriod.FIVE_YEARS, ChartPeriod.ONE_YEAR,
             ChartPeriod.THREE_MONTHS, ChartPeriod.ONE_MONTH,
@@ -127,10 +132,43 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     private boolean wasInFavoritesInitially;
     private boolean isInFavorites;
     private SparkViewAdapter sparkViewAdapter;
-    private SharedPreferences prefs;
     private NewsRecyclerAdapter newsRecyclerAdapter;
+    private SharedPreferences prefs;
 
-    /* Called from DownloadChartTask.onPostExecute(). */
+    /**
+     * Called from {@link DownloadChartTask#onPostExecute(Integer)}.
+     * <p>
+     * The following {@link DownloadChartTask.Status} represent at least one
+     * {@link IOException} being thrown in the DownloadChartTask:
+     * <ul>
+     * <li>{@link DownloadChartTask.Status#IO_EXCEPTION_FOR_MW_ONLY}
+     * <li>{@link DownloadChartTask.Status#IO_EXCEPTION_FOR_WSJ_ONLY}
+     * <li>{@link DownloadChartTask.Status#IO_EXCEPTION_FOR_MW_AND_WSJ}
+     * </ul>
+     * If status represents at least one IOException being thrown in the
+     * DownloadChartTask, this method shows a no-connection message where
+     * {@link #sparkView} would be if there were filled charts.
+     * <p>
+     * If status equals {@link DownloadChartTask.Status#GOOD}, this method
+     * uses missingChartPeriods to determine which charts are filled. It then
+     * displays the names of the filled ChartPeriod(s) in {@link
+     * #chartPeriodPicker}, sets up {@link #sparkViewAdapter} with the filled
+     * charts, calls {@link SparkViewAdapter#notifyDataSetChanged()} to update
+     * {@link #sparkView}, then shows all the Views related to the charts. In
+     * the extremely rare case that status equals GOOD, and no charts are
+     * filled, this method does the same thing that it would do if status
+     * represented an IOException thrown in DownloadChartTask, except in this
+     * case, a no-charts message is shown, rather than a no-connection message.
+     * <p>
+     * Regardless of the value of status, {@link #loadingChartsProgressBar}'s
+     * visibility is set to {@link View#GONE}, and a response (charts or
+     * message) to the DownloadChartTask is shown.
+     *
+     * @param status              The {@link DownloadChartTask.Status} of the
+     *                            task
+     * @param missingChartPeriods The set of missing
+     *                            {@link ChartPeriod}
+     */
     @Override
     public void onDownloadChartTaskCompleted(final int status,
                                              final Set<ChartPeriod> missingChartPeriods) {
@@ -151,43 +189,43 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
                 for (final ChartPeriod p : BIG_CHART_PERIODS) {
                     if (missingChartPeriods.contains(p)) {
-                        /* Always remove last node because displayChartPeriods is in
-                         * increasing order (1D -> 5Y), unlike BIG_CHART_PERIODS which
-                         * is in decreasing order. */
+                        /* Always remove last node because displayChartPeriods
+                         * is in increasing order (1D -> 5Y), unlike
+                         * BIG_CHART_PERIODS which is in decreasing order. */
                         displayChartPeriods.remove(displayChartPeriods.size() - 1);
                     } else {
                         if (missingChartPeriods.contains(ChartPeriod.ONE_DAY)) {
-                            /* If the 1D chart is filled, the current ChartPeriod will
-                             * be set to ONE_DAY. Otherwise, if the 1D chart is not
-                             * filled, the initially selected ChartPeriod should be the
-                             * smallest big ChartPeriod (TWO_WEEKS). By the way that
-                             * we're filling the charts, if at least one big ChartPeriod
-                             * is filled, that guarantees that the 2W chart is filled. */
+                            /* If the 1D chart is filled, the current
+                             * ChartPeriod will be set to ONE_DAY. Otherwise, if
+                             * the 1D chart is not filled, the initially
+                             * selected ChartPeriod should be the smallest big
+                             * ChartPeriod (TWO_WEEKS). By the way that we're
+                             * filling the charts, if at least one big
+                             * ChartPeriod is filled, that guarantees that the
+                             * 2W chart is filled. */
                             sparkViewAdapter.setChartPeriod(ChartPeriod.TWO_WEEKS);
                             sparkViewAdapter.setyData(this.stock.getPrices_2weeks());
                             sparkViewAdapter.setDates(this.stock.getDates_2weeks());
                             sparkViewAdapter.notifyDataSetChanged();
                         }
 
-                        /* Smaller charts (shorter ChartPeriods) take their data from
-                         * the largest chart that is filled. So once a filled chart is
-                         * found, there is no need to check if the smaller charts are
-                         * filled. */
+                        /* Smaller charts (shorter ChartPeriods) take their data
+                         * from the largest chart that is filled. So once a
+                         * filled chart is found, there is no need to check if
+                         * the smaller charts are filled. */
                         break;
                     }
                 }
 
                 if (missingChartPeriods.size() == ChartPeriod.values().length) {
                     // If there are no filled charts
-                    initTopViewsStatic();
                     chartsStatus.setText(getString(R.string.chartsUnavailable));
-
                     chartsStatus.setVisibility(View.VISIBLE);
                 } else {
                     // If there is at least 1 filled chart
-                    initTopViewsDynamic();
 
-                    final CharSequence[] displayChartPeriodsArr = new CharSequence[displayChartPeriods.size()];
+                    final CharSequence[] displayChartPeriodsArr =
+                            new CharSequence[displayChartPeriods.size()];
                     displayChartPeriods.toArray(displayChartPeriodsArr);
                     chartPeriodPicker.setValues(displayChartPeriodsArr);
 
@@ -199,7 +237,6 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             case DownloadChartTask.Status.IO_EXCEPTION_FOR_MW_AND_WSJ:
             case DownloadChartTask.Status.IO_EXCEPTION_FOR_MW_ONLY:
             case DownloadChartTask.Status.IO_EXCEPTION_FOR_WSJ_ONLY:
-                initTopViewsStatic();
                 chartsStatus.setText(getString(R.string.ioException_loadingCharts));
 
                 chartsStatus.setVisibility(View.VISIBLE);
@@ -209,7 +246,20 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         loadingChartsProgressBar.setVisibility(View.GONE);
     }
 
-    /* Called from DownloadStatsTask.onPostExecute(). */
+    /**
+     * Called from {@link DownloadStatsTask#onPostExecute(Integer)}.
+     * <p>
+     * If status equals {@link DownloadStatsTask.Status#IO_EXCEPTION}, this
+     * method sets each TextView in the "Key Statistics" section to show a
+     * {@literal x}, and makes the description TextView show a no-connection
+     * message. If status equals {@link DownloadStatsTask.Status#GOOD}, the
+     * "Key Statistics" TextViews and description TextView display the values of
+     * {@link #stock} that were updated in DownloadStatsTask. If a Stat is
+     * contained in missingStats, its TextView's text is set to {@literal N/A}.
+     *
+     * @param status       The {@link DownloadStatsTask.Status} of the task
+     * @param missingStats The set of missing {@link Stat}
+     */
     @Override
     public void onDownloadStatsTaskCompleted(final int status,
                                              final Set<Stat> missingStats) {
@@ -294,7 +344,15 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         }
     }
 
-    /* Called from DownloadNewsTask.onPostExecute(). */
+    /**
+     * Called from {@link DownloadNewsTask#onPostExecute(Integer)}.
+     * <p>
+     * Regardless of the value of status, {@link #loadingNewsProgressBar}'s
+     * visibility is set to {@link View#GONE}, and a response ({@link #newsRv}
+     * or message) to the DownloadNewsTask is shown.
+     *
+     * @param status The {@link DownloadNewsTask.Status} of the task
+     */
     @Override
     public void onDownloadNewsTaskCompleted(final Integer status) {
         switch (status) {
@@ -325,24 +383,14 @@ public final class IndividualStockActivity extends AppCompatActivity implements
      * change point at close, change percent at close, and the two views that
      * show values related to time. Values are taken from {@link #stock}.
      * <p>
-     * This function should be used when at least one chart is filled with data.
-     * If a {@link ChartPeriod} that is larger than {@link ChartPeriod#ONE_DAY}
-     * is filled and selected, the top change point and change percent values
-     * displayed, are relative to the first price of the selected chart - but if
-     * no charts are filled, then the top views should always display the values
-     * from the current/most recent day. This function displays values that are
-     * relative to the first price of the chart for the selected ChartPeriod,
-     * unlike {@link #initTopViewsStatic()}.
-     * <p>
      * This function should be called any time that the selected chart changes,
      * so that the top views can update to display the values for the selected
      * ChartPeriod.
      */
-    private void initTopViewsDynamic() {
+    private void initTopViews() {
         top_price.setText(getString(R.string.double2dec, stock.getLivePrice()));
         setScrubTime(sparkViewAdapter.getChartPeriod());
 
-        final double firstPriceOfPeriod = sparkViewAdapter.getY(0);
         final double changePoint;
         final double changePercent;
 
@@ -370,6 +418,8 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         } else {
             ah_linearLayout.setVisibility(View.INVISIBLE);
 
+            final double firstPriceOfPeriod = sparkViewAdapter.getY(0);
+
             /* If stock instanceof StockWithAhVals, change values are
              * comparisons between live values and the first price of the
              * current ChartPeriod. */
@@ -388,57 +438,36 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     }
 
     /**
-     * Initialize the top TextViews that are changed during scrubbing. This
-     * includes the live price (large), live change point, live change percent,
-     * change point at close, change percent at close, and the two views that
-     * show values related to time. Values are taken from {@link #stock}.
+     * Called from {@link CustomScrubGestureDetector#onTouch(View, MotionEvent)}.
      * <p>
-     * This function is used in {@link #onCreate(Bundle)} to initialize the top
-     * views to show the top values which are known before {@link
-     * #onDownloadChartTaskCompleted(int, Set)} or {@link
-     * #onDownloadStatsTaskCompleted(int, Set)} is called.
+     * This method changes the top Views depending on which {@link ChartPeriod}
+     * is selected, and the index of the scrubbing line.
      * <p>
-     * This function should be used instead of {@link #initTopViewsDynamic()}
-     * when no charts are filled with data. If a {@link ChartPeriod} that is
-     * larger than {@link ChartPeriod#ONE_DAY} is filled and selected, the top
-     * change values displayed are relative to the first price of the selected
-     * chart - but if no charts are filled, then the top views should always
-     * display the values from the current/most recent day. This function does
-     * not display values that are relative to the first price of the chart for
-     * the selected ChartPeriod, unlike {@link #initTopViewsDynamic()}.
+     * If the selected ChartPeriod is {@link ChartPeriod#ONE_DAY}, this function
+     * calculates the time of day that corresponds to the scrubbing index, and
+     * displays it in {@link #top_time}. If the top time value is 4:00pm or
+     * later, {@link #ah_linearLayout} is set to {@link View#VISIBLE}, and the
+     * top after hours Views display {@link #stock}'s after hours values.
+     * Additionally, if the scrubbing index represents a time value of 4:00pm or
+     * later, the shown change values reset to be relative to stock's price at
+     * close. This differs from if the scrubbing index does not represent an
+     * after hours time, and the change values are relative to the stock's price
+     * at open. This functionality is unique for when the selected ChartPeriod
+     * is ONE_DAY. This is the only ChartPeriod where ah_linearLayout is used
+     * and VISIBLE, and the only ChartPeriod where the change values can be
+     * relative to different prices depending on the scrubbing index.
+     * <p>
+     * If the selected ChartPeriod is not ONE_DAY, this method sets top_time to
+     * show the date at this scrubbing index of the selected ChartPeriod. Unlike
+     * the time of day if the selected ChartPeriod were ONE_DAY, the date is not
+     * calculated of the scrubbing index of the selected ChartPeriod is not
+     * calculated in this function. The date at this scrubbing index is gotten
+     * from {@link SparkViewAdapter#getDate(int)}. For ChartPeriods not equal to
+     * ONE_DAY, the change values are always relative to the first price of the
+     * list of prices of the selected ChartPeriod.
+     *
+     * @param index The scrubbing index; index of the scrubbing line
      */
-    private void initTopViewsStatic() {
-        top_price.setText(getString(R.string.double2dec, stock.getLivePrice()));
-        setScrubTime(ChartPeriod.ONE_DAY);
-
-        // Init views for after hours data in ah_linearLayout
-        if (stock instanceof StockWithAhVals) {
-            top_ah_time.setText(getString(R.string.afterHours));
-
-            if (stock.getLiveChangePoint() < 0) {
-                // '-' is already part of the number
-                top_ah_changePoint.setText(getString(R.string.double2dec, stock.getLiveChangePoint()));
-                top_ah_changePercent.setText(getString(R.string.openParen_double2dec_percent_closeParen, stock.getLiveChangePercent()));
-            } else {
-                top_ah_changePoint.setText(getString(R.string.plus_double2dec, stock.getLiveChangePoint()));
-                top_ah_changePercent.setText(getString(R.string.openParen_plus_double2dec_percent_closeParen, stock.getLiveChangePercent()));
-            }
-            ah_linearLayout.setVisibility(View.VISIBLE);
-        } else {
-            ah_linearLayout.setVisibility(View.INVISIBLE);
-        }
-
-        if (stock.getChangePoint() < 0) {
-            // '-' is already part of the number
-            top_changePoint.setText(getString(R.string.double2dec, stock.getChangePoint()));
-            top_changePercent.setText(getString(R.string.openParen_double2dec_percent_closeParen, stock.getChangePercent()));
-        } else {
-            top_changePoint.setText(getString(R.string.plus_double2dec, stock.getChangePoint()));
-            top_changePercent.setText(getString(R.string.openParen_plus_double2dec_percent_closeParen, stock.getChangePercent()));
-        }
-    }
-
-    /* Called from CustomScrubGestureDetector.onScrubbed(). */
     @Override
     public void onScrubbed(final int index) {
         // Get scrubbing price from the chart data for the selected ChartPeriod
@@ -512,16 +541,31 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         }
     }
 
-    /* Called from CustomScrubGestureDetector.onScrubEnded(). */
+    /**
+     * Called from {@link CustomScrubGestureDetector#onTouch(View, MotionEvent)}.
+     * <p>
+     * When scrubbing, the top Views are changed. Once the scrubbing ends, the
+     * top Views need to be restored to their original, non-scrubbing states.
+     * This method calls {@link #initTopViews()} to do this.
+     */
     @Override
     public void onScrubEnded() {
-        /* This function is called only if the spark view was scrubbed. The
-         * spark view can only be scrubbed if there is at least one chart that
-         * is filled. this is why initTopViewsDynamic() is called, not
-         * initTopViewsStatic(). */
-        initTopViewsDynamic(); // Restore views that were effected by scrubbing
+        initTopViews();
     }
 
+    /**
+     * Initializes various components of this Activity, then starts the
+     * following tasks:
+     * <ul>
+     * <li>{@link DownloadChartTask}
+     * <li>{@link DownloadStatsTask}
+     * <li>{@link DownloadNewsTask}
+     * </ul>
+     * Some components of this Activity are not "completely initialized" until a
+     * specific AsyncTask is completed.
+     *
+     * @param savedInstanceState The savedInstanceState is not used
+     */
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -529,10 +573,10 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         ButterKnife.bind(this);
         initStockFromHomeActivity();
         setTitle(stock.getName());
-        initTopViewsStatic();
         initOverviewAndNewsButtons();
-        initNewsRecyclerView();
         initSparkView();
+        initNewsRecyclerView();
+        initTopViews();
         AndroidThreeTen.init(this); // Used in DownloadChartTask
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
         isInFavorites = getIntent().getBooleanExtra("Is in favorites", false);
@@ -549,13 +593,22 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
     /**
      * Through intent extras, {@link HomeActivity} passes information about the
-     * stock that will be displayed in this activity. The information from
-     * HomeActivity can represent two instances of {@link Stock}: either a
-     * {@link ConcreteStock} is represented - ticker, name, state, price, change
-     * point, and change percent are passed; or a {@link
-     * ConcreteStockWithAhVals} is represented - ticker, name, state, price,
-     * change point, change percent, after hours price, after hours change
-     * point, and after hours change percent are passed.
+     * Stock that will be displayed in this activity. This method initializes
+     * {@link #stock} using the information about stock that have been passed
+     * from HomeActivity. This method does not set any of stock's fields that
+     * are declared in {@link AdvancedStock} - this only sets stock's fields
+     * that are declared in {@link Stock}.
+     * <p>
+     * The information from HomeActivity can represent one of
+     * two types of {@link StockInHomeActivity}:
+     * <ul>
+     * <li>{@link ConcreteStock} is represented:
+     * ticker, name, state, price, change point, and change percent are passed
+     * <li>{@link ConcreteStockWithAhVals} is represented:
+     * ticker, name, state, price, change point, change percent, after hours
+     * price, after hours change point, and after hours change percent are
+     * passed
+     * </ul>
      */
     private void initStockFromHomeActivity() {
         final Intent intent = getIntent();
@@ -588,6 +641,10 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         }
     }
 
+    /**
+     * Initializes the {@link #overviewBtn} and {@link #newsBtn} Buttons that
+     * are defined in this Activity's XML.
+     */
     private void initOverviewAndNewsButtons() {
         overviewBtn.setTextColor(Color.WHITE); // Selected initially
         overviewBtn.setOnClickListener(view -> {
@@ -604,10 +661,14 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         });
     }
 
+    /**
+     * Initializes {@link #sparkView}, {@link #sparkViewAdapter}, and {@link
+     * #chartPeriodPicker}.
+     */
     private void initSparkView() {
-        sparkViewAdapter = new SparkViewAdapter(); // Init as empty
+        sparkViewAdapter = new SparkViewAdapter(); // Init without prices or dates
         sparkView.setAdapter(sparkViewAdapter);
-        /* SparkView needs its OnScrubListener member variable to non-null in
+        /* SparkView needs its OnScrubListener member variable to be non-null in
          * order for the scrubbing line to work properly. The purpose of this
          * line is to make the scrubbing line work. All the scrub listening is
          * handled in onScrubbed(). */
@@ -619,6 +680,9 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         chartPeriodPicker.setOnItemSelectedListener(this);
     }
 
+    /**
+     * Initializes {@link #newsRv} and {@link #newsRecyclerAdapter}.
+     */
     private void initNewsRecyclerView() {
         newsRv.setLayoutManager(new LinearLayoutManager(this));
         newsRv.addItemDecoration(new NewsRecyclerDivider(this));
@@ -630,11 +694,21 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         newsRv.setAdapter(newsRecyclerAdapter);
     }
 
+    /**
+     * Saves the favorites status of {@link #stock} to preferences. If stock's
+     * information is not in preferences but is starred, call add it to
+     * preferences. If stock's information is in preferences but is not starred,
+     * remove it from preferences.
+     *
+     * @see #addStockToPreferences()
+     * @see #removeStockFromPreferences()
+     */
     @Override
     protected void onPause() {
         super.onPause();
+
         if (isInFavorites != wasInFavoritesInitially) {
-            // If the star status (favorite status) has changed
+            // If the star status (favorites status) has changed
 
             if (wasInFavoritesInitially) {
                 removeStockFromPreferences();
@@ -642,32 +716,44 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                 addStockToPreferences();
             }
 
-            /* The activity has paused. Update the favorites status.
-             * The condition to be able to edit Tickers TSV and Data TSV are
-             * dependent on whether or not the favorites status has changed. */
+            // Update the favorites status
             wasInFavoritesInitially = isInFavorites;
         }
     }
 
+    /**
+     * Start a new Intent to go to {@link HomeActivity}.
+     * <p>
+     * The super implementation of this method does not create a new
+     * HomeActivity, and returns the user to the HomeActivity that they were in
+     * before they got to this Activity. So when we go back back to the old
+     * HomeActivity instance, the first function called is onResume();
+     * onCreate() is not called. For HomeActivity to work properly, if Tickers
+     * TSV, Names TSV, and Data TSV are changed outside of HomeActivity, {@link
+     * HomeActivity#onCreate(Bundle)} must be called before {@link
+     * HomeActivity#onResume()}. This means that if Tickers TSV, Names TSV, and
+     * Data TSV are changed outside of HomeActivity, a new HomeActivity instance
+     * must be created in order to go to HomeActivity. The TSV strings stored in
+     * preferences can be changed within this class. Therefore, if we don't
+     * start a new HomeActivity in this function, then HomeActivity will not
+     * function properly
+     */
     @Override
     public void onBackPressed() {
-        /* The parent (non-override) onBackPressed() does not create a new
-         * HomeActivity. So when we go back back to HomeActivity, the first
-         * function called is onResume(); onCreate() is not called. HomeActivity
-         * depends on Tickers TSV and Data TSV not being changed in between
-         * calls to HomeActivity.onPause() and HomeActivity.onResume() (where
-         * HomeActivity.onCreate() is not called in between
-         * HomeActivity.onPause() and HomeActivity.onResume()). The TSV strings
-         * stored in preferences can be changed within this class. Therefore, if
-         * we don't start a new HomeActivity in this function, then it is
-         * possible that Tickers TSV and Data TSV are changed in between calls
-         * to HomeActivity.onResume() and HomeActivity.onPause(), which would
-         * cause HomeActivity to function incorrectly. */
         final Intent intent = new Intent(this, HomeActivity.class);
         startActivity(intent);
     }
 
-    /* For chartPeriodPicker. */
+    /**
+     * This is called whenever an item of {@link #chartPeriodPicker} is
+     * selected. This method updates {@link #sparkViewAdapter} by making it
+     * reference the correct selected ChartPeriod, making it reference the
+     * correct chart's prices and dates, and calling {@link
+     * SparkViewAdapter#notifyDataSetChanged()}. Lastly, this function updates
+     * this Activity's top Views by calling {@link #initTopViews()}.
+     *
+     * @param index The index of the selected item
+     */
     @Override
     public void onItemSelected(final int index) {
         // chartPeriodPicker's values come from chartPeriods string-array resource
@@ -688,17 +774,19 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                     sparkViewAdapter.setDates(stock.getDates(selected));
                     sparkViewAdapter.notifyDataSetChanged();
 
-                    /* This function is called only if the a ChartPeriod picker
-                     * item was selected. An item can only be selected if there
-                     * is at least one chart that is filled. this is why
-                     * initTopViewsDynamic() is called, not initTopViewsStatic(). */
-                    initTopViewsDynamic();
+                    initTopViews();
                 }
                 break;
             }
         }
     }
 
+    /**
+     * Initializes the contents of this Activity's standard options menu.
+     *
+     * @param menu The Menu containing the star MenuItem
+     * @return True because we want the menu to be shown
+     */
     @Override
     public boolean onCreateOptionsMenu(final Menu menu) {
         getMenuInflater().inflate(R.menu.menu_stock_activity, menu);
@@ -707,6 +795,15 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         return true;
     }
 
+    /**
+     * This method handles the selection of a {@link MenuItem} from the options
+     * menu of this Activity. If the star is pressed, toggle {@link
+     * #isInFavorites}.
+     *
+     * @param item The selected MenuItem
+     * @return True if a known item was selected, otherwise call the super
+     * method
+     */
     @Override
     public boolean onOptionsItemSelected(final MenuItem item) {
         switch (item.getItemId()) {
@@ -720,7 +817,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     }
 
     /**
-     * Adds values from {@link #stock} to {@link #prefs}: adds stock's ticker to
+     * Adds values from {@link #stock} to preferences: adds stock's ticker to
      * Tickers TSV, stock's name to Names TSV, and stock's data to Data TSV.
      * There are seven data values added in this order: state, price, change
      * point, change percent, after hours price, after hours change point, and
@@ -779,7 +876,7 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     }
 
     /**
-     * Removes {@link #stock} from {@link #prefs}: removes stock's ticker from
+     * Removes {@link #stock} from preferences: removes stock's ticker from
      * Tickers TSV, stock's name from Names TSV, and stock's data from Data TSV.
      */
     private void removeStockFromPreferences() {
@@ -809,6 +906,12 @@ public final class IndividualStockActivity extends AppCompatActivity implements
         }
     }
 
+    /**
+     * This method sets {@link #top_time} to show the display name of the passed
+     * in {@link ChartPeriod}.
+     *
+     * @param chartPeriod The ChartPeriod whose display name should be shown
+     */
     private void setScrubTime(final ChartPeriod chartPeriod) {
         switch (chartPeriod) {
             case ONE_DAY:
@@ -833,6 +936,11 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     }
 
 
+    /**
+     * An AsyncTask that updates {@link AdvancedStock} through setter methods
+     * defined in AdvancedStock. Updates the AdvancedStock's chart fields
+     * (prices and dates) for each {@link ChartPeriod}.
+     */
     private static final class DownloadChartTask extends AsyncTask<Void, Integer, Integer> {
 
         private final AdvancedStock stock;
@@ -847,16 +955,34 @@ public final class IndividualStockActivity extends AppCompatActivity implements
 
         /**
          * Gets the prices and dates needed for all the charts of {@link #stock}.
-         * The one day chart is taken from the MarketWatch multiple-stock-page,
-         * and all other "big" charts are taken from the Wall Street Journal.
-         * This function calls {@link Jsoup#connect(String)} three times: once
-         * to the MarketWatch multiple-stock-page, and twice to Wall Street
-         * Journal pages. The {@link DownloadChartTask.Status} code returned
-         * tells us which website is causing thrown IOExceptions.
+         * The one day chart is taken from the MarketWatch multiple-stock
+         * website, and all other "big" charts are taken from two WSJ websites.
+         * This function connects to three websites:
+         * <ul>
+         * <li>to the MarketWatch multiple-stock website
+         * <li>to stock's WSJ overview website
+         * <li>to stock's WSJ historical quotes AJAX website
+         * </ul>
          * <p>
-         * The one day chart and big charts are treated separately. Meaning that
-         * the loading of the big charts is unaffected by the status of the one
-         * day chart, and vice versa.
+         * If an {@link IOException} is thrown during any of the three
+         * connections, the returned {@link DownloadChartTask.Status} can
+         * represent which websites failed to connect. Because of the
+         * co-dependence of the information taken from the two WSJ websites,
+         * these two connections are treated as pair by the returned Status. For
+         * example, if this method throws and IOException when connecting to the
+         * WSJ historical quotes AJAX website, the returned Status will state
+         * that there was an IOException from WSJ, without specifying which WSJ
+         * website threw the IOException, and regardless of the status of the
+         * connection to the WSJ overview website.
+         * <p>
+         * The loading of the one day chart and the loading of the big charts
+         * are treated separately. Meaning that the loading of the big charts is
+         * not effected by the status of the one day chart, and vice versa.
+         * <p>
+         * If a Stock isn't old enough to contain all the data for a {@link
+         * ChartPeriod}'s chart, then that ChartPeriod's prices
+         * and dates are set to empty lists. The "missing" ChartPeriod is also
+         * added to {@link #missingChartPeriods}.
          *
          * @param voids Take no parameters
          * @return The {@link DownloadChartTask.Status} of the function
@@ -1165,6 +1291,14 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             return status;
         }
 
+        /**
+         * Notifies {@link #completionListener} that the task is complete.
+         * <p>
+         * {@link #missingChartPeriods} is passed to completionListener so that
+         * completionListener can be aware of which ChartPeriods were missing.
+         *
+         * @param status The Status of the task
+         */
         @Override
         protected void onPostExecute(final Integer status) {
             completionListener.get().onDownloadChartTaskCompleted(status, missingChartPeriods);
@@ -1183,6 +1317,11 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     }
 
 
+    /**
+     * An AsyncTask that updates a {@link AdvancedStock} through setter methods
+     * defined in AdvancedStock. Updates the AdvancedStock with values that are
+     * parsed from the AdvancedStock's WSJ website.
+     */
     private static final class DownloadStatsTask extends AsyncTask<Void, Integer, Integer> {
 
         private AdvancedStock stock;
@@ -1195,6 +1334,22 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             this.completionListener = new WeakReference<>(completionListener);
         }
 
+        /**
+         * Connects to the {@link #stock}'s WSJ website and parses it for values
+         * that are fields of {@link AdvancedStock}, excluding values related
+         * the AdvancedStock's chart data (prices and dates). The values updated
+         * in this method are represented by {@link Stat}. On the
+         * WSJ website, many values are irregular values, or "missing" values.
+         * {@link #missingStats} is keeps track of these values, and is passed
+         * as a parameter to {@link #completionListener}.
+         * <p>
+         * If an {@link IOException} is thrown while connecting to the WSJ
+         * website, this returns {@link Status#IO_EXCEPTION}. Otherwise, {@link
+         * Status#GOOD} is returned.
+         *
+         * @param voids Take no parameters
+         * @return The Status of the task
+         */
         @Override
         protected Integer doInBackground(final Void... voids) {
             int status = Status.GOOD;
@@ -1244,16 +1399,6 @@ public final class IndividualStockActivity extends AppCompatActivity implements
                                 "div[class$=compare_data] > ul > li > span.data_data");
                 open = parseDouble(openAndPrevClose.get(0).ownText().replaceAll("[^0-9.]+", ""));
                 prevClose = parseDouble(openAndPrevClose.get(1).ownText().replaceAll("[^0-9.]+", ""));
-//                open = parseDouble(
-//                        module2.selectFirst(
-//                                ":root > div > div[id=chart_divId] > div[class$=compare] > " +
-//                                        "div[class$=compare_data] > ul > li:eq(0) > " +
-//                                        "span.data_data").ownText().replaceAll("[^0-9.]+", ""));
-//                prevClose = parseDouble(
-//                        module2.selectFirst(
-//                                ":root > div > div[id=chart_divId] > div[class$=compare] > " +
-//                                        "div[class$=compare_data] > ul > li:eq(1) > " +
-//                                        "span.data_data").ownText().replaceAll("[^0-9.]+", ""));
                 /* If previous close isn't applicable (stock just had IPO),
                  * element exists and has value 0. Same applies for open. */
                 if (open == 0) {
@@ -1428,6 +1573,14 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             return status;
         }
 
+        /**
+         * Notifies {@link #completionListener} that the task is complete.
+         * <p>
+         * {@link #missingStats} is passed to completionListener so that
+         * completionListener can be aware of which stats were missing.
+         *
+         * @param status The Status of the task
+         */
         @Override
         protected void onPostExecute(final Integer status) {
             completionListener.get().onDownloadStatsTaskCompleted(status, missingStats);
@@ -1444,10 +1597,22 @@ public final class IndividualStockActivity extends AppCompatActivity implements
     }
 
 
+    /**
+     * An AsyncTask that fills a {@link SparseArray<Article>} with {@link
+     * Article}. This method creates Articles by parsing {@link #stock}'s page
+     * on Finviz.
+     */
     private static final class DownloadNewsTask extends AsyncTask<Void, Integer, Integer> {
 
         private final String ticker;
+
+        /**
+         * To understand why a {@link SparseArray<Article>} is used instead of
+         * a more traditional container of {@link Article}, look at {@link
+         * NewsRecyclerAdapter}.
+         */
         private final SparseArray<Article> sparseArray;
+
         private final WeakReference<DownloadNewsTaskListener> completionListener;
 
         private DownloadNewsTask(final String ticker, final SparseArray<Article> sparseArray,
@@ -1457,8 +1622,21 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             this.completionListener = new WeakReference<>(completionListener);
         }
 
+        /**
+         * Connects to the Finviz website for {@link #stock} and parses the
+         * page for article information. This information is used to create
+         * {@link Article}s that are added to {@link #sparseArray}.
+         * <p>
+         * If an {@link IOException} is thrown while connecting to the Finviz
+         * website, this method returns {@link Status#IO_EXCEPTION}. If no
+         * articles are found, this returns {@link Status#NO_NEWS_ARTICLES}. If
+         * at least one article is found, this returns {@link Status#GOOD}.
+         *
+         * @param voids Take no parameters
+         * @return The Status of the task
+         */
         @Override
-        protected Integer doInBackground(Void... voids) {
+        protected Integer doInBackground(final Void... voids) {
             int status = Status.GOOD;
 
             final String base_url = "https://finviz.com/quote.ashx?t=";
@@ -1530,6 +1708,11 @@ public final class IndividualStockActivity extends AppCompatActivity implements
             return status;
         }
 
+        /**
+         * Notifies {@link #completionListener} that the task is complete.
+         *
+         * @param status The Status of the task
+         */
         @Override
         protected void onPostExecute(final Integer status) {
             completionListener.get().onDownloadNewsTaskCompleted(status);

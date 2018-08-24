@@ -7,11 +7,10 @@ import com.robinhood.spark.SparkView;
 
 
 /**
- * This is a wrapper class for {@link com.robinhood.spark.SparkView} that
+ * This is a wrapper class of {@link SparkView} that
  * implements {@link CustomScrubGestureDetector.ScrubListener}.
- * <p>
- * For more background information on this class, look at
- * {@link CustomScrubGestureDetector}.
+ *
+ * @see CustomScrubGestureDetector
  */
 public final class CustomSparkView extends SparkView implements
         CustomScrubGestureDetector.ScrubListener {

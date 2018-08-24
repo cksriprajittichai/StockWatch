@@ -49,7 +49,7 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
     }
 
     /**
-     * Called when a viewHolder is swiped iv_left.
+     * Called when a viewHolder is swiped left.
      *
      * @param viewHolder The ArticleViewHolder which has been swiped by the user
      * @param direction  The direction to which the ArticleViewHolder is swiped.
@@ -68,13 +68,15 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
      * position to the new position.
      * <p>
      * If this method returns true, ItemTouchHelper assumes {@code viewHolder}
-     * has been moved to the adapter position of {@code target} ArticleViewHolder.
+     * has been moved to the adapter position of {@code target}
+     * ArticleViewHolder.
      *
      * @param rv         The RecyclerView to which ItemTouchHelper is attached
      *                   to
-     * @param viewHolder The ArticleViewHolder which is being dragged by the user
-     * @param target     The ArticleViewHolder over which the currently active item is
-     *                   being dragged
+     * @param viewHolder The ArticleViewHolder which is being dragged by the
+     *                   user
+     * @param target     The ArticleViewHolder over which the currently active
+     *                   item is being dragged
      * @return True if the {@code viewHolder} has been moved to the adapter
      * position of {@code target}
      */
@@ -89,16 +91,16 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
      * is called constantly while the user is swiping or dragging. This function
      * is where drawing "behind" the selected RecyclerView cell occurs.
      * <p>
-     * The red background and garbage icon when swiping a stock iv_left are
-     * drawn in this function.
+     * The red background and garbage icon when swiping a stock left are drawn
+     * in this function.
      *
      * @param c                 The canvas which RecyclerView is drawing its
      *                          children
      * @param rv                The RecyclerView to which ItemTouchHelper is
      *                          attached to
-     * @param viewHolder        The ArticleViewHolder which is being interacted by the
-     *                          User or it was interacted and simply animating
-     *                          to its original position
+     * @param viewHolder        The ArticleViewHolder which is being interacted
+     *                          by the user or it was interacted and simply
+     *                          animating to its original position
      * @param dX                The amount of horizontal displacement caused by
      *                          user's action
      * @param dY                The amount of vertical displacement caused by
@@ -171,10 +173,9 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
      *                          children
      * @param rv                The RecyclerView to which ItemTouchHelper is
      *                          attached to
-     * @param viewHolder        The ArticleViewHolder which is being interacted by the
-     *                          User or it was
-     *                          interacted and simply animating to its original
-     *                          position
+     * @param viewHolder        The ArticleViewHolder which is being interacted
+     *                          by the user or it was interacted and simply
+     *                          animating to its original position
      * @param dX                The amount of horizontal displacement caused by
      *                          user's action
      * @param dY                The amount of vertical displacement caused by
@@ -300,11 +301,18 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
         return makeMovementFlags(dragFlags, swipeFlags);
     }
 
-    @Override
-    public int getSwipeDirs(final RecyclerView rv, final RecyclerView.ViewHolder viewHolder) {
-        return super.getSwipeDirs(rv, viewHolder);
-    }
-
+    /**
+     * Returns whether ItemTouchHelper should start a drag and drop operation if
+     * an item is long pressed.
+     * <p>
+     * Default value returns true but you may want to disable this if you want
+     * to start dragging on a custom view touch using {@link
+     * ItemTouchHelper#startDrag(RecyclerView.ViewHolder)}.
+     *
+     * @return True if ItemTouchHelper should start dragging an item when it is
+     * long pressed, false otherwise. Default value is <code>true</code>
+     * @see ItemTouchHelper#startDrag(RecyclerView.ViewHolder)
+     */
     @Override
     public boolean isLongPressDragEnabled() {
         return true;

@@ -18,6 +18,13 @@ public final class WebViewActivity extends AppCompatActivity {
     @BindView(R.id.webView) WebView webView;
     @BindView(R.id.progressBar_webViewProgressBar) ProgressBar progressBar;
 
+    /**
+     * Initializes various components of this Activity. This method then starts
+     * {@link #webView} by calling {@link WebView#loadUrl(String)}, using the
+     * URL passed through Intent extras from IndividualStockActivity.
+     *
+     * @param savedInstanceState The savedInstanceState is not used
+     */
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -30,8 +37,14 @@ public final class WebViewActivity extends AppCompatActivity {
         webView.loadUrl(url);
     }
 
+    /**
+     * Initializes {@link #webView} to have certain features, including updating
+     * {@link #progressBar} while loading pages.
+     */
     private void initWebView() {
-        // Open links that are clicked in the web view inside the web view
+        /* By giving webView a WebViewClient, webView changes functionality to
+         * open links that are clicked in the web view inside the web view,
+         * rather than in an outside browser. */
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public void onPageStarted(final WebView view, final String url,
@@ -63,6 +76,13 @@ public final class WebViewActivity extends AppCompatActivity {
         webView.getSettings().setDisplayZoomControls(false); // Hide zoom controls
     }
 
+    /**
+     * If the user is currently at the first website that was opened in {@link
+     * #webView} return to the IndividualStockActivity that we were in before
+     * this Activity. Otherwise, if the user is at the second or subsequent
+     * website that was opened in webView, return to the previous website - like
+     * the back button in a browser.
+     */
     @Override
     public void onBackPressed() {
         if (webView.canGoBack()) {

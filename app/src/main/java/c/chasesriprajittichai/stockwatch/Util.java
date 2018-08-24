@@ -3,34 +3,54 @@ package c.chasesriprajittichai.stockwatch;
 import java.util.HashMap;
 import java.util.Map;
 
-import c.chasesriprajittichai.stockwatch.stocks.Stock;
+import static c.chasesriprajittichai.stockwatch.stocks.Stock.State;
 
 
+/**
+ * A class of static objects, classes, and methods that are useful in various
+ * places in the project. Everything in this class doesn't fit in well where
+ * they are used, so they have been put into this class.
+ */
 public final class Util {
 
-    // Prevent instantiation by making only constructor private
+    /**
+     * Prevent instantiation by making this private. Do not allow use of default
+     * constructor.
+     */
     private Util() {
     }
 
 
-    /* Maps each State.toString -> State */
-    static final Map<String, Stock.State> stringToStateMap = new HashMap<String, Stock.State>() {
+    /**
+     * Maps each {@link State#toString()} -> {@link State}. Used often because
+     * stock information, including it's State, is constantly being written to
+     * and read from preferences.
+     */
+    static final Map<String, State> stringToStateMap = new HashMap<String, State>() {
         {
-            put("ERROR", Stock.State.ERROR);
-            put("PREMARKET", Stock.State.PREMARKET);
-            put("OPEN", Stock.State.OPEN);
-            put("AFTER_HOURS", Stock.State.AFTER_HOURS);
-            put("CLOSED", Stock.State.CLOSED);
+            put("ERROR", State.ERROR);
+            put("PREMARKET", State.PREMARKET);
+            put("OPEN", State.OPEN);
+            put("AFTER_HOURS", State.AFTER_HOURS);
+            put("CLOSED", State.CLOSED);
         }
     };
 
 
     static class Char {
 
+        /**
+         * @param c Char to evaluate
+         * @return True if {@param c} is a digit or a '.'.
+         */
         public static boolean isDigitOrDec(final char c) {
             return Character.isDigit(c) || c == '.';
         }
 
+        /**
+         * @param c Char to evaluate
+         * @return True if {@param c} is a digit, a '.', or a '-'.
+         */
         public static boolean isDigitOrDecOrMinus(final char c) {
             return Character.isDigit(c) || c == '.' || c == '-';
         }
