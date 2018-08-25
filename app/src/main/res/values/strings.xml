@@ -4,16 +4,19 @@
     <string name="hockeyAppID">7a66f7ec251949d88f47aaa4931f20cc</string>
 
     <!--HomeActivity menu item titles-->
-    <string name="searchMenuItem">Search</string>
-    <string name="sortAlphabeticallyMenuItem">Sort Alphabetically</string>
-    <string name="sortByPriceMenuItem">Sort By Price</string>
-    <string name="sortByPercentMenuItem">Sort By % Change</string>
-    <string name="sortByStateMenuItem">Sort By State</string>
-    <string name="shuffleMenuItem">Shuffle</string>
-    <string name="flipListMenuItem">Flip List</string>
+    <string name="search_menuItemTitle">Search</string>
+    <string name="ticker_menuItemTitle">Ticker</string>
+    <string name="ticker_asc_menuItemTitle">Ticker \u2191</string>
+    <string name="ticker_desc_menuItemTitle">Ticker \u2193</string>
+    <string name="price_menuItemTitle">Price</string>
+    <string name="price_asc_menuItemTitle">Price \u2191</string>
+    <string name="price_desc_menuItemTitle">Price \u2193</string>
+    <string name="changePercent_menuItemTitle">% Change</string>
+    <string name="changePercent_asc_menuItemTitle">% Change \u2191</string>
+    <string name="changePercent_desc_menuItemTitle">% Change \u2193</string>
 
     <!--Strings in IndividualStockActivity-->
-    <string name="starMenuItem">Star</string>
+    <string name="star_menuItemTitle">Star</string>
 
     <string name="overview">Overview</string>
     <string name="news">News</string>

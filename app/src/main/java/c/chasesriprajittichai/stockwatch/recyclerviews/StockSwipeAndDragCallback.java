@@ -168,6 +168,9 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
      * to always return true. This function also notifies {@code
      * recyclerAdapter} if cells are being dragged, by setting {@link
      * StockRecyclerAdapter#setDragging(boolean)} to true.
+     * <p>
+     * This method notifies {@link #recyclerAdapter} and {@link #homeActivity}
+     * when indexes of Stocks in {@link #stocks} change.
      *
      * @param c                 The canvas which RecyclerView is drawing its
      *                          children
@@ -245,18 +248,16 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
                     whiteMargin.draw(c);
 
                     if (Math.abs(dY) > itemView.getHeight() / 2) {
-                        /* If the selected cell is more than 50% invaded into
-                         * an adjacent cell */
+                        // If the selected cell is more than 50% invaded into an adjacent cell.
 
-                        /* These calls replace what would normally be done in
-                         * onMove(). For this reason, override onMove() to
-                         * always return true. */
                         if (dY > 0) {
                             // Invading adjacent cell below
                             if (viewHolder.getAdapterPosition() < recyclerAdapter.getItemCount() - 1) {
                                 recyclerAdapter.swap(viewHolder.getAdapterPosition(),
                                         viewHolder.getAdapterPosition() + 1);
                                 homeActivity.updateTickerToIndexMap();
+
+                                homeActivity.notifyRvSortInvalidated();
                             }
                         } else {
                             // Invading adjacent cell above
@@ -264,6 +265,8 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
                                 recyclerAdapter.swap(viewHolder.getAdapterPosition(),
                                         viewHolder.getAdapterPosition() - 1);
                                 homeActivity.updateTickerToIndexMap();
+
+                                homeActivity.notifyRvSortInvalidated();
                             }
                         }
                     }

@@ -116,7 +116,7 @@ public final class StockRecyclerAdapter extends RecyclerView.Adapter<StockRecycl
     }
 
     /**
-     * Called from {@link IndividualStockActivity} when the user is "moving"
+     * Called from {@link StockSwipeAndDragCallback} when the user is "moving"
      * by long-pressing the stock, then dragging it up or down. Called when two
      * RecyclerView cells have switched positions.
      *

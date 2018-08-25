@@ -2,6 +2,7 @@ package c.chasesriprajittichai.stockwatch;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Canvas;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -31,7 +32,6 @@ import org.jsoup.select.Elements;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
@@ -63,6 +63,32 @@ public final class HomeActivity
         implements FindStockTaskListener,
         Response.Listener<ConcreteStockWithAhValsList>,
         Response.ErrorListener {
+
+    /**
+     * These are the possible sorts of {@link #stocks} that can be created by
+     * clicking the different sort (different list transformations) MenuItems in
+     * this Activity's Menu. This enum is used to represent how stocks is
+     * sorted, if at all.
+     */
+    public enum RvSort {
+        NO_SORT,
+        TICKER_ASC, TICKER_DESC,
+        PRICE_ASC, PRICE_DESC,
+        CHANGE_PERCENT_ASC, CHANGE_PERCENT_DESC
+    }
+
+    /**
+     * Maps each {@link RvSort#toString()} -> {@link RvSort}. Used in {@link
+     * #onCreate(Bundle)} to initialize {@link #rvSort}.
+     */
+    private static final Map<String, RvSort> stringToRvSortMap =
+            new HashMap<String, RvSort>() {
+                {
+                    for (final RvSort s : RvSort.values()) {
+                        put(s.toString(), s);
+                    }
+                }
+            };
 
     @BindView(R.id.recyclerView_stockRecycler) RecyclerView rv;
 
@@ -97,6 +123,11 @@ public final class HomeActivity
     private SharedPreferences prefs;
     private RequestQueue requestQueue;
     private Timer timer;
+
+    private RvSort rvSort;
+    private MenuItem sortByTicker_menuItem;
+    private MenuItem sortByPrice_menuItem;
+    private MenuItem sortByChangePercent_menuItem;
 
     /**
      * Called from {@link FindStockTask#onPostExecute(Integer)}.
@@ -145,6 +176,7 @@ public final class HomeActivity
      * @param savedInstanceState The savedInstanceState is not used
      * @see #initStocksFromPreferences()
      * @see #initRecyclerView()
+     * @see #initRvSortFromPreferences()
      */
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -158,6 +190,8 @@ public final class HomeActivity
 //        fillPreferencesWithRandomStocks(0); // Starter kit
         initStocksFromPreferences();
         initRecyclerView();
+        initRvSortFromPreferences();
+        checkIfStockAddedFromOtherActivity();
 
         checkForUpdates(); // ACRA
     }
@@ -242,6 +276,55 @@ public final class HomeActivity
     }
 
     /**
+     * Initializes {@link #rvSort} using the {@link RvSort#toString()} value
+     * stored in preferences. When this is called, the MenuItem titles do not
+     * reflect an RvSort - for example, if rvSort equals {@link
+     * RvSort#TICKER_ASC}, {@link #sortByTicker_menuItem} does not show an up
+     * arrow. Because this Activity's Menu has not been created yet, and our
+     * references to the MenuItems are not initialized yet, this method does not
+     * call updateMenuItemTitles(). updateMenuItemTitles is first called in
+     * {@link #onCreateOptionsMenu(Menu)}.
+     *
+     * @see #onCreateOptionsMenu(Menu)
+     */
+    private void initRvSortFromPreferences() {
+        final String rvSortStr = prefs.getString("HomeActivity Stocks Sort", "");
+        rvSort = stringToRvSortMap.getOrDefault(rvSortStr, RvSort.NO_SORT);
+    }
+
+    /**
+     * Checks if there is a Stock stored in preferences (Tickers TSV, Names TSV,
+     * and Data TSV) that is new to this Activity. If there is a new Stock, this
+     * method calls {@link #sortStocksToRvSort()} to ensure that the new Stock
+     * maintains the {@link RvSort} of {@link #stocks} that is specified by
+     * {@link #rvSort}.
+     * <p>
+     * The only way that a Stock is added to favorites is if the user stars the
+     * Stock in {@link IndividualStockActivity}. If the user does this,
+     * IndividualStockActivity sets a specific boolean value in preferences to
+     * true, which allows other Activities to check preferences and be aware of
+     * the new Stock. IndividualStockActivity, is completely unaware of the this
+     * Activity's rvSort, and adds a Stock's information to the front of Tickers
+     * TSV, Names TSV, and Data TSV. Therefore, if a new Stock has been added
+     * from IndividualStockActivity, it has probably invalidated the sort
+     * specified by rvSort. This method ensures that rvSort is maintained if new
+     * Stocks are added from other Activities.
+     *
+     * @see IndividualStockActivity#addStockToPreferences()
+     * @see IndividualStockActivity#onPause()
+     */
+    private void checkIfStockAddedFromOtherActivity() {
+        final boolean stockAdded = prefs.getBoolean(
+                "Stock Added",
+                false);
+        if (stockAdded) {
+            sortStocksToRvSort();
+
+            prefs.edit().putBoolean("Stock Added", false).apply();
+        }
+    }
+
+    /**
      * Re-initializes {@link #timer} because it is invalidated when {@link
      * #onPause()} is called. This method then uses timer to call {@link
      * #updateStocks()} on a constant interval.
@@ -268,7 +351,7 @@ public final class HomeActivity
 
     /**
      * Stops calls to {@link #updateStocks()} by cancelling {@link #timer}, then
-     * saves {@link #stocks} to preferences.
+     * saves {@link #stocks} and {@link #rvSort} to preferences.
      */
     @Override
     protected void onPause() {
@@ -280,6 +363,8 @@ public final class HomeActivity
         prefs.edit().putString("Tickers TSV", stocks.getStockTickersAsTSV()).apply();
         prefs.edit().putString("Names TSV", stocks.getStockNamesAsTSV()).apply();
         prefs.edit().putString("Data TSV", stocks.getStockDataAsTSV()).apply();
+
+        prefs.edit().putString("HomeActivity Stocks Sort", rvSort.toString()).apply();
 
         unregisterManagers();
     }
@@ -413,16 +498,20 @@ public final class HomeActivity
     }
 
     /**
-     * Initializes the contents of this Activity's standard options menu.
+     * Initializes the contents of this Activity's standard options menu. Also
+     * calls {@link #updateMenuItemTitles()} to update the titles of the
+     * just-initialized MenuItems to reflect the value of {@link #rvSort}.
      *
      * @param menu The Menu containing the list transformation MenuItems
      * @return True because we want the menu to be shown
+     * @see #initRvSortFromPreferences()
+     * @see #updateMenuItemTitles()
      */
     @Override
     public boolean onCreateOptionsMenu(final Menu menu) {
         getMenuInflater().inflate(R.menu.menu_home_activity, menu);
 
-        searchView = (SearchView) menu.findItem(R.id.menuItem_search_home).getActionView();
+        searchView = (SearchView) menu.findItem(R.id.menuItem_search).getActionView();
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
 
             /**
@@ -479,6 +568,18 @@ public final class HomeActivity
             }
         });
 
+        sortByTicker_menuItem = menu.findItem(R.id.menuItem_sortAlphabetically);
+        sortByPrice_menuItem = menu.findItem(R.id.menuItem_sortByPrice);
+        sortByChangePercent_menuItem = menu.findItem(R.id.menuItem_sortByChangePercent);
+
+        /* rvSort is initialized in initRvSortFromPreferences(), but the
+         * MenuItem titles do not reflect the current value of rvSort. the
+         * MenuItem titles cannot be updated in initRvSortFromPreferences,
+         * because this Activity does not have a reference to the MenuItems yet.
+         * Now that we have references to the MenuItems, update the MenuItem
+         * titles to reflect the value of rvSort. */
+        updateMenuItemTitles();
+
         return true;
     }
 
@@ -488,6 +589,8 @@ public final class HomeActivity
      * list transformations on {@link #rv}. All of these list transformations
      * change the indexing of the Stocks in {@link #stocks}. Therefore, each of
      * these list transformations must call {@link #updateTickerToIndexMap()}.
+     * Additionally, {@link #sortStocksToRvSort()} is called to update the
+     * MenuItem titles to reflect a change in value of {@link #rvSort}.
      *
      * @param item The selected MenuItem
      * @return True if a known item was selected, otherwise call the super
@@ -495,53 +598,102 @@ public final class HomeActivity
      */
     @Override
     public boolean onOptionsItemSelected(final MenuItem item) {
-        /* All of these list transformations change the indexing of the stocks
-         * in stocks. Therefore, each of these list transformations must call
-         * updateTickerToIndexMap(). */
+        /* The ordering of if statements within each case block determines
+         * whether the ascending or descending sort is selected initially, if
+         * neither were selected before. */
         switch (item.getItemId()) {
-            case R.id.menuItem_sortAlphabetically_home:
-                final Comparator<Stock> tickerComparator =
-                        Comparator.comparing(Stock::getTicker);
-                stocks.sort(tickerComparator);
-                updateTickerToIndexMap();
-                rvAdapter.notifyItemRangeChanged(0, rvAdapter.getItemCount());
-                return true;
-            case R.id.menuItem_sortByPrice_home:
-                // Sort by decreasing price
-                final Comparator<Stock> descPriceComparator =
-                        Comparator.comparingDouble(Stock::getPrice).reversed();
-                stocks.sort(descPriceComparator);
-                updateTickerToIndexMap();
-                rvAdapter.notifyItemRangeChanged(0, rvAdapter.getItemCount());
-                return true;
-            case R.id.menuItem_sortByChangePercent_home:
-                // Sort by decreasing magnitude of change percent
-                stocks.sort((Stock a, Stock b) -> {
-                    // Ignore sign, compare change percents by magnitude
-                    return Double.compare(Math.abs(b.getChangePercent()), Math.abs(a.getChangePercent()));
-                });
-                updateTickerToIndexMap();
-                rvAdapter.notifyItemRangeChanged(0, rvAdapter.getItemCount());
-                return true;
-            case R.id.menuItem_sortByState_home:
-                final Comparator<Stock> stateComparator =
-                        Comparator.comparing(Stock::getState);
-                stocks.sort(stateComparator);
-                updateTickerToIndexMap();
-                rvAdapter.notifyItemRangeChanged(0, rvAdapter.getItemCount());
-                return true;
-            case R.id.menuItem_shuffle_home:
-                Collections.shuffle(stocks);
-                updateTickerToIndexMap();
-                rvAdapter.notifyItemRangeChanged(0, rvAdapter.getItemCount());
-                return true;
-            case R.id.menuItem_flipList_home:
-                Collections.reverse(stocks);
-                updateTickerToIndexMap();
-                rvAdapter.notifyItemRangeChanged(0, rvAdapter.getItemCount());
-                return true;
+            case R.id.menuItem_sortAlphabetically:
+                if (rvSort == RvSort.TICKER_ASC) {
+                    rvSort = RvSort.TICKER_DESC;
+                } else {
+                    rvSort = RvSort.TICKER_ASC;
+                }
+                break;
+            case R.id.menuItem_sortByPrice:
+                if (rvSort == RvSort.PRICE_DESC) {
+                    rvSort = RvSort.PRICE_ASC;
+                } else {
+                    rvSort = RvSort.PRICE_DESC;
+                }
+                break;
+            case R.id.menuItem_sortByChangePercent:
+                if (rvSort == RvSort.CHANGE_PERCENT_DESC) {
+                    rvSort = RvSort.CHANGE_PERCENT_ASC;
+                } else {
+                    rvSort = RvSort.CHANGE_PERCENT_DESC;
+                }
+                break;
             default:
                 return super.onOptionsItemSelected(item);
+        }
+
+        sortStocksToRvSort();
+
+        updateMenuItemTitles();
+
+        updateTickerToIndexMap();
+        rvAdapter.notifyItemRangeChanged(0, rvAdapter.getItemCount());
+
+        return true;
+    }
+
+    /**
+     * Updates the following MenuItems to reflect the value of {@link #rvSort}.
+     * <ul>
+     * <li>{@link #sortByTicker_menuItem}
+     * <li>{@link #sortByPrice_menuItem}
+     * <li>{@link #sortByChangePercent_menuItem}
+     * </ul>
+     * <p>
+     * An example of this is: if rvSort equals {@link RvSort#TICKER_ASC},
+     * sortByTicker_menuItem should show an upwards arrow in its title, and
+     * sortByPrice_menuItem and sortByChangePercent_menuItem should not show any
+     * arrows.
+     */
+    private void updateMenuItemTitles() {
+        switch (rvSort) {
+            case TICKER_ASC:
+                sortByTicker_menuItem.setTitle(getString(R.string.ticker_asc_menuItemTitle));
+
+                sortByPrice_menuItem.setTitle(getText(R.string.price_menuItemTitle));
+                sortByChangePercent_menuItem.setTitle(getText(R.string.changePercent_menuItemTitle));
+                break;
+            case TICKER_DESC:
+                sortByTicker_menuItem.setTitle(getString(R.string.ticker_desc_menuItemTitle));
+
+                sortByPrice_menuItem.setTitle(getText(R.string.price_menuItemTitle));
+                sortByChangePercent_menuItem.setTitle(getText(R.string.changePercent_menuItemTitle));
+                break;
+            case PRICE_ASC:
+                sortByPrice_menuItem.setTitle(getText(R.string.price_asc_menuItemTitle));
+
+                sortByTicker_menuItem.setTitle(getString(R.string.ticker_menuItemTitle));
+                sortByChangePercent_menuItem.setTitle(getText(R.string.changePercent_menuItemTitle));
+                break;
+            case PRICE_DESC:
+                sortByPrice_menuItem.setTitle(getText(R.string.price_desc_menuItemTitle));
+
+                sortByTicker_menuItem.setTitle(getString(R.string.ticker_menuItemTitle));
+                sortByChangePercent_menuItem.setTitle(getText(R.string.changePercent_menuItemTitle));
+                break;
+            case CHANGE_PERCENT_ASC:
+                sortByChangePercent_menuItem.setTitle(getText(R.string.changePercent_asc_menuItemTitle));
+
+                sortByTicker_menuItem.setTitle(getString(R.string.ticker_menuItemTitle));
+                sortByPrice_menuItem.setTitle(getText(R.string.price_menuItemTitle));
+                break;
+            case CHANGE_PERCENT_DESC:
+                sortByChangePercent_menuItem.setTitle(getText(R.string.changePercent_desc_menuItemTitle));
+
+                sortByTicker_menuItem.setTitle(getString(R.string.ticker_menuItemTitle));
+                sortByPrice_menuItem.setTitle(getText(R.string.price_menuItemTitle));
+                break;
+            case NO_SORT:
+            default:
+                sortByTicker_menuItem.setTitle(getString(R.string.ticker_menuItemTitle));
+                sortByPrice_menuItem.setTitle(getText(R.string.price_menuItemTitle));
+                sortByChangePercent_menuItem.setTitle(getText(R.string.changePercent_menuItemTitle));
+                break;
         }
     }
 
@@ -579,6 +731,62 @@ public final class HomeActivity
         for (int i = 0; i < stocks.size(); i++) {
             tickerToIndexMap.put(stocks.get(i).getTicker(), i);
         }
+    }
+
+    /**
+     * Sorts {@link #stocks} to the sort specified by {@link #rvSort}.
+     */
+    private void sortStocksToRvSort() {
+        boolean needToSort = true;
+        final Comparator<Stock> comparator;
+
+        switch (rvSort) {
+            case TICKER_ASC:
+                comparator = Comparator.comparing(Stock::getTicker);
+                break;
+            case TICKER_DESC:
+                comparator = Comparator.comparing(Stock::getTicker).reversed();
+                break;
+            case PRICE_ASC:
+                comparator = Comparator.comparingDouble(Stock::getPrice);
+                break;
+            case PRICE_DESC:
+                comparator = Comparator.comparingDouble(Stock::getPrice).reversed();
+                break;
+            case CHANGE_PERCENT_ASC:
+                comparator = Comparator.comparingDouble(Stock::getChangePercent);
+                break;
+            case CHANGE_PERCENT_DESC:
+                comparator = Comparator.comparingDouble(Stock::getChangePercent).reversed();
+                break;
+            case NO_SORT:
+            default:
+                needToSort = false;
+                comparator = null;
+        }
+
+        if (needToSort) {
+            stocks.sort(comparator);
+        }
+    }
+
+    /**
+     * This method sets {@link #rvSort} to {@link RvSort#NO_SORT}, and then
+     * calls {@link #updateMenuItemTitles()}.
+     * <p>
+     * This method is called in {@link
+     * StockSwipeAndDragCallback#onChildDrawOver(Canvas, RecyclerView,
+     * RecyclerView.ViewHolder, float, float, int, boolean)} to notify this
+     * activity that rvSort is no longer valid in the case that Stocks
+     * in {@link #stocks} are swapped (switch indexes). This is because a single
+     * swap invalidates any sort that stocks had.
+     *
+     * @see StockSwipeAndDragCallback#onChildDrawOver(Canvas, RecyclerView,
+     * RecyclerView.ViewHolder, float, float, int, boolean)
+     */
+    public void notifyRvSortInvalidated() {
+        rvSort = RvSort.NO_SORT;
+        updateMenuItemTitles();
     }
 
     /**

@@ -28,11 +28,9 @@ public final class Util {
      */
     static final Map<String, State> stringToStateMap = new HashMap<String, State>() {
         {
-            put("ERROR", State.ERROR);
-            put("PREMARKET", State.PREMARKET);
-            put("OPEN", State.OPEN);
-            put("AFTER_HOURS", State.AFTER_HOURS);
-            put("CLOSED", State.CLOSED);
+            for (final State s : State.values()) {
+                put(s.toString(), s);
+            }
         }
     };
 

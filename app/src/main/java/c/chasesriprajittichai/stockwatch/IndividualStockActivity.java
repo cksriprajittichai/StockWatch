@@ -696,9 +696,11 @@ public final class IndividualStockActivity
 
     /**
      * Saves the favorites status of {@link #stock} to preferences. If stock's
-     * information is not in preferences but is starred, call add it to
-     * preferences. If stock's information is in preferences but is not starred,
-     * remove it from preferences.
+     * information is not in preferences but is starred, add it to preferences
+     * and store in preferences that a new Stock has been added.
+     * If stock's information is in preferences but is not starred, remove it
+     * from preferences and store in preferences that a new Stock has not been
+     * added.
      *
      * @see #addStockToPreferences()
      * @see #removeStockFromPreferences()
@@ -712,8 +714,12 @@ public final class IndividualStockActivity
 
             if (wasInFavoritesInitially) {
                 removeStockFromPreferences();
+
+                prefs.edit().putBoolean("Stock Added", false).apply();
             } else {
                 addStockToPreferences();
+
+                prefs.edit().putBoolean("Stock Added", true).apply();
             }
 
             // Update the favorites status
