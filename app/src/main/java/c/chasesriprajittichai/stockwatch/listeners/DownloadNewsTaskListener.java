@@ -2,6 +2,6 @@ package c.chasesriprajittichai.stockwatch.listeners;
 
 public interface DownloadNewsTaskListener {
 
-    void onDownloadNewsTaskCompleted(final Integer status);
+    void onDownloadNewsTaskCompleted(final int status);
 
 }

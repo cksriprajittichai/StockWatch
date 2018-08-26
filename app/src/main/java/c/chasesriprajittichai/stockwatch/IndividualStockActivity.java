@@ -101,18 +101,18 @@ public final class IndividualStockActivity
     @BindView(R.id.horizontalPicker_chartPeriod) HorizontalPicker chartPeriodPicker;
     @BindView(R.id.view_chartPeriodPickerUnderline) View chartPeriodPickerUnderline;
     @BindView(R.id.textView_keyStatisticsHeader) TextView keyStatisticsHeader;
+    @BindView(R.id.textSwitcher_prevClose) TextSwitcher prevClose;
+    @BindView(R.id.textSwitcher_open) TextSwitcher open;
+    @BindView(R.id.textSwitcher_volume) TextSwitcher volume;
+    @BindView(R.id.textSwitcher_averageVolume) TextSwitcher avgVolume;
     @BindView(R.id.textSwitcher_todaysLow) TextSwitcher todaysLow;
     @BindView(R.id.textSwitcher_todaysHigh) TextSwitcher todaysHigh;
     @BindView(R.id.textSwitcher_fiftyTwoWeekLow) TextSwitcher fiftyTwoWeekLow;
     @BindView(R.id.textSwitcher_fiftyTwoWeekHigh) TextSwitcher fiftyTwoWeekHigh;
     @BindView(R.id.textSwitcher_marketCap) TextSwitcher marketCap;
-    @BindView(R.id.textSwitcher_prevClose) TextSwitcher prevClose;
     @BindView(R.id.textSwitcher_peRatio) TextSwitcher peRatio;
     @BindView(R.id.textSwitcher_eps) TextSwitcher eps;
     @BindView(R.id.textSwitcher_yield) TextSwitcher yield;
-    @BindView(R.id.textSwitcher_averageVolume) TextSwitcher avgVolume;
-    @BindView(R.id.textSwitcher_volume) TextSwitcher volume;
-    @BindView(R.id.textSwitcher_open) TextSwitcher open;
     @BindView(R.id.textSwitcher_description) TextSwitcher description;
 
     @BindView(R.id.recyclerView_newsRecycler) RecyclerView newsRv;
@@ -136,6 +136,18 @@ public final class IndividualStockActivity
     private SharedPreferences prefs;
 
     /**
+     * This is the number of times that a specific AsyncTask can fail
+     * (IOException) and be restarted (new instance created and executed). If a
+     * specific AsyncTask fails more times than this value, the AsyncTask will
+     * not be restarted.
+     */
+    private final int NUM_TASK_RETRIES_ALLOWED = 1; // Per each task
+
+    private int failCount_chartTask = 0;
+    private int failCount_statsTask = 0;
+    private int failCount_newsTask = 0;
+
+    /**
      * Called from {@link DownloadChartTask#onPostExecute(Integer)}.
      * <p>
      * The following {@link DownloadChartTask.Status} represent at least one
@@ -146,8 +158,11 @@ public final class IndividualStockActivity
      * <li>{@link DownloadChartTask.Status#IO_EXCEPTION_FOR_MW_AND_WSJ}
      * </ul>
      * If status represents at least one IOException being thrown in the
-     * DownloadChartTask, this method shows a no-connection message where
-     * {@link #sparkView} would be if there were filled charts.
+     * DownloadChartTask and {@link #NUM_TASK_RETRIES_ALLOWED} has been
+     * exceeded by this task's fail count, this method shows a no-connection
+     * message where {@link #sparkView} would be if there were filled charts.
+     * If this task's fail count does not exceed NUM_TASK_RETRIES_ALLOWED, a
+     * new instance of this task is created and executed.
      * <p>
      * If status equals {@link DownloadChartTask.Status#GOOD}, this method
      * uses missingChartPeriods to determine which charts are filled. It then
@@ -160,9 +175,10 @@ public final class IndividualStockActivity
      * represented an IOException thrown in DownloadChartTask, except in this
      * case, a no-charts message is shown, rather than a no-connection message.
      * <p>
-     * Regardless of the value of status, {@link #loadingChartsProgressBar}'s
-     * visibility is set to {@link View#GONE}, and a response (charts or
-     * message) to the DownloadChartTask is shown.
+     * If a new instance of this task is not created and executed, regardless of
+     * the value of status, {@link #loadingChartsProgressBar}'s visibility is
+     * set to {@link View#GONE}, and a response (charts or message) to the
+     * DownloadChartTask is shown.
      *
      * @param status              The {@link DownloadChartTask.Status} of the
      *                            task
@@ -233,27 +249,39 @@ public final class IndividualStockActivity
                     chartPeriodPicker.setVisibility(View.VISIBLE);
                     chartPeriodPickerUnderline.setVisibility(View.VISIBLE);
                 }
+
+                loadingChartsProgressBar.setVisibility(View.GONE);
                 break;
             case DownloadChartTask.Status.IO_EXCEPTION_FOR_MW_AND_WSJ:
             case DownloadChartTask.Status.IO_EXCEPTION_FOR_MW_ONLY:
             case DownloadChartTask.Status.IO_EXCEPTION_FOR_WSJ_ONLY:
-                chartsStatus.setText(getString(R.string.ioException_loadingCharts));
+                failCount_chartTask++;
 
-                chartsStatus.setVisibility(View.VISIBLE);
+                if (failCount_chartTask > NUM_TASK_RETRIES_ALLOWED) {
+                    chartsStatus.setText(getString(R.string.ioException_loadingCharts));
+                    chartsStatus.setVisibility(View.VISIBLE);
+
+                    loadingChartsProgressBar.setVisibility(View.GONE);
+                } else {
+                    new DownloadChartTask(stock, this).execute();
+                }
                 break;
         }
-
-        loadingChartsProgressBar.setVisibility(View.GONE);
     }
 
     /**
      * Called from {@link DownloadStatsTask#onPostExecute(Integer)}.
      * <p>
-     * If status equals {@link DownloadStatsTask.Status#IO_EXCEPTION}, this
-     * method sets each TextView in the "Key Statistics" section to show a
+     * If status equals {@link DownloadStatsTask.Status#IO_EXCEPTION} and {@link
+     * #NUM_TASK_RETRIES_ALLOWED} has been exceeded by this task's fail count,
+     * this method sets each TextView in the "Key Statistics" section to show a
      * {@literal x}, and makes the description TextView show a no-connection
-     * message. If status equals {@link DownloadStatsTask.Status#GOOD}, the
-     * "Key Statistics" TextViews and description TextView display the values of
+     * message. If status equals IO_EXCEPTION and this task's fail count does
+     * not exceed NUM_TASK_RETRIES_ALLOWED, a new instance of this task is
+     * created and executed.
+     * <p>
+     * If status equals {@link DownloadStatsTask.Status#GOOD}, the "Key
+     * Statistics" TextViews and description TextView display the values of
      * {@link #stock} that were updated in DownloadStatsTask. If a Stat is
      * contained in missingStats, its TextView's text is set to {@literal N/A}.
      *
@@ -326,20 +354,26 @@ public final class IndividualStockActivity
                 }
                 break;
             case DownloadStatsTask.Status.IO_EXCEPTION:
-                todaysLow.setText(getString(R.string.x));
-                todaysHigh.setText(getString(R.string.x));
-                fiftyTwoWeekLow.setText(getString(R.string.x));
-                fiftyTwoWeekHigh.setText(getString(R.string.x));
-                marketCap.setText(getString(R.string.x));
-                prevClose.setText(getString(R.string.x));
-                peRatio.setText(getString(R.string.x));
-                eps.setText(getString(R.string.x));
-                yield.setText(getString(R.string.x));
-                volume.setText(getString(R.string.x));
-                open.setText(getString(R.string.x));
-                avgVolume.setText(getString(R.string.x));
+                failCount_statsTask++;
 
-                description.setText(getString(R.string.ioException_loadingDescription));
+                if (failCount_statsTask > NUM_TASK_RETRIES_ALLOWED) {
+                    todaysLow.setText(getString(R.string.x));
+                    todaysHigh.setText(getString(R.string.x));
+                    fiftyTwoWeekLow.setText(getString(R.string.x));
+                    fiftyTwoWeekHigh.setText(getString(R.string.x));
+                    marketCap.setText(getString(R.string.x));
+                    prevClose.setText(getString(R.string.x));
+                    peRatio.setText(getString(R.string.x));
+                    eps.setText(getString(R.string.x));
+                    yield.setText(getString(R.string.x));
+                    volume.setText(getString(R.string.x));
+                    open.setText(getString(R.string.x));
+                    avgVolume.setText(getString(R.string.x));
+
+                    description.setText(getString(R.string.ioException_loadingDescription));
+                } else {
+                    new DownloadStatsTask(stock, this).execute();
+                }
                 break;
         }
     }
@@ -347,14 +381,15 @@ public final class IndividualStockActivity
     /**
      * Called from {@link DownloadNewsTask#onPostExecute(Integer)}.
      * <p>
-     * Regardless of the value of status, {@link #loadingNewsProgressBar}'s
-     * visibility is set to {@link View#GONE}, and a response ({@link #newsRv}
-     * or message) to the DownloadNewsTask is shown.
+     * If a new instance of this task is not created and executed, regardless of
+     * the value of status, {@link #loadingNewsProgressBar}'s visibility is set
+     * to {@link View#GONE}, and a response ({@link #newsRv} or message) to the
+     * DownloadNewsTask is shown.
      *
      * @param status The {@link DownloadNewsTask.Status} of the task
      */
     @Override
-    public void onDownloadNewsTaskCompleted(final Integer status) {
+    public void onDownloadNewsTaskCompleted(final int status) {
         switch (status) {
             case DownloadNewsTask.Status.GOOD:
                 loadingNewsProgressBar.setVisibility(View.GONE);
@@ -369,10 +404,17 @@ public final class IndividualStockActivity
                 newsStatus.setText(getString(R.string.noNewsArticlesFound));
                 break;
             case DownloadNewsTask.Status.IO_EXCEPTION:
-                loadingNewsProgressBar.setVisibility(View.GONE);
-                newsRv.setVisibility(View.GONE);
+                failCount_newsTask++;
 
-                newsStatus.setText(getString(R.string.ioException_loadingNews));
+                if (failCount_newsTask > NUM_TASK_RETRIES_ALLOWED) {
+                    loadingNewsProgressBar.setVisibility(View.GONE);
+                    newsRv.setVisibility(View.GONE);
+
+                    newsStatus.setText(getString(R.string.ioException_loadingNews));
+                } else {
+                    new DownloadNewsTask(stock.getTicker(), newsRecyclerAdapter.getArticleSparseArray(), this)
+                            .execute();
+                }
                 break;
         }
     }
