@@ -3,11 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/colorCharcoal"
-    android:paddingBottom="0dp"
-    android:paddingEnd="0dp"
-    android:paddingStart="0dp"
-    android:paddingTop="0dp">
+    android:background="@color/colorCharcoal">
 
     <!--Don't constrain to price TextView or change percent TextView so that values will be in a column-->
     <TextView

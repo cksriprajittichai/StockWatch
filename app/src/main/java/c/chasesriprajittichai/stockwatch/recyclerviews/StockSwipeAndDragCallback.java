@@ -16,6 +16,9 @@ import c.chasesriprajittichai.stockwatch.R;
 import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhValsList;
 
 
+/**
+ * Useful repo with explanations: https://github.com/iPaulPro/Android-ItemTouchHelper-Demo.
+ */
 public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallback {
 
     private final HomeActivity homeActivity;
@@ -26,6 +29,7 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
     // Minimize the amount of allocation done in drawing methods
     private final Drawable whiteMargin;
     private final Drawable redBackground;
+    private final Drawable darkCharcoalBackground;
     private final Drawable garbageIcon;
     private final int garbageMargin;
     private final int whiteMarginSize = 4;
@@ -43,6 +47,7 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
 
         whiteMargin = new ColorDrawable(Color.WHITE);
         redBackground = new ColorDrawable(Color.RED);
+        darkCharcoalBackground = new ColorDrawable(Color.parseColor("#202020"));
         garbageIcon = ContextCompat.getDrawable(homeActivity, R.drawable.ic_delete_black_24dp);
         final float dpUnit = homeActivity.getResources().getDisplayMetrics().density;
         garbageMargin = (int) (16 * dpUnit);
@@ -66,10 +71,6 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
     /**
      * Called when ItemTouchHelper wants to move the dragged item from its old
      * position to the new position.
-     * <p>
-     * If this method returns true, ItemTouchHelper assumes {@code viewHolder}
-     * has been moved to the adapter position of {@code target}
-     * ArticleViewHolder.
      *
      * @param rv         The RecyclerView to which ItemTouchHelper is attached
      *                   to
@@ -77,22 +78,28 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
      *                   user
      * @param target     The ArticleViewHolder over which the currently active
      *                   item is being dragged
-     * @return True if the {@code viewHolder} has been moved to the adapter
-     * position of {@code target}
+     * @return True because viewHolder has been moved to the adapter
+     * position of target
      */
     @Override
     public boolean onMove(final RecyclerView rv, final RecyclerView.ViewHolder viewHolder,
                           final RecyclerView.ViewHolder target) {
+        recyclerAdapter.swap(viewHolder.getAdapterPosition(),
+                target.getAdapterPosition());
+        homeActivity.updateTickerToIndexMap();
+
+        homeActivity.notifyRvSortInvalidated();
         return true;
     }
 
     /**
      * Called by ItemTouchHelper on RecyclerView's onDraw callback. This method
-     * is called constantly while the user is swiping or dragging. This function
+     * is called repeatedly while the user is swiping or dragging. This method
      * is where drawing "behind" the selected RecyclerView cell occurs.
      * <p>
-     * The red background and garbage icon when swiping a stock left are drawn
-     * in this function.
+     * If the user is swiping, {@link #redBackground} and {@link #garbageIcon}
+     * are drawn. If the user is dragging, {@link #darkCharcoalBackground} is
+     * drawn.
      *
      * @param c                 The canvas which RecyclerView is drawing its
      *                          children
@@ -125,52 +132,48 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
             return;
         }
 
-        switch (actionState) {
-            case ItemTouchHelper.ACTION_STATE_SWIPE:
-                // Draw red background
-                redBackground.setBounds(itemView.getRight() + (int) dX,
-                        itemView.getTop(), itemView.getRight(), itemView.getBottom());
-                redBackground.draw(c);
+        if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
+            // Draw red background
+            redBackground.setBounds(
+                    itemView.getRight() + (int) dX,
+                    itemView.getTop(),
+                    itemView.getRight(),
+                    itemView.getBottom());
+            redBackground.draw(c);
 
-                // Draw garbage can
-                final int itemHeight = itemView.getBottom() - itemView.getTop();
-                final int intrinsicWidth = garbageIcon.getIntrinsicWidth();
-                final int intrinsicHeight = garbageIcon.getIntrinsicHeight();
+            // Draw garbage can
+            final int itemHeight = itemView.getBottom() - itemView.getTop();
+            final int intrinsicWidth = garbageIcon.getIntrinsicWidth();
+            final int intrinsicHeight = garbageIcon.getIntrinsicHeight();
 
-                final int xMarkLeft = itemView.getRight() - garbageMargin - intrinsicWidth;
-                final int xMarkRight = itemView.getRight() - garbageMargin;
-                final int xMarkTop = itemView.getTop() + (itemHeight - intrinsicHeight) / 2;
-                final int xMarkBottom = xMarkTop + intrinsicHeight;
-                garbageIcon.setBounds(xMarkLeft, xMarkTop, xMarkRight, xMarkBottom);
-                garbageIcon.draw(c);
-                break;
+            final int xMarkLeft = itemView.getRight() - garbageMargin - intrinsicWidth;
+            final int xMarkRight = itemView.getRight() - garbageMargin;
+            final int xMarkTop = itemView.getTop() + (itemHeight - intrinsicHeight) / 2;
+            final int xMarkBottom = xMarkTop + intrinsicHeight;
+            garbageIcon.setBounds(xMarkLeft, xMarkTop, xMarkRight, xMarkBottom);
+            garbageIcon.draw(c);
+        } else if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
+            // Draw black background
+            darkCharcoalBackground.setBounds(
+                    itemView.getLeft(),
+                    itemView.getTop(),
+                    itemView.getRight(),
+                    itemView.getBottom());
+            darkCharcoalBackground.draw(c);
         }
 
         super.onChildDraw(c, rv, viewHolder, dX, dY, actionState, isCurrentlyActive);
     }
 
+
     /**
      * Called by ItemTouchHelper on RecyclerView's onDraw callback. This method
-     * is called constantly while the user is swiping or dragging. This function
+     * is called repeatedly while the user is swiping or dragging. This method
      * is where drawing on the selected RecyclerView cell (includes drawing over
      * other cells) occurs.
      * <p>
      * The white margins around a selected cell that is being dragged are drawn
-     * here. The actual cell switching occurs in this function as well. A more
-     * traditional drag and drop RecyclerView implementation would execute cell
-     * switches in {@link #onMove(RecyclerView, RecyclerView.ViewHolder,
-     * RecyclerView.ViewHolder)}. But doing that restricts the precision about
-     * when two cells swap. This function swaps cells when the selected cell is
-     * more than 50% into the adjacent cell that it is invading. This function
-     * takes care of the duties of {@link #onMove(RecyclerView,
-     * RecyclerView.ViewHolder, RecyclerView.ViewHolder)}, causing {@link
-     * #onMove(RecyclerView, RecyclerView.ViewHolder, RecyclerView.ViewHolder)}
-     * to always return true. This function also notifies {@code
-     * recyclerAdapter} if cells are being dragged, by setting {@link
-     * StockRecyclerAdapter#setDragging(boolean)} to true.
-     * <p>
-     * This method notifies {@link #recyclerAdapter} and {@link #homeActivity}
-     * when indexes of Stocks in {@link #stocks} change.
+     * in this method.
      *
      * @param c                 The canvas which RecyclerView is drawing its
      *                          children
@@ -188,12 +191,12 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
      *                          ACTION_STATE_SWIPE}.
      * @param isCurrentlyActive True if this view is currently being controlled
      *                          by the user or false it is simply animating back
-     *                          to its original state.
+     *                          to its original state
      */
     @Override
     public void onChildDrawOver(final Canvas c, final RecyclerView rv,
                                 final RecyclerView.ViewHolder viewHolder,
-                                final float dX, final float dY,
+                                final float dX, float dY,
                                 final int actionState, final boolean isCurrentlyActive) {
         final View itemView = viewHolder.itemView;
 
@@ -203,83 +206,69 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
             return;
         }
 
-        switch (actionState) {
-            case ItemTouchHelper.ACTION_STATE_DRAG:
-                if (isCurrentlyActive) {
-                    /* This function is called multiple times after clearView()
-                     * is called. Therefore, any calls to
-                     * recyclerAdapter.setDragging() in clearView() could be
-                     * erased by subsequent calls to this function. clearView()
-                     * will be called after this method's isCurrentlyActive
-                     * boolean parameter is set to false. */
-                    recyclerAdapter.setDragging(true);
+        if (isCurrentlyActive && actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
+            // y increases as we move further down the screen
+            // Draw left margin
+            whiteMargin.setBounds(
+                    itemView.getLeft(),
+                    itemView.getTop() + (int) dY,
+                    itemView.getLeft() + whiteMarginSize,
+                    itemView.getBottom() + (int) dY);
+            whiteMargin.draw(c);
 
-                    // y increases as we move further down the screen
-                    // Draw left margin
-                    whiteMargin.setBounds(
-                            itemView.getLeft(),
-                            itemView.getTop() + (int) dY,
-                            itemView.getLeft() + whiteMarginSize,
-                            itemView.getBottom() + (int) dY);
-                    whiteMargin.draw(c);
+            // Draw right margin
+            whiteMargin.setBounds(
+                    itemView.getRight() - whiteMarginSize,
+                    itemView.getTop() + (int) dY,
+                    itemView.getRight(),
+                    itemView.getBottom() + (int) dY);
+            whiteMargin.draw(c);
 
-                    // Draw right margin
-                    whiteMargin.setBounds(
-                            itemView.getRight() - whiteMarginSize,
-                            itemView.getTop() + (int) dY,
-                            itemView.getRight(),
-                            itemView.getBottom() + (int) dY);
-                    whiteMargin.draw(c);
+            // Draw top margin
+            whiteMargin.setBounds(
+                    itemView.getLeft(),
+                    itemView.getTop() + (int) dY,
+                    itemView.getRight(),
+                    itemView.getTop() + (int) dY + whiteMarginSize);
+            whiteMargin.draw(c);
 
-                    // Draw top margin
-                    whiteMargin.setBounds(
-                            itemView.getLeft(),
-                            itemView.getTop() + (int) dY,
-                            itemView.getRight(),
-                            itemView.getTop() + (int) dY + whiteMarginSize);
-                    whiteMargin.draw(c);
-
-                    // Draw bottom margin
-                    whiteMargin.setBounds(
-                            itemView.getLeft(),
-                            itemView.getBottom() + (int) dY - whiteMarginSize,
-                            itemView.getRight(),
-                            itemView.getBottom() + (int) dY);
-                    whiteMargin.draw(c);
-
-                    if (Math.abs(dY) > itemView.getHeight() / 2) {
-                        // If the selected cell is more than 50% invaded into an adjacent cell.
-
-                        if (dY > 0) {
-                            // Invading adjacent cell below
-                            if (viewHolder.getAdapterPosition() < recyclerAdapter.getItemCount() - 1) {
-                                recyclerAdapter.swap(viewHolder.getAdapterPosition(),
-                                        viewHolder.getAdapterPosition() + 1);
-                                homeActivity.updateTickerToIndexMap();
-
-                                homeActivity.notifyRvSortInvalidated();
-                            }
-                        } else {
-                            // Invading adjacent cell above
-                            if (viewHolder.getAdapterPosition() > 0) {
-                                recyclerAdapter.swap(viewHolder.getAdapterPosition(),
-                                        viewHolder.getAdapterPosition() - 1);
-                                homeActivity.updateTickerToIndexMap();
-
-                                homeActivity.notifyRvSortInvalidated();
-                            }
-                        }
-                    }
-                }
-                break;
+            // Draw bottom margin
+            whiteMargin.setBounds(
+                    itemView.getLeft(),
+                    itemView.getBottom() + (int) dY - whiteMarginSize,
+                    itemView.getRight(),
+                    itemView.getBottom() + (int) dY);
+            whiteMargin.draw(c);
         }
 
         super.onChildDrawOver(c, rv, viewHolder, dX, dY, actionState, isCurrentlyActive);
     }
 
     /**
+     * Called when the ViewHolder swiped or dragged by the ItemTouchHelper is
+     * changed. If the user is swiping or dragging a RecyclerView cell, notify
+     * {@link #recyclerAdapter}.
+     *
+     * @param viewHolder  The new ViewHolder that is being swiped or dragged. Might be null if
+     *                    it is cleared
+     * @param actionState One of {@link ItemTouchHelper#ACTION_STATE_IDLE},
+     *                    {@link ItemTouchHelper#ACTION_STATE_SWIPE} or
+     *                    {@link ItemTouchHelper#ACTION_STATE_DRAG}
+     * @see #clearView(RecyclerView, RecyclerView.ViewHolder)
+     */
+    @Override
+    public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
+        super.onSelectedChanged(viewHolder, actionState);
+        if (actionState == ItemTouchHelper.ACTION_STATE_DRAG ||
+                actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
+            recyclerAdapter.setSwipingOrDragging(true);
+        }
+    }
+
+    /**
      * Called by the ItemTouchHelper when the user interaction with an element
-     * is over and it also completed its animation.
+     * is over and it also completed its animation. Ensure that {@link
+     * #recyclerAdapter} knows that the user is not swiping or dragging.
      * <p>
      * This is a good place to clear all changes on the View that was done in
      * {@link #onSelectedChanged(RecyclerView.ViewHolder, int)}, {@link
@@ -290,11 +279,12 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
      * @param rv         The RecyclerView which is controlled by the
      *                   ItemTouchHelper
      * @param viewHolder The View that was interacted by the user
+     * @see #onSelectedChanged(RecyclerView.ViewHolder, int)
      */
     @Override
     public void clearView(final RecyclerView rv, final RecyclerView.ViewHolder viewHolder) {
         super.clearView(rv, viewHolder);
-        recyclerAdapter.setDragging(false);
+        recyclerAdapter.setSwipingOrDragging(false);
     }
 
     @Override
@@ -313,7 +303,7 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
      * ItemTouchHelper#startDrag(RecyclerView.ViewHolder)}.
      *
      * @return True if ItemTouchHelper should start dragging an item when it is
-     * long pressed, false otherwise. Default value is <code>true</code>
+     * long pressed, false otherwise. Default value is true.
      * @see ItemTouchHelper#startDrag(RecyclerView.ViewHolder)
      */
     @Override
@@ -321,6 +311,18 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
         return true;
     }
 
+    /**
+     * Returns whether ItemTouchHelper should start a swipe operation if a
+     * pointer is swiped over the View.
+     * <p>
+     * Default value returns true but you may want to disable this if you want
+     * to start swiping on a custom view touch using {@link
+     * ItemTouchHelper#startSwipe(RecyclerView.ViewHolder)}.
+     *
+     * @return True if ItemTouchHelper should start swiping an item when user
+     * swipes a pointer over the View, false otherwise. Default value is true.
+     * @see ItemTouchHelper#startSwipe(RecyclerView.ViewHolder)}.
+     */
     @Override
     public boolean isItemViewSwipeEnabled() {
         return true;

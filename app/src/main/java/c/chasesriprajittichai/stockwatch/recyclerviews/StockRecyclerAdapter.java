@@ -13,14 +13,13 @@ import java.util.List;
 import java.util.Locale;
 
 import c.chasesriprajittichai.stockwatch.HomeActivity;
-import c.chasesriprajittichai.stockwatch.IndividualStockActivity;
 import c.chasesriprajittichai.stockwatch.R;
 import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhVals;
 import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhValsList;
 import c.chasesriprajittichai.stockwatch.stocks.Stock;
 
 
-public final class StockRecyclerAdapter extends RecyclerView.Adapter<StockRecyclerAdapter.ViewHolder> {
+public final class StockRecyclerAdapter extends RecyclerView.Adapter<StockRecyclerAdapter.StockViewHolder> {
 
 
     /**
@@ -30,14 +29,14 @@ public final class StockRecyclerAdapter extends RecyclerView.Adapter<StockRecycl
      * To understand why only ConcreteStockWithAhVals are shown, look at {@link
      * ConcreteStockWithAhVals}.
      */
-    class ViewHolder extends RecyclerView.ViewHolder {
+    class StockViewHolder extends RecyclerView.ViewHolder {
 
         private final TextView state;
         private final TextView ticker;
         private final TextView price;
         private final TextView changePercent;
 
-        ViewHolder(final View v) {
+        StockViewHolder(final View v) {
             super(v);
 
             state = v.findViewById(R.id.textView_state_stockRecyclerItem);
@@ -86,18 +85,20 @@ public final class StockRecyclerAdapter extends RecyclerView.Adapter<StockRecycl
 
     /**
      * Used so that {@link HomeActivity} can know whether or not a cell in
-     * {@link HomeActivity#rv} is being dragged. This is useful for when
+     * {@link HomeActivity#rv} is being swiped or dragged. This is useful when
      * HomeActivity is trying to update the rv. If rv is updated while a cell is
-     * dragging, the dragging will be stopped (as if the user lifted their
-     * finger off the screen). HomeActivity avoids this by checking if a cell is
-     * dragging before updating rv.
+     * swiping or dragging, the action will be stopped (as if the user lifted
+     * their finger off the screen). HomeActivity avoids this by checking if a
+     * cell is swiping or dragging before updating rv.
+     *
+     * @see HomeActivity#onResponse(ConcreteStockWithAhValsList)
      */
-    private boolean isDragging;
+    private boolean isSwipingOrDragging;
 
     public StockRecyclerAdapter(final ConcreteStockWithAhValsList stocks, final OnItemClickListener listener) {
         this.stocks = stocks;
         onItemClickListener = listener;
-        isDragging = false;
+        isSwipingOrDragging = false;
     }
 
     /**
@@ -132,28 +133,28 @@ public final class StockRecyclerAdapter extends RecyclerView.Adapter<StockRecycl
      * Called when RecyclerView needs a new {@link RecyclerView.ViewHolder} of
      * the given type to represent an item.
      * <p>
-     * This new ViewHolder should be constructed with a new View that can
+     * This new StockViewHolder should be constructed with a new View that can
      * represent the items of the given type. You can either create a new View
      * manually or inflate it from an XML layout file.
      * <p>
-     * The new ViewHolder will be used to display items of the adapter using
+     * The new StockViewHolder will be used to display items of the adapter using
      * {@link #onBindViewHolder(RecyclerView.ViewHolder, int, List)}.
      *
      * @param parent   The ViewGroup into which the new View will be added after
      *                 it is bound to an adapter position
      * @param viewType The view type of the new View
-     * @return A new ViewHolder that holds a View of the given view type
+     * @return A new StockViewHolder that holds a View of the given view type
      * @see #getItemViewType(int)
      * @see #onBindViewHolder(RecyclerView.ViewHolder, int)
      */
     @NonNull
     @Override
-    public StockRecyclerAdapter.ViewHolder onCreateViewHolder(@NonNull final ViewGroup parent, final int viewType) {
+    public StockViewHolder onCreateViewHolder(@NonNull final ViewGroup parent, final int viewType) {
         final LayoutInflater inflater = LayoutInflater.from(parent.getContext());
 
         final View stockView = inflater.inflate(R.layout.recycler_item_stock_stock_recycler, parent, false);
 
-        return new ViewHolder(stockView);
+        return new StockViewHolder(stockView);
     }
 
     /**
@@ -162,12 +163,12 @@ public final class StockRecyclerAdapter extends RecyclerView.Adapter<StockRecycl
      * RecyclerView.ViewHolder#itemView} to reflect the item at the given
      * position.
      *
-     * @param holder   The ViewHolder which should be updated to represent the
+     * @param holder   The StockViewHolder which should be updated to represent the
      *                 contents of the item at the given position in the data set
      * @param position The position of the item within the adapter's data set
      */
     @Override
-    public void onBindViewHolder(@NonNull final ViewHolder holder, final int position) {
+    public void onBindViewHolder(@NonNull final StockViewHolder holder, final int position) {
         holder.bind(stocks.get(position), onItemClickListener);
     }
 
@@ -182,19 +183,19 @@ public final class StockRecyclerAdapter extends RecyclerView.Adapter<StockRecycl
     }
 
     /**
-     * @return Value of isDragging
-     * @see #isDragging
+     * @return Value of isSwipingOrDragging
+     * @see #isSwipingOrDragging
      */
-    public boolean isDragging() {
-        return isDragging;
+    public boolean isSwipingOrDragging() {
+        return isSwipingOrDragging;
     }
 
     /**
-     * @param dragging Value to set isDragging to
-     * @see #isDragging
+     * @param swipingOrDragging Value to set isSwipingOrDragging to
+     * @see #isSwipingOrDragging
      */
-    public void setDragging(boolean dragging) {
-        isDragging = dragging;
+    public void setSwipingOrDragging(boolean swipingOrDragging) {
+        isSwipingOrDragging = swipingOrDragging;
     }
 
 

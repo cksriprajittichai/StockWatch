@@ -105,17 +105,17 @@ public final class NewsRecyclerAdapter extends RecyclerView.Adapter<RecyclerView
      * Called when RecyclerView needs a new {@link RecyclerView.ViewHolder} of
      * the given type to represent an item.
      * <p>
-     * This new ViewHolder should be constructed with a new View that can
+     * This new StockViewHolder should be constructed with a new View that can
      * represent the items of the given type. You can either create a new View
      * manually or inflate it from an XML layout file.
      * <p>
-     * The new ViewHolder will be used to display items of the adapter using
+     * The new StockViewHolder will be used to display items of the adapter using
      * {@link #onBindViewHolder(RecyclerView.ViewHolder, int, List)}.
      *
      * @param parent   The ViewGroup into which the new View will be added after
      *                 it is bound to an adapter position
      * @param viewType The view type of the new View
-     * @return A new ViewHolder that holds a View of the given view type
+     * @return A new StockViewHolder that holds a View of the given view type
      * @see #getItemViewType(int)
      * @see #onBindViewHolder(RecyclerView.ViewHolder, int)
      */
@@ -142,7 +142,7 @@ public final class NewsRecyclerAdapter extends RecyclerView.Adapter<RecyclerView
      * RecyclerView.ViewHolder#itemView} to reflect the item at the given
      * position.
      *
-     * @param holder   The ViewHolder which should be updated to represent the
+     * @param holder   The StockViewHolder which should be updated to represent the
      *                 contents of the item at the given position in the data set
      * @param position The position of the item within the adapter's data set
      */

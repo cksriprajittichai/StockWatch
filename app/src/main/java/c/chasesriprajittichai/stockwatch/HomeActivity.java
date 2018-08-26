@@ -457,20 +457,19 @@ public final class HomeActivity
      * {@link #rvAdapter} that updated Stocks have been changed, so that the
      * rvAdapter can update {@link #rv}.
      * <p>
-     * If rv is updated while a cell is dragging, the dragging will be stopped
-     * (as if the user lifted their finger off the screen). This method avoids
-     * this by using {@link StockRecyclerAdapter#isDragging()} to see if the
-     * user is currently dragging. If the user is dragging, updating the
-     * current Stock is skipped. If the user is not dragging, rvAdapter is
-     * notified that the current Stock has changed. {@link
-     * StockRecyclerAdapter#notifyItemChanged(int)} is used to update rv. The
-     * index in stocks of the current Stock is determined using {@link
-     * #tickerToIndexMap}.
+     * If rv is updated while a cell is swiping or dragging, the action will be
+     * stopped (as if the user lifted their finger off the screen). This method
+     * avoids this by using {@link StockRecyclerAdapter#isSwipingOrDragging()}
+     * to see if the user is currently swiping or dragging. If the user is
+     * swiping or dragging, updating the current Stock is skipped. If the user
+     * is not swiping or dragging, rvAdapter is notified that the current Stock
+     * has changed. The index in stocks of the current Stock is determined
+     * using {@link #tickerToIndexMap}.
      * <p>
-     * This method checks that tickerToIndexMap contains the ticker of the
-     * current Stock to update notifying rvAdapter. this is because the user
-     * could have possible swipe-deleted the current Stock from stocks in the
-     * time that the MultiStockRequest was executing.
+     * This method also checks that tickerToIndexMap contains the ticker of the
+     * current Stock to update before notifying rvAdapter. This is because the
+     * user could have possible swipe-deleted the current Stock from stocks in
+     * the time that the MultiStockRequest was executing.
      *
      * @param updatedStocks The ConcreteStockWithAhValsList with a maximum size
      *                      of 10 that contains the updated Stocks
@@ -478,7 +477,7 @@ public final class HomeActivity
     @Override
     public void onResponse(final ConcreteStockWithAhValsList updatedStocks) {
         for (final Stock s : updatedStocks) {
-            if (!rvAdapter.isDragging() && tickerToIndexMap.containsKey(s.getTicker())) {
+            if (!rvAdapter.isSwipingOrDragging() && tickerToIndexMap.containsKey(s.getTicker())) {
                 rvAdapter.notifyItemChanged(tickerToIndexMap.get(s.getTicker()));
             }
         }
