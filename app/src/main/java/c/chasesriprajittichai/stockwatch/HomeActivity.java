@@ -737,26 +737,26 @@ public final class HomeActivity
      */
     private void sortStocksToRvSort() {
         boolean needToSort = true;
-        final Comparator<Stock> comparator;
+        final Comparator<StockInHomeActivity> comparator;
 
         switch (rvSort) {
             case TICKER_ASC:
-                comparator = Comparator.comparing(Stock::getTicker);
+                comparator = Comparator.comparing(StockInHomeActivity::getTicker);
                 break;
             case TICKER_DESC:
-                comparator = Comparator.comparing(Stock::getTicker).reversed();
+                comparator = Comparator.comparing(StockInHomeActivity::getTicker).reversed();
                 break;
             case PRICE_ASC:
-                comparator = Comparator.comparingDouble(Stock::getPrice);
+                comparator = Comparator.comparingDouble(StockInHomeActivity::getLivePrice);
                 break;
             case PRICE_DESC:
-                comparator = Comparator.comparingDouble(Stock::getPrice).reversed();
+                comparator = Comparator.comparingDouble(StockInHomeActivity::getLivePrice).reversed();
                 break;
             case CHANGE_PERCENT_ASC:
-                comparator = Comparator.comparingDouble(Stock::getChangePercent);
+                comparator = Comparator.comparingDouble(StockInHomeActivity::getNetChangePercent);
                 break;
             case CHANGE_PERCENT_DESC:
-                comparator = Comparator.comparingDouble(Stock::getChangePercent).reversed();
+                comparator = Comparator.comparingDouble(StockInHomeActivity::getNetChangePercent).reversed();
                 break;
             case NO_SORT:
             default:
