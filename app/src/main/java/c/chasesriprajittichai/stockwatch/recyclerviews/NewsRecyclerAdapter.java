@@ -65,21 +65,30 @@ public final class NewsRecyclerAdapter extends RecyclerView.Adapter<RecyclerView
             source = v.findViewById(R.id.textView_articleSource_newsRecyclerItem);
         }
 
-        void bind(final Article article, final NewsRecyclerAdapter.OnItemClickListener listener) {
+        void bind(final Article article,
+                  final NewsRecyclerAdapter.OnItemClickListener clickListener,
+                  final NewsRecyclerAdapter.OnItemLongClickListener longClickListener) {
             title.setText(article.getTitle());
             source.setText(article.getSource());
 
-            itemView.setOnClickListener(l -> listener.onItemClick(article));
+            itemView.setOnClickListener(l -> clickListener.onItemClick(article));
+            itemView.setOnLongClickListener(l -> {
+                longClickListener.onItemLongclick(article);
+                return true;
+            });
         }
 
     }
 
 
     private final SparseArray<Article> articleSparseArray = new SparseArray<>();
-    private final OnItemClickListener onItemClickListener;
+    private final OnItemLongClickListener longClickListener;
+    private final OnItemClickListener clickListener;
 
-    public NewsRecyclerAdapter(final OnItemClickListener listener) {
-        this.onItemClickListener = listener;
+    public NewsRecyclerAdapter(final OnItemClickListener clickListener,
+                               final OnItemLongClickListener longClickListener) {
+        this.clickListener = clickListener;
+        this.longClickListener = longClickListener;
     }
 
     /**
@@ -149,7 +158,8 @@ public final class NewsRecyclerAdapter extends RecyclerView.Adapter<RecyclerView
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         if (holder.getItemViewType() == ArticleViewHolder.TYPE_ID) {
-            ((ArticleViewHolder) holder).bind(articleSparseArray.get(position), onItemClickListener);
+            ((ArticleViewHolder) holder).bind(articleSparseArray.get(position),
+                    clickListener, longClickListener);
         } else {
             /* articleSparseArray contains dates (no mapping), followed by the
              * Articles (mapping) that were published on that date. Once a new
@@ -190,6 +200,12 @@ public final class NewsRecyclerAdapter extends RecyclerView.Adapter<RecyclerView
     public interface OnItemClickListener {
 
         void onItemClick(final Article article);
+
+    }
+
+    public interface OnItemLongClickListener {
+
+        void onItemLongclick(final Article artciel);
 
     }
 }

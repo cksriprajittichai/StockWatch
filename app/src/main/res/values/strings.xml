@@ -58,6 +58,10 @@
     <string name="ioException_loadingNews">Cannot load news articles.\nCheck your internet connection and retry.</string>
     <string name="ioException_loadingDescription">Cannot load description.\nCheck your internet connection and retry.</string>
 
+    <string name="openInBrowser">Open in Browser</string>
+    <string name="copyLink">Copy Link</string>
+    <string name="shareLink">Share Link</string>
+
     <string-array name="chartPeriods">
         <item>1D</item>
         <item>2W</item>

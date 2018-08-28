@@ -21,7 +21,6 @@
             android:text="@string/overview"
             android:textAppearance="?android:textAppearanceSmall"
             android:textColor="@color/colorCharcoal"
-            android:textSize="14sp"
             android:textStyle="bold" />
 
         <Button
@@ -33,7 +32,6 @@
             android:text="@string/news"
             android:textAppearance="?android:textAppearanceSmall"
             android:textColor="@color/colorCharcoal"
-            android:textSize="14sp"
             android:textStyle="bold" />
 
     </LinearLayout>

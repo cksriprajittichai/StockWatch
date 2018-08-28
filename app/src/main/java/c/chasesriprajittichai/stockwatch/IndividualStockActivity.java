@@ -12,6 +12,7 @@ import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.SparseArray;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -196,7 +197,7 @@ public final class IndividualStockActivity
 
                 if (!missingChartPeriods.contains(ChartPeriod.ONE_DAY)) {
                     sparkViewAdapter.setChartPeriod(ChartPeriod.ONE_DAY);
-                    sparkViewAdapter.setyData(this.stock.getPrices_1day());
+                    sparkViewAdapter.setyData(stock.getPrices_1day());
                     // Don't set dates for sparkViewAdapter for 1D
                     sparkViewAdapter.notifyDataSetChanged();
                 } else {
@@ -220,8 +221,8 @@ public final class IndividualStockActivity
                              * ChartPeriod is filled, that guarantees that the
                              * 2W chart is filled. */
                             sparkViewAdapter.setChartPeriod(ChartPeriod.TWO_WEEKS);
-                            sparkViewAdapter.setyData(this.stock.getPrices_2weeks());
-                            sparkViewAdapter.setDates(this.stock.getDates_2weeks());
+                            sparkViewAdapter.setyData(stock.getPrices_2weeks());
+                            sparkViewAdapter.setDates(stock.getDates_2weeks());
                             sparkViewAdapter.notifyDataSetChanged();
                         }
 
@@ -514,7 +515,7 @@ public final class IndividualStockActivity
     public void onScrubbed(final int index) {
         // Get scrubbing price from the chart data for the selected ChartPeriod
         final double scrubPrice = sparkViewAdapter.getY(index);
-        this.top_price.setText(getString(R.string.double2dec, scrubPrice));
+        top_price.setText(getString(R.string.double2dec, scrubPrice));
 
         final double firstPriceOfSection;
         final double changePoint;
@@ -724,15 +725,27 @@ public final class IndividualStockActivity
 
     /**
      * Initializes {@link #newsRv} and {@link #newsRecyclerAdapter}.
+     * Initializing newsRecyclerAdapter includes setting newsRv's {@link
+     * NewsRecyclerAdapter.OnItemClickListener} and {@link
+     * NewsRecyclerAdapter.OnItemLongClickListener}.
+     *
+     * @see ArticleLongClickPopupWindow
      */
     private void initNewsRecyclerView() {
         newsRv.setLayoutManager(new LinearLayoutManager(this));
         newsRv.addItemDecoration(new NewsRecyclerDivider(this));
-        newsRecyclerAdapter = new NewsRecyclerAdapter(article -> {
-            final Intent webViewIntent = new Intent(this, WebViewActivity.class);
-            webViewIntent.putExtra("URL", article.getUrl());
-            startActivity(webViewIntent);
-        });
+        newsRecyclerAdapter = new NewsRecyclerAdapter(
+                article -> {
+                    final Intent webViewIntent =
+                            new Intent(this, WebViewActivity.class);
+                    webViewIntent.putExtra("URL", article.getUrl());
+                    startActivity(webViewIntent);
+                },
+                article -> {
+                    final ArticleLongClickPopupWindow popupWindow = new ArticleLongClickPopupWindow(this, article);
+                    popupWindow.showAtLocation(newsRv, Gravity.CENTER, 0, 0);
+                }
+        );
         newsRv.setAdapter(newsRecyclerAdapter);
     }
 

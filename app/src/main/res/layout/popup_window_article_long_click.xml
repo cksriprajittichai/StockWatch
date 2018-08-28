@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:layout_margin="48dp"
+    android:background="@android:color/white"
+    android:orientation="vertical">
+
+    <TextView
+        android:id="@+id/textView_url_articleLongClickPopupWindow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="16dp"
+        android:layout_marginRight="16dp"
+        android:layout_marginTop="8dp"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:minLines="1"
+        android:textAppearance="?android:textAppearance"
+
+        android:textStyle="bold" />
+
+    <Button
+        android:id="@+id/button_openInBroswer_articleLongClickPopupWindow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:gravity="start"
+        android:minHeight="0dp"
+        android:minWidth="0dp"
+        android:padding="16dp"
+        android:text="@string/openInBrowser"
+        android:textAppearance="?android:textAppearanceSmall" />
+
+    <Button
+        android:id="@+id/button_copyLink_articleLongClickPopupWindow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?android:attr/selectableItemBackground"
+        android:gravity="start"
+        android:minHeight="0dp"
+        android:minWidth="0dp"
+        android:padding="16dp"
+        android:text="@string/copyLink"
+        android:textAppearance="?android:textAppearanceSmall" />
+
+    <Button
+        android:id="@+id/button_shareLink_articleLongClickPopupWindow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:background="?android:attr/selectableItemBackground"
+        android:gravity="start"
+        android:minHeight="0dp"
+        android:minWidth="0dp"
+        android:padding="16dp"
+        android:text="@string/shareLink"
+        android:textAppearance="?android:textAppearanceSmall" />
+
+</LinearLayout>
+
