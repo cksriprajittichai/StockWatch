@@ -5,4 +5,6 @@
     <color name="colorAccent">#2b94df</color>
     <color name="colorAccentTransparent">#7d2b94df</color>
     <color name="colorCharcoal">#292929</color>
+    <color name="colorAlmostBlack">#161616</color>
+    <color name="colorDimGray">#5b5b5b</color>
 </resources>

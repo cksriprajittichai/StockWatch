@@ -29,7 +29,7 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
     // Minimize the amount of allocation done in drawing methods
     private final Drawable whiteMargin;
     private final Drawable redBackground;
-    private final Drawable darkCharcoalBackground;
+    private final Drawable darkGrayBackground;
     private final Drawable garbageIcon;
     private final int garbageMargin;
     private final int whiteMarginSize = 4;
@@ -38,8 +38,8 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
                                      final StockRecyclerAdapter recyclerAdapter,
                                      final ConcreteStockWithAhValsList stocks,
                                      final Map<String, Integer> tickerToIndexMap) {
-        super(0, ItemTouchHelper.LEFT | ItemTouchHelper.DOWN |
-                ItemTouchHelper.UP);
+        super(0,
+                ItemTouchHelper.LEFT | ItemTouchHelper.DOWN | ItemTouchHelper.UP);
         this.homeActivity = homeActivity;
         this.recyclerAdapter = recyclerAdapter;
         this.stocks = stocks;
@@ -47,7 +47,7 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
 
         whiteMargin = new ColorDrawable(Color.WHITE);
         redBackground = new ColorDrawable(Color.RED);
-        darkCharcoalBackground = new ColorDrawable(Color.parseColor("#202020"));
+        darkGrayBackground = new ColorDrawable(Color.DKGRAY);
         garbageIcon = ContextCompat.getDrawable(homeActivity, R.drawable.ic_delete_black_24dp);
         final float dpUnit = homeActivity.getResources().getDisplayMetrics().density;
         garbageMargin = (int) (16 * dpUnit);
@@ -98,7 +98,7 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
      * is where drawing "behind" the selected RecyclerView cell occurs.
      * <p>
      * If the user is swiping, {@link #redBackground} and {@link #garbageIcon}
-     * are drawn. If the user is dragging, {@link #darkCharcoalBackground} is
+     * are drawn. If the user is dragging, {@link #darkGrayBackground} is
      * drawn.
      *
      * @param c                 The canvas which RecyclerView is drawing its
@@ -154,12 +154,12 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
             garbageIcon.draw(c);
         } else if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
             // Draw black background
-            darkCharcoalBackground.setBounds(
+            darkGrayBackground.setBounds(
                     itemView.getLeft(),
                     itemView.getTop(),
                     itemView.getRight(),
                     itemView.getBottom());
-            darkCharcoalBackground.draw(c);
+            darkGrayBackground.draw(c);
         }
 
         super.onChildDraw(c, rv, viewHolder, dX, dY, actionState, isCurrentlyActive);
@@ -249,8 +249,8 @@ public final class StockSwipeAndDragCallback extends ItemTouchHelper.SimpleCallb
      * changed. If the user is swiping or dragging a RecyclerView cell, notify
      * {@link #recyclerAdapter}.
      *
-     * @param viewHolder  The new ViewHolder that is being swiped or dragged. Might be null if
-     *                    it is cleared
+     * @param viewHolder  The new ViewHolder that is being swiped or dragged.
+     *                    Might be null if it is cleared.
      * @param actionState One of {@link ItemTouchHelper#ACTION_STATE_IDLE},
      *                    {@link ItemTouchHelper#ACTION_STATE_SWIPE} or
      *                    {@link ItemTouchHelper#ACTION_STATE_DRAG}
