@@ -1676,9 +1676,23 @@ public final class IndividualStockActivity
 
         private final WeakReference<DownloadNewsTaskListener> completionListener;
 
+        /**
+         * The only constructor of a DownloadNewsTask.
+         * <p>
+         * The Finviz website uses '-' in their stock tickers, not '.'. For
+         * example, BRK.A is BRK-A on Finviz. Replace '.' with '-' immediately,
+         * so that {@link #ticker} is the ticker for Finviz.
+         *
+         * @param ticker             The ticker passed from
+         *                           IndividualStockActivity. This ticker could
+         *                           have '.' in it.
+         * @param sparseArray        The sparseArray to fill with Article
+         * @param completionListener The listener to notify when this task is
+         *                           completed
+         */
         private DownloadNewsTask(final String ticker, final SparseArray<Article> sparseArray,
                                  final DownloadNewsTaskListener completionListener) {
-            this.ticker = ticker;
+            this.ticker = ticker.replaceAll("\\.", "-");
             this.sparseArray = sparseArray;
             this.completionListener = new WeakReference<>(completionListener);
         }
