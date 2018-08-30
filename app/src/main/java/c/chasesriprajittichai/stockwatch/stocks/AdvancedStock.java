@@ -26,8 +26,9 @@ public interface AdvancedStock extends Stock {
      * track of which Stats are missing or have irregular values.
      */
     enum Stat {
-        PREV_CLOSE, OPEN, VOLUME, AVG_VOLUME, TODAYS_RANGE,
-        FIFTY_TWO_WEEK_RANGE, MARKET_CAP, PE_RATIO, EPS, YIELD, DESCRIPTION
+        PREV_CLOSE, OPEN, VOLUME, AVG_VOLUME,
+        TODAYS_LOW, TODAYS_HIGH, FIFTY_TWO_WEEK_LOW, FIFTY_TWO_WEEK_HIGH,
+        MARKET_CAP, PE_RATIO, EPS, YIELD, DESCRIPTION
     }
 
     double getOpen();

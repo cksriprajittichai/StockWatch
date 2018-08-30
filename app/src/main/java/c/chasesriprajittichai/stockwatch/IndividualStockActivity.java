@@ -43,10 +43,14 @@ import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.stream.Collectors;
 
 import butterknife.BindView;
@@ -129,24 +133,51 @@ public final class IndividualStockActivity
             ChartPeriod.TWO_WEEKS
     };
 
+    /**
+     * Maps every {@link Stat} to the {@link TextSwitcher} that displays its
+     * value.
+     * <p>
+     * This cannot be initialized here because the TextSwitchers that will be in
+     * the map are not initialized yet.
+     */
+    private final Map<Stat, TextSwitcher> statToViewMap = new HashMap<>();
+
     private AdvancedStock stock;
     private boolean wasInFavoritesInitially;
     private boolean isInFavorites;
     private SparkViewAdapter sparkViewAdapter;
     private NewsRecyclerAdapter newsRecyclerAdapter;
     private SharedPreferences prefs;
+    private Timer timer;
 
     /**
-     * This is the number of times that a specific AsyncTask can fail
-     * (IOException) and be restarted (new instance created and executed). If a
-     * specific AsyncTask fails more times than this value, the AsyncTask will
-     * not be restarted.
+     * This is set to true once a {@link DownloadStatsTask} completes with a
+     * status code of {@link DownloadStatsTask.Status#GOOD}. This variable's
+     * value is checked and possibly set to true in {@link
+     * #onDownloadStatsTaskCompleted(int, Set)}. This is used to determine the
+     * state of the Views displaying Stats. More specifically, this is a flag
+     * for whether or not a DownloadStatsTask has completed with a {@link
+     * DownloadStatsTask.Status} equal to {@link DownloadStatsTask.Status#GOOD}.
+     *
+     * @see #updateDisplayStat(Stat)
+     * @see #onDownloadStatsTaskCompleted(int, Set)
      */
-    private final int NUM_TASK_RETRIES_ALLOWED = 1; // Per each task
+    private boolean showsRealValues_stats = false;
 
-    private int failCount_chartTask = 0;
-    private int failCount_statsTask = 0;
-    private int failCount_newsTask = 0;
+    /**
+     * This is the number of consecutive times that a specific AsyncTask can
+     * fail (IOException) and be restarted (new instance created and executed).
+     * If a specific AsyncTask consecutively fails more times than this value,
+     * the AsyncTask will not be restarted.
+     *
+     * @see #onDownloadStatsTaskCompleted(int, Set)
+     */
+    private final int NUM_CONSEC_TASK_FAILS_ALLOWED = 3; // Per each task
+
+    private int consecFails_chartTask = 0;
+    private int consecFails_statsTask = 0;
+    private int consecFails_newsTask = 0;
+
 
     /**
      * Called from {@link DownloadChartTask#onPostExecute(Integer)}.
@@ -159,10 +190,10 @@ public final class IndividualStockActivity
      * <li>{@link DownloadChartTask.Status#IO_EXCEPTION_FOR_MW_AND_WSJ}
      * </ul>
      * If status represents at least one IOException being thrown in the
-     * DownloadChartTask and {@link #NUM_TASK_RETRIES_ALLOWED} has been
+     * DownloadChartTask and {@link #NUM_CONSEC_TASK_FAILS_ALLOWED} has been
      * exceeded by this task's fail count, this method shows a no-connection
      * message where {@link #sparkView} would be if there were filled charts.
-     * If this task's fail count does not exceed NUM_TASK_RETRIES_ALLOWED, a
+     * If this task's fail count does not exceed NUM_CONSEC_TASK_FAILS_ALLOWED, a
      * new instance of this task is created and executed.
      * <p>
      * If status equals {@link DownloadChartTask.Status#GOOD}, this method
@@ -187,8 +218,8 @@ public final class IndividualStockActivity
      *                            {@link ChartPeriod}
      */
     @Override
-    public void onDownloadChartTaskCompleted(final int status,
-                                             final Set<ChartPeriod> missingChartPeriods) {
+    public synchronized void onDownloadChartTaskCompleted(final int status,
+                                                          final Set<ChartPeriod> missingChartPeriods) {
         switch (status) {
             case DownloadChartTask.Status.GOOD:
                 // ChartPeriods from string-array resource are in increasing order (1D -> 5Y)
@@ -256,9 +287,9 @@ public final class IndividualStockActivity
             case DownloadChartTask.Status.IO_EXCEPTION_FOR_MW_AND_WSJ:
             case DownloadChartTask.Status.IO_EXCEPTION_FOR_MW_ONLY:
             case DownloadChartTask.Status.IO_EXCEPTION_FOR_WSJ_ONLY:
-                failCount_chartTask++;
+                consecFails_chartTask++;
 
-                if (failCount_chartTask > NUM_TASK_RETRIES_ALLOWED) {
+                if (consecFails_chartTask > NUM_CONSEC_TASK_FAILS_ALLOWED) {
                     chartsStatus.setText(getString(R.string.ioException_loadingCharts));
                     chartsStatus.setVisibility(View.VISIBLE);
 
@@ -274,90 +305,73 @@ public final class IndividualStockActivity
      * Called from {@link DownloadStatsTask#onPostExecute(Integer)}.
      * <p>
      * If status equals {@link DownloadStatsTask.Status#IO_EXCEPTION} and {@link
-     * #NUM_TASK_RETRIES_ALLOWED} has been exceeded by this task's fail count,
-     * this method sets each TextView in the "Key Statistics" section to show a
-     * {@literal x}, and makes the description TextView show a no-connection
-     * message. If status equals IO_EXCEPTION and this task's fail count does
-     * not exceed NUM_TASK_RETRIES_ALLOWED, a new instance of this task is
-     * created and executed.
+     * #NUM_CONSEC_TASK_FAILS_ALLOWED} has been exceeded by {@link
+     * #consecFails_statsTask} this method sets each display in the "Key
+     * Statistics" section to show a {@literal x}, and makes the description
+     * display show a no-connection message. If status equals IO_EXCEPTION and
+     * consecFails_statsTask does not exceed NUM_CONSEC_TASK_FAILS_ALLOWED, a
+     * new instance of this task is created and executed. If status equals
+     * IO_EXCEPTION, the "top views" are not changed by this method.
      * <p>
      * If status equals {@link DownloadStatsTask.Status#GOOD}, the "Key
-     * Statistics" TextViews and description TextView display the values of
-     * {@link #stock} that were updated in DownloadStatsTask. If a Stat is
-     * contained in missingStats, its TextView's text is set to {@literal N/A}.
+     * Statistics" and description displays display the values of {@link #stock}
+     * that were updated in DownloadStatsTask. The top views are updated as well
+     * to show the values of stock. If a Stat is contained in missingStats, its
+     * display text is set to {@literal N/A}. Displays are only updated (setText
+     * method) if necessary.
+     * <p>
+     * On the first call to this function where status equals GOOD, {@link
+     * #showsRealValues_stats} is set to true.
      *
      * @param status       The {@link DownloadStatsTask.Status} of the task
      * @param missingStats The set of missing {@link Stat}
+     * @see #showsRealValues_stats
+     * @see #updateDisplayStat(Stat)
      */
     @Override
-    public void onDownloadStatsTaskCompleted(final int status,
-                                             final Set<Stat> missingStats) {
+    public synchronized void onDownloadStatsTaskCompleted(final int status,
+                                                          final Set<Stat> missingStats) {
         switch (status) {
             case DownloadStatsTask.Status.GOOD:
-                if (!missingStats.contains(Stat.TODAYS_RANGE)) {
-                    todaysLow.setText(getString(R.string.double2dec, stock.getTodaysLow()));
-                    todaysHigh.setText(getString(R.string.double2dec, stock.getTodaysHigh()));
-                } else {
-                    todaysLow.setText(getString(R.string.na));
-                    todaysHigh.setText(getString(R.string.na));
+                consecFails_statsTask = 0;
+
+                initTopViews(); // Update top views
+
+                for (final Stat s : Stat.values()) {
+                    if (!missingStats.contains(s)) {
+                        updateDisplayStat(s);
+                    } else if (!showsRealValues_stats) {
+                        if (s != Stat.DESCRIPTION) {
+                            /* If a stat (excluding DESCRIPTION) is "missing",
+                             * "N/A" should be displayed as its value. If this
+                             * is the first time real values are being shown,
+                             * animate the text change. By using the condition
+                             * that showsRealValues_stats is false (this is the
+                             * first time real values are being shown), we are
+                             * assuming that values that are not "missing" the
+                             * first time real values are shown, will not be
+                             * "missing" after the first time real values are
+                             * shown (updated). */
+                            statToViewMap.get(s).setText(getString(R.string.na));
+                        } else {
+                            /* Description is the only Stat that shouldn't
+                             * display "N/A" if missing. */
+                            description.setText(getString(R.string.descriptionNotFound));
+                        }
+                    }
                 }
-                if (!missingStats.contains(Stat.FIFTY_TWO_WEEK_RANGE)) {
-                    fiftyTwoWeekLow.setText(getString(R.string.double2dec, stock.getFiftyTwoWeekLow()));
-                    fiftyTwoWeekHigh.setText(getString(R.string.double2dec, stock.getFiftyTwoWeekHigh()));
-                } else {
-                    fiftyTwoWeekLow.setText(getString(R.string.na));
-                    fiftyTwoWeekHigh.setText(getString(R.string.na));
-                }
-                if (!missingStats.contains(Stat.MARKET_CAP)) {
-                    marketCap.setText(getString(R.string.string, stock.getMarketCap()));
-                } else {
-                    marketCap.setText(getString(R.string.na));
-                }
-                if (!missingStats.contains(Stat.PREV_CLOSE)) {
-                    prevClose.setText(getString(R.string.double2dec, stock.getPrevClose()));
-                } else {
-                    prevClose.setText(getString(R.string.na));
-                }
-                if (!missingStats.contains(Stat.PE_RATIO)) {
-                    peRatio.setText(getString(R.string.double2dec, stock.getPeRatio()));
-                } else {
-                    peRatio.setText(getString(R.string.na));
-                }
-                if (!missingStats.contains(Stat.EPS)) {
-                    eps.setText(getString(R.string.double2dec, stock.getEps()));
-                } else {
-                    eps.setText(getString(R.string.na));
-                }
-                if (!missingStats.contains(Stat.YIELD)) {
-                    yield.setText(getString(R.string.double2dec_percent, stock.getYield()));
-                } else {
-                    yield.setText(getString(R.string.na));
-                }
-                if (!missingStats.contains(Stat.VOLUME)) {
-                    volume.setText(getString(R.string.string, stock.getVolume()));
-                } else {
-                    volume.setText(getString(R.string.na));
-                }
-                if (!missingStats.contains(Stat.AVG_VOLUME)) {
-                    avgVolume.setText(getString(R.string.string, stock.getAverageVolume()));
-                } else {
-                    avgVolume.setText(getString(R.string.na));
-                }
-                if (!missingStats.contains(Stat.OPEN)) {
-                    open.setText(getString(R.string.double2dec, stock.getOpen()));
-                } else {
-                    open.setText(getString(R.string.na));
-                }
-                if (!missingStats.contains(Stat.DESCRIPTION)) {
-                    description.setText(stock.getDescription());
-                } else {
-                    description.setText(getString(R.string.descriptionNotFound));
-                }
+
+                /* Real values are first shown in updateDisplayStat. Don't
+                 * change this value before updateDisplayStat is called. */
+                showsRealValues_stats = true;
                 break;
             case DownloadStatsTask.Status.IO_EXCEPTION:
-                failCount_statsTask++;
+                consecFails_statsTask++;
 
-                if (failCount_statsTask > NUM_TASK_RETRIES_ALLOWED) {
+                /* Don't change any of the top views. They show the values
+                 * that were passed on from HomeActivity. */
+
+                if (consecFails_statsTask > NUM_CONSEC_TASK_FAILS_ALLOWED) {
                     todaysLow.setText(getString(R.string.x));
                     todaysHigh.setText(getString(R.string.x));
                     fiftyTwoWeekLow.setText(getString(R.string.x));
@@ -390,7 +404,7 @@ public final class IndividualStockActivity
      * @param status The {@link DownloadNewsTask.Status} of the task
      */
     @Override
-    public void onDownloadNewsTaskCompleted(final int status) {
+    public synchronized void onDownloadNewsTaskCompleted(final int status) {
         switch (status) {
             case DownloadNewsTask.Status.GOOD:
                 loadingNewsProgressBar.setVisibility(View.GONE);
@@ -405,9 +419,9 @@ public final class IndividualStockActivity
                 newsStatus.setText(getString(R.string.noNewsArticlesFound));
                 break;
             case DownloadNewsTask.Status.IO_EXCEPTION:
-                failCount_newsTask++;
+                consecFails_newsTask++;
 
-                if (failCount_newsTask > NUM_TASK_RETRIES_ALLOWED) {
+                if (consecFails_newsTask > NUM_CONSEC_TASK_FAILS_ALLOWED) {
                     loadingNewsProgressBar.setVisibility(View.GONE);
                     newsRv.setVisibility(View.GONE);
 
@@ -448,11 +462,19 @@ public final class IndividualStockActivity
 
                 if (stock.getLiveChangePoint() < 0) {
                     // '-' is already part of the number
-                    top_ah_changePoint.setText(getString(R.string.double2dec, stock.getLiveChangePoint()));
-                    top_ah_changePercent.setText(getString(R.string.openParen_double2dec_percent_closeParen, stock.getLiveChangePercent()));
+                    top_ah_changePoint.setText(getString(
+                            R.string.double2dec,
+                            stock.getLiveChangePoint()));
+                    top_ah_changePercent.setText(getString(
+                            R.string.openParen_double2dec_percent_closeParen,
+                            stock.getLiveChangePercent()));
                 } else {
-                    top_ah_changePoint.setText(getString(R.string.plus_double2dec, stock.getLiveChangePoint()));
-                    top_ah_changePercent.setText(getString(R.string.openParen_plus_double2dec_percent_closeParen, stock.getLiveChangePercent()));
+                    top_ah_changePoint.setText(getString(
+                            R.string.plus_double2dec,
+                            stock.getLiveChangePoint()));
+                    top_ah_changePercent.setText(getString(
+                            R.string.openParen_plus_double2dec_percent_closeParen,
+                            stock.getLiveChangePercent()));
                 }
                 ah_linearLayout.setVisibility(View.VISIBLE);
             } else {
@@ -473,10 +495,14 @@ public final class IndividualStockActivity
         if (changePoint < 0) {
             // '-' is already part of the number
             top_changePoint.setText(getString(R.string.double2dec, changePoint));
-            top_changePercent.setText(getString(R.string.openParen_double2dec_percent_closeParen, changePercent));
+            top_changePercent.setText(getString
+                    (R.string.openParen_double2dec_percent_closeParen,
+                            changePercent));
         } else {
             top_changePoint.setText(getString(R.string.plus_double2dec, changePoint));
-            top_changePercent.setText(getString(R.string.openParen_plus_double2dec_percent_closeParen, changePercent));
+            top_changePercent.setText(getString(
+                    R.string.openParen_plus_double2dec_percent_closeParen,
+                    changePercent));
         }
     }
 
@@ -597,15 +623,11 @@ public final class IndividualStockActivity
     }
 
     /**
-     * Initializes various components of this Activity, then starts the
-     * following tasks:
-     * <ul>
-     * <li>{@link DownloadChartTask}
-     * <li>{@link DownloadStatsTask}
-     * <li>{@link DownloadNewsTask}
-     * </ul>
-     * Some components of this Activity are not "completely initialized" until a
-     * specific AsyncTask is completed.
+     * Initializes various components of this Activity. Some components of this
+     * Activity are not "completely initialized" until a specific AsyncTask is
+     * completed.
+     * <p>
+     * This Activity's AsyncTasks are started in {@link #onResume()}.
      *
      * @param savedInstanceState The savedInstanceState is not used
      */
@@ -620,18 +642,11 @@ public final class IndividualStockActivity
         initSparkView();
         initNewsRecyclerView();
         initTopViews();
+        initStatToViewMap();
         AndroidThreeTen.init(this); // Used in DownloadChartTask
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
         isInFavorites = getIntent().getBooleanExtra("Is in favorites", false);
         wasInFavoritesInitially = isInFavorites;
-
-        // Start tasks
-        new DownloadChartTask(stock, this)
-                .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-        new DownloadStatsTask(stock, this)
-                .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
-        new DownloadNewsTask(stock.getTicker(), newsRecyclerAdapter.getArticleSparseArray(), this)
-                .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
     }
 
     /**
@@ -742,7 +757,8 @@ public final class IndividualStockActivity
                     startActivity(webViewIntent);
                 },
                 article -> {
-                    final ArticleLongClickPopupWindow popupWindow = new ArticleLongClickPopupWindow(this, article);
+                    final ArticleLongClickPopupWindow popupWindow =
+                            new ArticleLongClickPopupWindow(this, article);
                     popupWindow.showAtLocation(newsRv, Gravity.CENTER, 0, 0);
                 }
         );
@@ -750,12 +766,65 @@ public final class IndividualStockActivity
     }
 
     /**
-     * Saves the favorites status of {@link #stock} to preferences. If stock's
-     * information is not in preferences but is starred, add it to preferences
-     * and store in preferences that a new Stock has been added.
-     * If stock's information is in preferences but is not starred, remove it
-     * from preferences and store in preferences that a new Stock has not been
-     * added.
+     * Initialize {@link #statToViewMap} with all {@link Stat}s.
+     *
+     * @see #statToViewMap
+     */
+    private void initStatToViewMap() {
+        statToViewMap.put(Stat.PREV_CLOSE, prevClose);
+        statToViewMap.put(Stat.OPEN, open);
+        statToViewMap.put(Stat.VOLUME, volume);
+        statToViewMap.put(Stat.AVG_VOLUME, avgVolume);
+        statToViewMap.put(Stat.TODAYS_LOW, todaysLow);
+        statToViewMap.put(Stat.TODAYS_HIGH, todaysHigh);
+        statToViewMap.put(Stat.FIFTY_TWO_WEEK_LOW, fiftyTwoWeekLow);
+        statToViewMap.put(Stat.FIFTY_TWO_WEEK_HIGH, fiftyTwoWeekHigh);
+        statToViewMap.put(Stat.MARKET_CAP, marketCap);
+        statToViewMap.put(Stat.PE_RATIO, peRatio);
+        statToViewMap.put(Stat.EPS, eps);
+        statToViewMap.put(Stat.YIELD, yield);
+        statToViewMap.put(Stat.DESCRIPTION, description);
+    }
+
+    /**
+     * Re-initializes {@link #timer} because it is invalidated when {@link
+     * #onPause()} is called. This method then uses timer to create and execute
+     * {@link DownloadStatsTask}s on a constant interval. Single instances of
+     * {@link DownloadChartTask} and {@link DownloadNewsTask} are created and
+     * executed in this method.
+     */
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        final TimerTask statsTask = new TimerTask() {
+            @Override
+            public void run() {
+                new DownloadStatsTask(stock, IndividualStockActivity.this)
+                        .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+            }
+        };
+
+        timer = new Timer();
+        // Run every 30 seconds, starting immediately
+        timer.schedule(statsTask, 0, 15000);
+
+
+        // Start tasks that don't update
+        new DownloadChartTask(stock, this)
+                .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+        new DownloadNewsTask(stock.getTicker(), newsRecyclerAdapter.getArticleSparseArray(), this)
+                .executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR);
+    }
+
+    /**
+     * This method stops scheduled AsyncTasks by cancelling {@link #timer} and
+     * saves the favorites status of {@link #stock} to preferences.
+     * <p>
+     * If stock's information is not in preferences but is starred, add it to
+     * preferences and store in preferences that a new Stock has been added. If
+     * stock's information is in preferences but is not starred, remove it from
+     * preferences and store in preferences that a new Stock has not been added.
      *
      * @see #addStockToPreferences()
      * @see #removeStockFromPreferences()
@@ -763,6 +832,9 @@ public final class IndividualStockActivity
     @Override
     protected void onPause() {
         super.onPause();
+
+        // cancel() invalidates timer - it must be re-initialized to use again
+        timer.cancel();
 
         if (isInFavorites != wasInFavoritesInitially) {
             // If the star status (favorites status) has changed
@@ -964,6 +1036,85 @@ public final class IndividualStockActivity
                 dataList.remove(dataNdx);
             }
             prefs.edit().putString("Data TSV", TextUtils.join("\t", dataList)).apply();
+        }
+    }
+
+    /**
+     * This method is called from {@link
+     * #onDownloadStatsTaskCompleted(int, Set)} to update display Stat values.
+     * <p>
+     * This method checks if the {@link TextSwitcher} that is displaying stat,
+     * is not displaying the value of stat that {@link #stock} has. If the
+     * display value and stock's value are the same, this method does nothing.
+     * Otherwise, this method updates the display to show the updated value of
+     * stat.
+     * <p>
+     * For views in the "Key Statistics" or description sections, the value of
+     * {@link #showsRealValues_stats} determines whether or not the TextSwitcher
+     * update (text change) is animated or not.
+     *
+     * @param stat The {@link Stat} to update
+     * @see #onDownloadStatsTaskCompleted(int, Set)
+     */
+    private void updateDisplayStat(final Stat stat) {
+        final TextSwitcher displayView = statToViewMap.get(stat);
+        final String displayed =
+                ((TextView) displayView.getCurrentView()).getText().toString();
+        String updated = "";
+
+        switch (stat) {
+            case PREV_CLOSE:
+                updated = getString(R.string.double2dec, stock.getPrevClose());
+                break;
+            case OPEN:
+                updated = getString(R.string.double2dec, stock.getOpen());
+                break;
+            case VOLUME:
+                updated = stock.getVolume();
+                break;
+            case AVG_VOLUME:
+                updated = stock.getAverageVolume();
+                break;
+            case TODAYS_LOW:
+                updated = getString(R.string.double2dec, stock.getTodaysLow());
+                break;
+            case TODAYS_HIGH:
+                updated = getString(R.string.double2dec, stock.getTodaysHigh());
+                break;
+            case FIFTY_TWO_WEEK_LOW:
+                updated = getString(R.string.double2dec, stock.getFiftyTwoWeekLow());
+                break;
+            case FIFTY_TWO_WEEK_HIGH:
+                updated = getString(R.string.double2dec, stock.getFiftyTwoWeekHigh());
+                break;
+            case MARKET_CAP:
+                updated = stock.getMarketCap();
+                break;
+            case PE_RATIO:
+                updated = getString(R.string.double2dec, stock.getPeRatio());
+                break;
+            case EPS:
+                updated = getString(R.string.double2dec, stock.getEps());
+                break;
+            case YIELD:
+                updated = getString(R.string.double2dec, stock.getYield());
+                break;
+            case DESCRIPTION:
+                updated = stock.getDescription();
+                break;
+        }
+
+        // Key Statistics and description are TextSwitchers
+        if (!displayed.equals(updated)) {
+
+            /* If real values are already shown, don't animate the text change.
+             * Only animate the text change the first time the text is changed
+             * to show real values. */
+            if (showsRealValues_stats) {
+                displayView.setCurrentText(updated);
+            } else {
+                displayView.setText(updated);
+            }
         }
     }
 
@@ -1398,11 +1549,11 @@ public final class IndividualStockActivity
         /**
          * Connects to the {@link #stock}'s WSJ website and parses it for values
          * that are fields of {@link AdvancedStock}, excluding values related
-         * the AdvancedStock's chart data (prices and dates). The values updated
-         * in this method are represented by {@link Stat}. On the
-         * WSJ website, many values are irregular values, or "missing" values.
-         * {@link #missingStats} is keeps track of these values, and is passed
-         * as a parameter to {@link #completionListener}.
+         * the AdvancedStock's chart data (historical prices and dates). The
+         * values updated in this method are represented by {@link Stat}, or are
+         * "top values". On the WSJ website, many values are irregular values,
+         * or "missing" values. {@link #missingStats} keeps track of these
+         * values, and is passed as a parameter to {@link #completionListener}.
          * <p>
          * If an {@link IOException} is thrown while connecting to the WSJ
          * website, this returns {@link Status#IO_EXCEPTION}. Otherwise, {@link
@@ -1451,6 +1602,7 @@ public final class IndividualStockActivity
                         diffs.get(0).ownText().replaceAll("[^0-9.-]+", ""));
                 changePercent = parseDouble(
                         diffs.get(1).ownText().replaceAll("[^0-9.-]+", ""));
+                // Assume that price, change point, and change percent cannot be missing
                 stock.setPrice(price);
                 stock.setChangePoint(changePoint);
                 stock.setChangePercent(changePercent);
@@ -1551,7 +1703,8 @@ public final class IndividualStockActivity
                     stock.setTodaysLow(todaysLow);
                     stock.setTodaysHigh(todaysHigh);
                 } else {
-                    missingStats.add(Stat.TODAYS_RANGE);
+                    missingStats.add(Stat.TODAYS_LOW);
+                    missingStats.add(Stat.TODAYS_HIGH);
                 }
 
                 final double fiftyTwoWeekLow, fiftyTwoWeekHigh;
@@ -1564,7 +1717,8 @@ public final class IndividualStockActivity
                     stock.setFiftyTwoWeekLow(fiftyTwoWeekLow);
                     stock.setFiftyTwoWeekHigh(fiftyTwoWeekHigh);
                 } else {
-                    missingStats.add(Stat.FIFTY_TWO_WEEK_RANGE);
+                    missingStats.add(Stat.FIFTY_TWO_WEEK_LOW);
+                    missingStats.add(Stat.FIFTY_TWO_WEEK_HIGH);
                 }
 
 
