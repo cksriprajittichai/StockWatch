@@ -12,7 +12,7 @@ public final class SparkViewAdapter extends SparkAdapter {
 
     private List<Double> prices;
     private List<String> dates;
-    private AdvancedStock.ChartPeriod chartPeriod = AdvancedStock.ChartPeriod.ONE_DAY; // Initial period
+    private AdvancedStock.ChartPeriod chartPeriod = null;
 
     SparkViewAdapter() {
         prices = new ArrayList<>();
@@ -44,8 +44,16 @@ public final class SparkViewAdapter extends SparkAdapter {
         return (float) prices.get(index).doubleValue();
     }
 
+    public float getPrice(final int index) {
+        return getY(index);
+    }
+
     public String getDate(final int index) {
         return dates.get(index);
+    }
+
+    public List<Double> getPrices() {
+        return prices;
     }
 
     /**
@@ -53,8 +61,12 @@ public final class SparkViewAdapter extends SparkAdapter {
      *
      * @param yData To set prices to
      */
-    public void setyData(final List<Double> yData) {
+    public void setPrices(final List<Double> yData) {
         prices = yData;
+    }
+
+    public List<String> getDates() {
+        return dates;
     }
 
     /**
