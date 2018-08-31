@@ -334,7 +334,6 @@ public final class HomeActivity
         super.onResume();
 
         // If there are stocks in favorites, update stocks and rv
-        timer = new Timer();
         final TimerTask timerTask = new TimerTask() {
             @Override
             public void run() {
@@ -343,8 +342,12 @@ public final class HomeActivity
                 }
             }
         };
+
+        timer = new Timer();
+
         // Run every 10 seconds, starting immediately
         timer.schedule(timerTask, 0, 10000);
+
 
         checkForCrashes();
     }
