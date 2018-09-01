@@ -28,6 +28,20 @@ public class ConcreteStock implements Stock, StockInHomeActivity {
     }
 
     /**
+     * Copy constructor.
+     *
+     * @param stock The Stock to copy
+     */
+    public ConcreteStock(final Stock stock) {
+        state = stock.getState();
+        ticker = stock.getTicker();
+        name = stock.getName();
+        price = stock.getPrice();
+        changePoint = stock.getChangePoint();
+        changePercent = stock.getChangePercent();
+    }
+
+    /**
      * @return The price of the Stock
      */
     @Override

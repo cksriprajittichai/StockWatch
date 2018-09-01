@@ -64,6 +64,21 @@ public final class HomeActivity
         Response.Listener<ConcreteStockWithAhValsList>,
         Response.ErrorListener {
 
+    @BindView(R.id.recyclerView_stockRecycler) RecyclerView rv;
+
+    /**
+     * This is true if this Activity is being shown. This is set to false in
+     * {@link #onPause()}, and set to true in {@link #onResume()}.
+     * <p>
+     * This is used in {@link
+     * #onFindStockTaskCompleted(int, String, StockInHomeActivity)} to check
+     * that this Activity is visible before responding to the {@link
+     * FindStockTask} (i.e. start a new IndividualStockActivity for the searched
+     * Stock, or display a toast saying that a Stock with the searched ticker
+     * does not exist).
+     */
+    private static boolean activityIsVisible = true;
+
     /**
      * These are the possible sorts of {@link #stocks} that can be created by
      * clicking the different sort (different list transformations) MenuItems in
@@ -75,6 +90,7 @@ public final class HomeActivity
         TICKER_ASC, TICKER_DESC,
         PRICE_ASC, PRICE_DESC,
         CHANGE_PERCENT_ASC, CHANGE_PERCENT_DESC
+
     }
 
     /**
@@ -89,8 +105,6 @@ public final class HomeActivity
                     }
                 }
             };
-
-    @BindView(R.id.recyclerView_stockRecycler) RecyclerView rv;
 
     /**
      * The list of ConcreteStockWithAhVals that are shown in this Activity.
@@ -147,6 +161,10 @@ public final class HomeActivity
     @Override
     public void onFindStockTaskCompleted(final int status, final String searchTicker,
                                          final StockInHomeActivity stock) {
+        if (!activityIsVisible) {
+            return;
+        }
+
         switch (status) {
             case FindStockTask.Status.STOCK_EXISTS:
                 // Go to individual stock activity
@@ -172,11 +190,27 @@ public final class HomeActivity
 
     /**
      * Initializes various components of this Activity.
+     * <p>
+     * This method sets the "Stock Added" and "Stock Removed" booleans in {@link
+     * #prefs} to false. One of these values is set to true in {@link
+     * IndividualStockActivity#onPause()}, if a Stock is added or removed from
+     * favorites and this Activity needs to be aware of it. In addition to
+     * setting either the "Stock Added" or "Stock Removed" booleans,
+     * IndividualStockActivity.onPause() updates Tickers, Names, and Data TSV
+     * to reflect any changes. Because 1) added or removed Stocks are reflected in
+     * Tickers, Names, and Data TSV; and 2) {@link #initStocksFromPreferences()}
+     * uses the information from Tickers, Names, and Data TSV to initialize
+     * {@link #stocks}; we know that in this method, any Stocks that were added
+     * or removed from another Activity (added or removed from prefs) are
+     * correctly added/removed from stocks. Therefore, the "Stock Added" and
+     * "Stock Removed" booleans are set to false, because whatever addition or
+     * removal they represented has been taken care of.
      *
      * @param savedInstanceState The savedInstanceState is not used
      * @see #initStocksFromPreferences()
      * @see #initRecyclerView()
      * @see #initRvSortFromPreferences()
+     * @see IndividualStockActivity#onPause()
      */
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -188,16 +222,25 @@ public final class HomeActivity
         requestQueue = Volley.newRequestQueue(this);
         stocks = new ConcreteStockWithAhValsList();
 //        fillPreferencesWithRandomStocks(0); // Starter kit
+
+        /* onCreate is only called if the app was just opened. These preferences
+         * should only be true if a stock was added from an activity outside of
+         * this activity (i.e. IndividualStockActivity). */
+        prefs.edit().putBoolean("Stock Added", false).apply();
+        prefs.edit().putBoolean("Stock Removed", false).apply();
+
         initStocksFromPreferences();
         initRecyclerView();
         initRvSortFromPreferences();
-        checkIfStockAddedFromOtherActivity();
+
 
         checkForUpdates(); // ACRA
     }
 
     /**
      * Initialize {@link #stocks} using the information stored in preferences.
+     * <p>
+     * This method should only be called in {@link #onCreate(Bundle)}.
      */
     private void initStocksFromPreferences() {
         final String[] tickerArr = prefs.getString("Tickers TSV", "").split("\t");
@@ -293,45 +336,23 @@ public final class HomeActivity
     }
 
     /**
-     * Checks if there is a Stock stored in preferences (Tickers TSV, Names TSV,
-     * and Data TSV) that is new to this Activity. If there is a new Stock, this
-     * method calls {@link #sortStocksToRvSort()} to ensure that the new Stock
-     * maintains the {@link RvSort} of {@link #stocks} that is specified by
-     * {@link #rvSort}.
-     * <p>
-     * The only way that a Stock is added to favorites is if the user stars the
-     * Stock in {@link IndividualStockActivity}. If the user does this,
-     * IndividualStockActivity sets a specific boolean value in preferences to
-     * true, which allows other Activities to check preferences and be aware of
-     * the new Stock. IndividualStockActivity, is completely unaware of the this
-     * Activity's rvSort, and adds a Stock's information to the front of Tickers
-     * TSV, Names TSV, and Data TSV. Therefore, if a new Stock has been added
-     * from IndividualStockActivity, it has probably invalidated the sort
-     * specified by rvSort. This method ensures that rvSort is maintained if new
-     * Stocks are added from other Activities.
+     * This method sets {@link #activityIsVisible} to true. This also
+     * re-initializes {@link #timer} because it is invalidated when {@link
+     * #onPause()} is called, then uses timer to call {@link #updateStocks()} on
+     * a constant interval. Additionally, this method checks if a Stock has been
+     * added or removed outside of this activity, and if so, updates {@link
+     * #stocks} and {@link #tickerToIndexMap} to reflect the change.
      *
-     * @see IndividualStockActivity#addStockToPreferences()
-     * @see IndividualStockActivity#onPause()
-     */
-    private void checkIfStockAddedFromOtherActivity() {
-        final boolean stockAdded = prefs.getBoolean(
-                "Stock Added",
-                false);
-        if (stockAdded) {
-            sortStocksToRvSort();
-
-            prefs.edit().putBoolean("Stock Added", false).apply();
-        }
-    }
-
-    /**
-     * Re-initializes {@link #timer} because it is invalidated when {@link
-     * #onPause()} is called. This method then uses timer to call {@link
-     * #updateStocks()} on a constant interval.
+     * @see #checkIfStockAddedFromOtherActivity()
+     * @see #checkIfStockRemovedFromOtherActivity()
      */
     @Override
     protected void onResume() {
         super.onResume();
+        activityIsVisible = true;
+
+        checkIfStockAddedFromOtherActivity();
+        checkIfStockRemovedFromOtherActivity();
 
         // If there are stocks in favorites, update stocks and rv
         final TimerTask timerTask = new TimerTask() {
@@ -353,12 +374,110 @@ public final class HomeActivity
     }
 
     /**
-     * Stops calls to {@link #updateStocks()} by cancelling {@link #timer}, then
-     * saves {@link #stocks} and {@link #rvSort} to preferences.
+     * Checks the values of the "Stock Added" boolean in {@link #prefs} to see
+     * if there is a Stock stored in {@link #prefs} that is new to this Activity
+     * (added from a different Activity). If there is a new Stock, this method
+     * adds the new Stock into {@link #stocks} and updates {@link
+     * #tickerToIndexMap}, while maintaining {@link #rvSort}.
+     * <p>
+     * The only way that a Stock is added to favorites is if the user stars the
+     * Stock in {@link IndividualStockActivity}. If the user does this,
+     * IndividualStockActivity sets the "Stock Added" boolean in prefs to true,
+     * which allows other Activities to check preferences and be aware of the
+     * new Stock. If the "Stock Added" boolean is true, then the following
+     * strings in prefs contain the information needed to add the new Stock into
+     * stocks and tickerToIndexMap:
+     * <ul>
+     * <li>"Stock Added Ticker"
+     * <li>"Stock Added Name"
+     * <li>"Stock Added Data" (7 element TSV)
+     * </ul>
+     * <p>
+     * If there is a new Stock, this method calls {@link #sortStocksToRvSort()}
+     * to ensure that the new Stock maintains the {@link RvSort} of stocks. If
+     * rvSort equals {@link RvSort#NO_SORT}, this method inserts the new Stock
+     * at index 0.
+     *
+     * @see IndividualStockActivity#addStockToPreferences()
+     * @see IndividualStockActivity#onPause()
+     */
+    private void checkIfStockAddedFromOtherActivity() {
+        final boolean stockAdded = prefs.getBoolean("Stock Added", false);
+        if (!stockAdded) {
+            return;
+        }
+
+        final String ticker = prefs.getString("Stock Added Ticker", "");
+        final String name = prefs.getString("Stock Added Name", "");
+        final String[] dataArr = prefs.getString("Stock Added Data", "").split("\t");
+        final Stock.State state = Util.stringToStateMap.get(dataArr[0]);
+        final double price = parseDouble(dataArr[1]);
+        final double changePoint = parseDouble(dataArr[2]);
+        final double changePercent = parseDouble(dataArr[3]);
+        final double ahPrice = parseDouble(dataArr[4]);
+        final double ahChangePoint = parseDouble(dataArr[5]);
+        final double ahChangePercent = parseDouble(dataArr[6]);
+
+        final ConcreteStockWithAhVals added = new ConcreteStockWithAhVals(
+                state, ticker, name,
+                price, changePoint, changePercent,
+                ahPrice, ahChangePoint, ahChangePercent);
+
+        // Insert the added stock at the top of stocks
+        stocks.add(0, added);
+        // Maintain rvSort, then update tickerToIndexMap
+        sortStocksToRvSort();
+        updateTickerToIndexMap();
+
+        // Restore prefs
+        prefs.edit().putBoolean("Stock Added", false).apply();
+    }
+
+    /**
+     * Checks the value of the "Stock Removed" boolean in {@link #prefs} to see
+     * if there is a Stock that is no longer stored in prefs but is still
+     * contained in {@link #stocks} and {@link #tickerToIndexMap}. This scenario
+     * can occur if a Stock was removed from prefs from a different Activity
+     * (IndividualStockActivity).
+     * <p>
+     * If the "Stock Removed" boolean is true, then the following strings in
+     * prefs contain the information needed to remove the Stock from stocks and
+     * tickerToIndexMap:
+     * <ul>
+     * <li>"Stock Removed Ticker"
+     * </ul>
+     * <p>
+     *
+     * @see IndividualStockActivity#addStockToPreferences()
+     * @see IndividualStockActivity#onPause()
+     */
+    private void checkIfStockRemovedFromOtherActivity() {
+        final boolean stockRemoved = prefs.getBoolean("Stock Removed", false);
+        if (stockRemoved) {
+            final String removedTicker =
+                    prefs.getString("Stock Removed Ticker", "");
+            final int removedIndex = tickerToIndexMap.get(removedTicker);
+
+            tickerToIndexMap.remove(removedTicker); // Do before removal from stocks
+            rvAdapter.remove(removedIndex); // Removes from rview and from stocks, and updates rview
+            updateTickerToIndexMap(removedIndex);
+
+            // Restore prefs
+            prefs.edit().putBoolean("Stock Removed", false).apply();
+            prefs.edit().putString("Stock Removed Ticker", "").apply();
+        }
+    }
+
+    /**
+     * This method sets {@link #activityIsVisible} to false, stops calls to
+     * {@link #updateStocks()} by cancelling {@link #timer}, and saves {@link
+     * #stocks} and {@link #rvSort} to preferences - stocks is saved to Tickers,
+     * Names, and Data TSV in prefs.
      */
     @Override
     protected void onPause() {
         super.onPause();
+        activityIsVisible = false;
 
         // cancel() invalidates timer - it must be re-initialized to use again
         timer.cancel();
@@ -514,6 +633,7 @@ public final class HomeActivity
         getMenuInflater().inflate(R.menu.menu_home_activity, menu);
 
         searchView = (SearchView) menu.findItem(R.id.menuItem_search).getActionView();
+        searchView.setQueryHint("Ticker");
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
 
             /**
@@ -630,11 +750,10 @@ public final class HomeActivity
         }
 
         sortStocksToRvSort();
-
-        updateMenuItemTitles();
-
         updateTickerToIndexMap();
         rvAdapter.notifyItemRangeChanged(0, rvAdapter.getItemCount());
+
+        updateMenuItemTitles();
 
         return true;
     }

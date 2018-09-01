@@ -53,8 +53,7 @@ public class ConcreteStockWithAhVals
      * @param stock The Stock to copy
      */
     public ConcreteStockWithAhVals(final Stock stock) {
-        super(stock.getState(), stock.getTicker(), stock.getName(),
-                stock.getPrice(), stock.getChangePoint(), stock.getChangePercent());
+        super(stock);
 
         if (stock instanceof StockWithAhVals) {
             final StockWithAhVals ahStock = (StockWithAhVals) stock;

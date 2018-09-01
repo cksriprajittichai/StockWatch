@@ -146,8 +146,9 @@ public final class IndividualStockActivity
     private final Map<Stat, TextSwitcher> statToViewMap = new HashMap<>();
 
     private AdvancedStock stock;
-    private boolean wasInFavoritesInitially;
-    private boolean isInFavorites;
+    private boolean wasStarredInitially;
+    private boolean isStarred;
+    private boolean isInPrefs;
     private SparkViewAdapter sparkViewAdapter;
     private NewsRecyclerAdapter newsRecyclerAdapter;
     private SharedPreferences prefs;
@@ -772,8 +773,9 @@ public final class IndividualStockActivity
         initStatToViewMap();
         AndroidThreeTen.init(this); // Used in DownloadChartsTask
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        isInFavorites = getIntent().getBooleanExtra("Is in favorites", false);
-        wasInFavoritesInitially = isInFavorites;
+        isStarred = getIntent().getBooleanExtra("Is in favorites", false);
+        wasStarredInitially = isStarred;
+        isInPrefs = isStarred;
     }
 
     /**
@@ -959,15 +961,29 @@ public final class IndividualStockActivity
 
     /**
      * This method stops scheduled AsyncTasks by cancelling {@link #timer} and
-     * saves the favorites status of {@link #stock} to preferences.
+     * adds or removes {@link #stock}'s presence from {@link #prefs} to reflect
+     * the current star status of stock.
      * <p>
-     * If stock's information is not in preferences but is starred, add it to
-     * preferences and store in preferences that a new Stock has been added. If
-     * stock's information is in preferences but is not starred, remove it from
-     * preferences and store in preferences that a new Stock has not been added.
+     * If stock's information is not in prefs but is starred, add its
+     * information to Tickers, Names, and Data TSV, set the "Stock Added"
+     * boolean in prefs to true, and add stock's information to the following
+     * prefs strings:
+     * <ul>
+     * <li>"Stock Added Ticker"
+     * <li>"Stock Added Name"
+     * <li>"Stock Added Data" (7 element TSV)
+     * </ul>.
+     * If stock's information is in prefs already but it is not starred, remove
+     * its information from Tickers, Names, and Data TSV, set the "Stock
+     * Removed" boolean in prefs to true, and add stock's information to the
+     * following prefs strings:
+     * <ul>
+     * <li>"Stock Removed Ticker"
+     * </ul>
      *
      * @see #addStockToPreferences()
      * @see #removeStockFromPreferences()
+     * @see IndividualStockActivity#onResume()
      */
     @Override
     protected void onPause() {
@@ -976,45 +992,38 @@ public final class IndividualStockActivity
         // cancel() invalidates timer - it must be re-initialized to use again
         timer.cancel();
 
-        if (isInFavorites != wasInFavoritesInitially) {
+        if (isStarred != wasStarredInitially &&
+                isStarred != isInPrefs) {
             // If the star status (favorites status) has changed
 
-            if (wasInFavoritesInitially) {
+            if (isInPrefs) {
                 removeStockFromPreferences();
+                isInPrefs = false;
 
                 prefs.edit().putBoolean("Stock Added", false).apply();
+                prefs.edit().putBoolean("Stock Removed", true).apply();
+
+                prefs.edit().putString("Stock Removed Ticker", stock.getTicker()).apply();
             } else {
                 addStockToPreferences();
+                isInPrefs = true;
 
                 prefs.edit().putBoolean("Stock Added", true).apply();
+                prefs.edit().putBoolean("Stock Removed", false).apply();
+
+                prefs.edit().putString("Stock Added Ticker", stock.getTicker()).apply();
+                prefs.edit().putString("Stock Added Name", stock.getName()).apply();
+                final String dataStr;
+                if (stock instanceof StockWithAhVals) {
+                    dataStr = TextUtils.join("\t", new ConcreteStockWithAhVals(stock)
+                            .getDataAsArray());
+                } else {
+                    dataStr = TextUtils.join("\t", new ConcreteStock(stock)
+                            .getDataAsArray());
+                }
+                prefs.edit().putString("Stock Added Data", dataStr).apply();
             }
-
-            // Update the favorites status
-            wasInFavoritesInitially = isInFavorites;
         }
-    }
-
-    /**
-     * Start a new Intent to go to {@link HomeActivity}.
-     * <p>
-     * The super implementation of this method does not create a new
-     * HomeActivity, and returns the user to the HomeActivity that they were in
-     * before they got to this Activity. So when we go back back to the old
-     * HomeActivity instance, the first function called is onResume();
-     * onCreate() is not called. For HomeActivity to work properly, if Tickers
-     * TSV, Names TSV, and Data TSV are changed outside of HomeActivity, {@link
-     * HomeActivity#onCreate(Bundle)} must be called before {@link
-     * HomeActivity#onResume()}. This means that if Tickers TSV, Names TSV, and
-     * Data TSV are changed outside of HomeActivity, a new HomeActivity instance
-     * must be created in order to go to HomeActivity. The TSV strings stored in
-     * preferences can be changed within this class. Therefore, if we don't
-     * start a new HomeActivity in this function, then HomeActivity will not
-     * function properly
-     */
-    @Override
-    public void onBackPressed() {
-        final Intent intent = new Intent(this, HomeActivity.class);
-        startActivity(intent);
     }
 
     /**
@@ -1064,14 +1073,14 @@ public final class IndividualStockActivity
     public boolean onCreateOptionsMenu(final Menu menu) {
         getMenuInflater().inflate(R.menu.menu_stock_activity, menu);
         final MenuItem starItem = menu.findItem(R.id.starMenuItem);
-        starItem.setIcon(isInFavorites ? R.drawable.star_on : R.drawable.star_off);
+        starItem.setIcon(isStarred ? R.drawable.star_on : R.drawable.star_off);
         return true;
     }
 
     /**
      * This method handles the selection of a {@link MenuItem} from the options
      * menu of this Activity. If the star is pressed, toggle {@link
-     * #isInFavorites}.
+     * #isStarred}.
      *
      * @param item The selected MenuItem
      * @return True if a known item was selected, otherwise call the super
@@ -1081,8 +1090,8 @@ public final class IndividualStockActivity
     public boolean onOptionsItemSelected(final MenuItem item) {
         switch (item.getItemId()) {
             case R.id.starMenuItem:
-                isInFavorites = !isInFavorites; // Toggle
-                item.setIcon(isInFavorites ? R.drawable.star_on : R.drawable.star_off);
+                isStarred = !isStarred; // Toggle
+                item.setIcon(isStarred ? R.drawable.star_on : R.drawable.star_off);
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -1653,7 +1662,9 @@ public final class IndividualStockActivity
          */
         @Override
         protected void onPostExecute(final Integer status) {
-            completionListener.get().onDownloadChartsTaskCompleted(status, missingChartPeriods);
+            if (completionListener.get() != null) {
+                completionListener.get().onDownloadChartsTaskCompleted(status, missingChartPeriods);
+            }
         }
 
 
@@ -1938,7 +1949,9 @@ public final class IndividualStockActivity
          */
         @Override
         protected void onPostExecute(final Integer status) {
-            completionListener.get().onDownloadStatsTaskCompleted(status, missingStats);
+            if (completionListener.get() != null) {
+                completionListener.get().onDownloadStatsTaskCompleted(status, missingStats);
+            }
         }
 
 
@@ -2084,7 +2097,9 @@ public final class IndividualStockActivity
          */
         @Override
         protected void onPostExecute(final Integer status) {
-            completionListener.get().onDownloadNewsTaskCompleted(status);
+            if (completionListener.get() != null) {
+                completionListener.get().onDownloadNewsTaskCompleted(status);
+            }
         }
 
 
