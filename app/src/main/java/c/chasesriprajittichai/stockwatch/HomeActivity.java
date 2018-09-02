@@ -414,9 +414,17 @@ public final class HomeActivity
         final double price = parseDouble(dataArr[1]);
         final double changePoint = parseDouble(dataArr[2]);
         final double changePercent = parseDouble(dataArr[3]);
-        final double ahPrice = parseDouble(dataArr[4]);
-        final double ahChangePoint = parseDouble(dataArr[5]);
-        final double ahChangePercent = parseDouble(dataArr[6]);
+        final double ahPrice, ahChangePoint, ahChangePercent;
+        if (state == AFTER_HOURS || state == PREMARKET) {
+            ahPrice = parseDouble(dataArr[4]);
+            ahChangePoint = parseDouble(dataArr[5]);
+            ahChangePercent = parseDouble(dataArr[6]);
+        } else {
+            // dataArr.length() equals 4, not 7
+            ahPrice = 0;
+            ahChangePoint = 0;
+            ahChangePercent = 0;
+        }
 
         final ConcreteStockWithAhVals added = new ConcreteStockWithAhVals(
                 state, ticker, name,

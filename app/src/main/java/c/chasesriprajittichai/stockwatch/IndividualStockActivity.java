@@ -181,7 +181,6 @@ public final class IndividualStockActivity
      */
     private boolean showsRealValues_stats = false;
 
-
     /**
      * This is the number of consecutive times that a specific AsyncTask can
      * fail (IOException) and be restarted (new instance created and executed).
@@ -218,7 +217,6 @@ public final class IndividualStockActivity
      * @see #onDownloadNewsTaskCompleted(int)
      */
     private int consecFails_newsTask = 0;
-
 
     /**
      * Called from {@link DownloadChartsTask#onPostExecute(Integer)}.
