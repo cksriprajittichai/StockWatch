@@ -52,7 +52,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.stream.Collectors;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -236,17 +235,15 @@ public final class IndividualStockActivity
      * restarted (created and executed).
      * <p>
      * If status equals {@link DownloadChartsTask.Status#GOOD}, this method
-     * uses missingChartPeriods to determine which charts are filled. It then
-     * displays the names of the filled ChartPeriod(s) in {@link
-     * #chartPeriodPicker}, sets up {@link #sparkViewAdapter} with the initially
-     * selected chart, updates {@link #sparkView}, then shows all the Views
-     * related to the charts. In the extremely rare case that status equals
-     * GOOD, and no charts are filled, this method does the same thing that it
-     * would do if status represented an thrown IOException in
+     * sets up {@link #sparkViewAdapter} to show the 1D chart, which is the
+     * initially selected chart. The this updates {@link #sparkView} and shows
+     * all the Views related to the charts. In the extremely rare case that
+     * status equals GOOD, and no charts are filled, this method does the same
+     * thing that it would do if status represented an thrown IOException in
      * DownloadChartsTask, except in this case, a no-charts message is shown,
      * rather than a no-connection message.
      * <p>
-     * In the first call to this function where status equals GOOD, {@link
+     * In the first call to this method where status equals GOOD, {@link
      * #showsRealValues_charts} is set to true.
      * <p>
      * Once real values have been shown (showsRealValues_charts == true) or
@@ -271,12 +268,13 @@ public final class IndividualStockActivity
                 if (showsRealValues_charts) {
                     final ChartPeriod selectedPeriod = sparkViewAdapter.getChartPeriod();
                     boolean needToUpdate = false;
+
+                    /* The 1D chart does not have dates, so it must be treated
+                     * differently than the big ChartPeriods. */
                     if (selectedPeriod == ChartPeriod.ONE_DAY) {
                         /* The 1D chart adds a data point every 5 minutes (while
                          * OPEN). Check if a new data point has been added to
-                         * the prices list that is currently displayed. The 1D
-                         * chart does not have dates, so it must be treated
-                         * differently than the big ChartPeriods. */
+                         * the prices list that is currently displayed. */
                         if (sparkViewAdapter.getPrices().size() !=
                                 stock.getPrices(selectedPeriod).size()) {
                             needToUpdate = true;
@@ -311,74 +309,22 @@ public final class IndividualStockActivity
                         sparkViewAdapter.notifyDataSetChanged();
                     }
                 } else {
-                    /* This else block is unaffected by sparkViewAdapter's
-                     * ChartPeriod being null. */
-
                     showsRealValues_charts = true;
 
-
-                    // ChartPeriods from string-array resource are in increasing order (1D -> 5Y)
-                    final List<CharSequence> displayChartPeriods = Arrays.stream(
-                            getResources().getStringArray(R.array.chartPeriods))
-                            .collect(Collectors.toList());
-
-                    if (!missingChartPeriods.contains(ChartPeriod.ONE_DAY)) {
+                    if (missingChartPeriods.size() != ChartPeriod.values().length) {
                         sparkViewAdapter.setChartPeriod(ChartPeriod.ONE_DAY);
                         sparkViewAdapter.setPrices(stock.getPrices_1day());
-                        // Don't set dates for sparkViewAdapter for 1D
+                        // Don't set dates for 1D chart
                         sparkViewAdapter.notifyDataSetChanged();
-                    } else {
-                        displayChartPeriods.remove(0); // 1D is at index 0 of chartPeriods
-                    }
-
-                    for (final ChartPeriod p : BIG_CHART_PERIODS) {
-                        if (missingChartPeriods.contains(p)) {
-                            /* Always remove last node because
-                             * displayChartPeriods is in increasing order
-                             * (1D -> 5Y), unlike BIG_CHART_PERIODS which is in
-                             * decreasing order. */
-                            displayChartPeriods.remove(displayChartPeriods.size() - 1);
-                        } else {
-                            if (missingChartPeriods.contains(ChartPeriod.ONE_DAY)) {
-                                /* If the 1D chart is filled, the current
-                                 * ChartPeriod will be set to ONE_DAY.
-                                 * Otherwise, if the 1D chart is not filled, the
-                                 * initially selected ChartPeriod should be the
-                                 * smallest big ChartPeriod (TWO_WEEKS). By the
-                                 * way that we're filling the charts, if at
-                                 * least one big ChartPeriod is filled, that
-                                 * guarantees that the 2W chart is filled. */
-                                sparkViewAdapter.setChartPeriod(ChartPeriod.TWO_WEEKS);
-                                sparkViewAdapter.setPrices(stock.getPrices_2weeks());
-                                sparkViewAdapter.setDates(stock.getDates_2weeks());
-                                sparkViewAdapter.notifyDataSetChanged();
-                            }
-
-                            /* Smaller charts (shorter ChartPeriods) take their
-                             * data from the largest chart that is filled. So
-                             * once a filled chart is found, there is no need to
-                             * check if the smaller charts are filled. */
-                            break;
-                        }
-                    }
-
-                    if (missingChartPeriods.size() == ChartPeriod.values().length) {
-                        // If there are no filled charts
-                        chartsStatus.setText(getString(R.string.chartsUnavailable));
-                        chartsStatus.setVisibility(View.VISIBLE);
-                    } else {
-                        // If there is at least 1 filled chart
-
-                        final CharSequence[] displayChartPeriodsArr =
-                                new CharSequence[displayChartPeriods.size()];
-                        displayChartPeriods.toArray(displayChartPeriodsArr);
-                        chartPeriodPicker.setValues(displayChartPeriodsArr);
 
                         sparkView.setVisibility(View.VISIBLE);
                         chartPeriodPicker.setVisibility(View.VISIBLE);
                         chartPeriodPickerUnderline.setVisibility(View.VISIBLE);
+                    } else {
+                        // If there are no filled charts
+                        chartsStatus.setText(getString(R.string.chartsUnavailable));
+                        chartsStatus.setVisibility(View.VISIBLE);
                     }
-
                     loadingChartsProgressBar.setVisibility(View.GONE);
                 }
                 break;
@@ -418,7 +364,7 @@ public final class IndividualStockActivity
      * display text is set to {@literal N/A}. Displays are only updated (setText
      * method) if necessary.
      * <p>
-     * In the first call to this function where status equals GOOD, {@link
+     * In the first call to this method where status equals GOOD, {@link
      * #showsRealValues_stats} is set to true.
      *
      * @param status       The {@link DownloadStatsTask.Status} of the task
@@ -638,7 +584,7 @@ public final class IndividualStockActivity
      * This method changes the top Views depending on which {@link ChartPeriod}
      * is selected, and the index of the scrubbing line.
      * <p>
-     * If the selected ChartPeriod is {@link ChartPeriod#ONE_DAY}, this function
+     * If the selected ChartPeriod is {@link ChartPeriod#ONE_DAY}, this method
      * calculates the time of day that corresponds to the scrubbing index, and
      * displays it in {@link #top_time}. If the top time value is 4:00pm or
      * later, {@link #ah_linearLayout} is set to {@link View#VISIBLE}, and the
@@ -656,7 +602,7 @@ public final class IndividualStockActivity
      * show the date at this scrubbing index of the selected ChartPeriod. Unlike
      * the time of day if the selected ChartPeriod were ONE_DAY, the date is not
      * calculated of the scrubbing index of the selected ChartPeriod is not
-     * calculated in this function. The date at this scrubbing index is gotten
+     * calculated in this method. The date at this scrubbing index is gotten
      * from {@link SparkViewAdapter#getDate(int)}. For ChartPeriods not equal to
      * ONE_DAY, the change values are always relative to the first price of the
      * list of prices of the selected ChartPeriod.
@@ -1029,7 +975,7 @@ public final class IndividualStockActivity
      * selected. This method updates {@link #sparkViewAdapter} by making it
      * reference the correct selected ChartPeriod, making it reference the
      * correct chart's prices and dates, and calling {@link
-     * SparkViewAdapter#notifyDataSetChanged()}. Lastly, this function updates
+     * SparkViewAdapter#notifyDataSetChanged()}. Lastly, this method updates
      * this Activity's top Views by calling {@link #initTopViews()}.
      *
      * @param index The index of the selected item
@@ -1107,11 +1053,10 @@ public final class IndividualStockActivity
      * then 0s are added in place of the three after hours values. stock's
      * ticker, name, and data values are added to the front of each preference
      * string, meaning that the stock is inserted at the top of the list of
-     * stocks that are represented in prefs. This function does not check if
+     * stocks that are represented in prefs. This method does not check if
      * stock is already in prefs before adding stock.
      * <p>
-     * If stock's state is {@link Stock.State#ERROR}, this function does
-     * nothing.
+     * If stock's state is {@link Stock.State#ERROR}, this method does nothing.
      */
     private void addStockToPreferences() {
         if (stock.getState() == ERROR) {
@@ -1316,7 +1261,7 @@ public final class IndividualStockActivity
          * Gets the prices and dates needed for all the charts of {@link #stock}.
          * The one day chart is taken from the MarketWatch multiple-stock
          * website, and all other "big" charts are taken from two WSJ websites.
-         * This function connects to three websites:
+         * This method connects to three websites:
          * <ul>
          * <li>to the MarketWatch multiple-stock website
          * <li>to stock's WSJ overview website
@@ -1329,10 +1274,10 @@ public final class IndividualStockActivity
          * co-dependence of the information taken from the two WSJ websites,
          * these two connections are treated as pair by the returned Status. For
          * example, if this method throws and IOException when connecting to the
-         * WSJ historical quotes AJAX website, the returned Status will state
-         * that there was an IOException from WSJ, without specifying which WSJ
-         * website threw the IOException, and regardless of the status of the
-         * connection to the WSJ overview website.
+         * WSJ historical quotes AJAX website, regardless of the status of the
+         * connection to the WSJ overview website, the returned Status will
+         * represent that there was an IOException from WSJ, without specifying
+         * which WSJ website threw the IOException.
          * <p>
          * The loading of the one day chart and the loading of the big charts
          * are treated separately. Meaning that the loading of the big charts is
@@ -1340,11 +1285,11 @@ public final class IndividualStockActivity
          * <p>
          * If a Stock isn't old enough to contain all the data for a {@link
          * ChartPeriod}'s chart, then that ChartPeriod's prices
-         * and dates are set to empty lists. The "missing" ChartPeriod is also
-         * added to {@link #missingChartPeriods}.
+         * and dates are padded at the front of the data with filler data
+         * points.
          *
          * @param voids Take no parameters
-         * @return The {@link DownloadChartsTask.Status} of the function
+         * @return The {@link DownloadChartsTask.Status} of the method
          */
         @Override
         protected Integer doInBackground(final Void... voids) {
@@ -1364,9 +1309,7 @@ public final class IndividualStockActivity
             }
 
             if (multiDoc != null) {
-                /* Some stocks have no chart data. If this is the case, chart_prices will be an
-                 * empty array list. */
-                final ArrayList<Double> chartPrices_1day = new ArrayList<>();
+                final ArrayList<Double> prices_1day = new ArrayList<>();
 
                 final Element multiQuoteValueRoot = multiDoc.selectFirst(
                         "html > body > div#blanket > div[class*=multi] > div#maincontent > " +
@@ -1374,61 +1317,60 @@ public final class IndividualStockActivity
                                 "div[class^=section activeQuote bgQuote]");
                 final Element javascriptElmnt = multiQuoteValueRoot.selectFirst(
                         ":root > div.intradaychart > script[type=text/javascript]");
-                final String jsonString = substringBetween(
+                final String jsonStr = substringBetween(
                         javascriptElmnt.toString(),
                         "var chartData = [", "];");
 
-                /* If there is no chart data, javascriptElmnt element still exists
-                 * in the HTML and there is still some javascript code in
-                 * javascriptElmnt.toString(). There is just no chart data embedded
-                 * in the javascript. This means that the call to substringBetween()
-                 * on javascriptElmnt.toString() will return null, because no
-                 * substring between the open and close parameters
-                 * (substringBetween() parameters) exists. */
+                /* If there is no chart data, javascriptElmnt element still
+                 * exists in the HTML and there is still some javascript code in
+                 * javascriptElmnt.toString(). There is just no chart data
+                 * embedded in the javascript. This means that the call to
+                 * substringBetween() on javascriptElmnt.toString() will return
+                 * null, because no substring between the open and close
+                 * parameters (substringBetween() parameters) exists. */
                 final String javascriptStr = substringBetween(
                         javascriptElmnt.toString(),
                         "Trades\":[", "]");
                 if (javascriptStr != null) {
                     try {
-                        final JSONObject topObj = new JSONObject(jsonString);
-                        final JSONObject valueOuterObj = topObj.getJSONObject("Value");
-                        final JSONArray dataArr = valueOuterObj.getJSONArray("Data");
-                        final JSONObject valueInnerObj = dataArr.getJSONObject(0).getJSONObject("Value");
+                        final JSONArray tradesArr =
+                                new JSONObject(jsonStr)
+                                        .getJSONObject("Value")
+                                        .getJSONArray("Data")
+                                        .getJSONObject(0)
+                                        .getJSONObject("Value")
+                                        .getJSONArray("Sessions")
+                                        .getJSONObject(0)
+                                        .getJSONArray("Trades");
 
-                        final JSONArray sessionsArr = valueInnerObj.getJSONArray("Sessions");
-                        final JSONObject sessionsNdxZero = sessionsArr.getJSONObject(0);
-                        final JSONArray tradesArr = sessionsNdxZero.getJSONArray("Trades");
                         final int numPrices = tradesArr.length();
 
-                        /* Fill chartPrices_1day. If null values are found, replace
-                         * them with the last non-null value. If the first value is
-                         * null, replace it with the first non-null value. */
+                        /* Fill prices_1day. If null values are found, replace them with the last
+                         * non-null value. If the first value is null, replace it with the first
+                         * non-null value. */
                         if (tradesArr.length() > 0) {
-                            chartPrices_1day.ensureCapacity(numPrices);
+                            prices_1day.ensureCapacity(numPrices);
 
-                            /* Init as out of bounds. If firstNonNullNdx is never
-                             * changed to an index in bounds, then all values in
-                             * tradesArr are null. */
+                            /* Init as out of bounds. If firstNonNullNdx is never changed to an
+                             * index in bounds, then all values in tradesArr are null. */
                             int firstNonNullNdx = numPrices;
 
                             // Find firstNonNullNdx and fill chartPrices up through firstNonNullNdx
-                            /* After this if/else statement, chartPrices is filled
-                             * with non-null values up through firstNonNullNdx. */
+                            /* After this if/else statement, chartPrices is filled with non-null
+                             * values up through firstNonNullNdx. */
                             if (tradesArr.get(0).toString().equals("null")) {
                                 for (int i = 1; i < numPrices; i++) { // Redundant to check index 0
                                     if (!tradesArr.get(i).toString().equals("null")) {
                                         firstNonNullNdx = i;
 
-                                        /* The first non-null value has been found.
-                                         * The indexes < firstNonNullNdx have null
-                                         * values and therefore should be replaced
-                                         * with the first non-null value
-                                         * (firstNonNullValue) which is at
-                                         * firstNonNullNdx. */
+                                        /* The first non-null value has been found. The
+                                         * indexes < firstNonNullNdx have null values and therefore
+                                         * should be replaced with the first non-null value
+                                         * (firstNonNullValue) which is at firstNonNullNdx. */
                                         final double firstNonNullValue =
                                                 parseDouble(tradesArr.get(firstNonNullNdx).toString());
                                         while (i >= 0) {
-                                            chartPrices_1day.add(firstNonNullValue);
+                                            prices_1day.add(firstNonNullValue);
                                             i--;
                                         }
                                         break;
@@ -1436,15 +1378,15 @@ public final class IndividualStockActivity
                                 }
                             } else {
                                 firstNonNullNdx = 0;
-                                chartPrices_1day.add(parseDouble(tradesArr.get(0).toString()));
+                                prices_1day.add(parseDouble(tradesArr.get(0).toString()));
                             }
 
                             // Fill chartPrices for the indexes after firstNonNullNdx
                             for (int i = firstNonNullNdx + 1; i < numPrices; i++) {
                                 if (!tradesArr.get(i).toString().equals("null")) {
-                                    chartPrices_1day.add(parseDouble(tradesArr.get(i).toString()));
+                                    prices_1day.add(parseDouble(tradesArr.get(i).toString()));
                                 } else {
-                                    chartPrices_1day.add(chartPrices_1day.get(i - 1));
+                                    prices_1day.add(prices_1day.get(i - 1));
                                 }
                             }
 
@@ -1463,12 +1405,12 @@ public final class IndividualStockActivity
                              * issue by manually setting the price at 4:00pm to the price at close.
                              * Recall that in the 1 day chart, the prices are taken every 5 minutes,
                              * starting at 9:30am - the 4:00pm price is at index 78. */
-                            if (chartPrices_1day.size() >= 79) {
-                                chartPrices_1day.set(78, stock.getPrice());
+                            if (prices_1day.size() >= 79) {
+                                prices_1day.set(78, stock.getPrice());
                             }
 
                             // Update stock's one day chart
-                            stock.setPrices_1day(chartPrices_1day);
+                            stock.setPrices_1day(prices_1day);
                         }
                     } catch (final JSONException jsone) {
                         Log.e("JSONException", jsone.getLocalizedMessage());
@@ -1478,8 +1420,7 @@ public final class IndividualStockActivity
                     missingChartPeriods.add(ChartPeriod.ONE_DAY);
                 }
             }
-            // Done with one day chart
-            // Code below is for the big charts
+            // Done with one day chart. Code below is for the big charts
 
 
             Document individualDoc;
@@ -1498,9 +1439,9 @@ public final class IndividualStockActivity
             }
 
             if (individualDoc != null) {
-                /* Get chart data for periods greater than one day from Wall Street
-                 * Journal. Certain values from WSJ page are needed for the URL of
-                 * the WSJ database of historical prices. */
+                /* Get chart data for periods greater than one day from Wall
+                 * Street Journal. Certain values from WSJ page are needed for
+                 * the URL of the WSJ database of historical prices. */
                 final Element contentFrame = individualDoc.selectFirst(
                         ":root > body > div.pageFrame > div.contentFrame");
                 final Element module2 = contentFrame.selectFirst(
@@ -1514,8 +1455,9 @@ public final class IndividualStockActivity
                         ":root > input#quote_type").ownText();
 
                 final LocalDate today = LocalDate.now();
-                /* Deduct extra two weeks because it doesn't hurt and ensures that the URL we create
-                 * doesn't incorrectly believe that there isn't enough data for the five year chart. */
+                /* Deduct extra two weeks because it doesn't hurt and ensures
+                 * that the URL we create doesn't incorrectly believe that there
+                 * isn't enough data for the five year chart. */
                 final LocalDate fiveYearsAgo = today.minusYears(5).minusWeeks(2);
                 final int period_5years = (int) ChronoUnit.DAYS.between(fiveYearsAgo, today);
 
@@ -1525,13 +1467,15 @@ public final class IndividualStockActivity
                 final String wsj_5yearsAgoDateStr = String.format(Locale.US, "%d/%d/%d",
                         fiveYearsAgo.getMonthValue(), fiveYearsAgo.getDayOfMonth(), fiveYearsAgo.getYear());
 
-                /* If the WSJ URL parameters (ie. start date) request data from dates that
-                 * are prior to a stock's existence, then the WSJ response delivers all
-                 * historical data available for the stock. Because five years is the largest
-                 * chart period we are using, data for the smaller periods can be grabbed
-                 * from the five year WSJ response page. The actual number of data points
-                 * that exists for a stock can be determined by parsing the WSJ response and
-                 * counting the number of certain elements (ie. table rows). */
+                /* If the WSJ URL parameters (ie. start date) request data from
+                 * dates that are prior to a stock's existence, then the WSJ
+                 * response delivers all historical data available for the
+                 * stock. Because five years is the largest chart period we are
+                 * using, data for the smaller periods can be grabbed from the
+                 * five year WSJ response page. The actual number of data points
+                 * that exists for a stock can be determined by parsing the WSJ
+                 * response and counting the number of certain elements (ie.
+                 * table rows). */
                 final String wsj_url_5years = String.format(Locale.US,
                         "https://quotes.wsj.com/ajax/historicalprices/4/%s?MOD_VIEW=page" +
                                 "&ticker=%s&country=%s&exchange=%s&instrumentType=%s&num_rows=%d" +
@@ -1555,95 +1499,154 @@ public final class IndividualStockActivity
                 }
 
                 if (fiveYearDoc != null) {
-                    final List<Double> chartPrices_5years = new ArrayList<>();
-                    final List<Double> chartPrices_1year = new ArrayList<>();
-                    final List<Double> chartPrices_3months = new ArrayList<>();
-                    final List<Double> chartPrices_1month = new ArrayList<>();
-                    final List<Double> chartPrices_2weeks = new ArrayList<>();
-                    final List<List<Double>> chartPricesList = new ArrayList<>(Arrays.asList(
-                            chartPrices_5years, chartPrices_1year, chartPrices_3months,
-                            chartPrices_1month, chartPrices_2weeks));
-                    final List<String> chartDates_5years = new ArrayList<>();
-                    final List<String> chartDates_1year = new ArrayList<>();
-                    final List<String> chartDates_3months = new ArrayList<>();
-                    final List<String> chartDates_1month = new ArrayList<>();
-                    final List<String> chartDates_2weeks = new ArrayList<>();
-                    final List<List<String>> chartDatesList = new ArrayList<>(Arrays.asList(
-                            chartDates_5years, chartDates_1year, chartDates_3months,
-                            chartDates_1month, chartDates_2weeks));
+                    final ArrayList<Double> prices_5years = new ArrayList<>();
+                    final ArrayList<Double> prices_1year = new ArrayList<>();
+                    final ArrayList<Double> prices_3months = new ArrayList<>();
+                    final ArrayList<Double> prices_1month = new ArrayList<>();
+                    final ArrayList<Double> prices_2weeks = new ArrayList<>();
+                    final ArrayList<ArrayList<Double>> pricesList =
+                            new ArrayList<>(Arrays.asList(
+                                    prices_5years, prices_1year, prices_3months,
+                                    prices_1month, prices_2weeks));
+                    final ArrayList<String> dates_5years = new ArrayList<>();
+                    final ArrayList<String> dates_1year = new ArrayList<>();
+                    final ArrayList<String> dates_3months = new ArrayList<>();
+                    final ArrayList<String> dates_1month = new ArrayList<>();
+                    final ArrayList<String> dates_2weeks = new ArrayList<>();
+                    final List<ArrayList<String>> datesList =
+                            new ArrayList<>(Arrays.asList(
+                                    dates_5years, dates_1year, dates_3months,
+                                    dates_1month, dates_2weeks));
 
-                    int reverseNdx, periodNdx, i;
+                    int i, reverseNdx, count;
 
-                    /* This is the number of data points needed for each period. The
-                     * stock market is only open on weekdays, and there are 9
-                     * holidays that the stock market closes for. So the stock
-                     * market is open for ~252 days a year. Use this value to
-                     * approximate the number of data points that should be in each
-                     * period. */
-                    final int[] SIZES = {1260, 252, 63, 21, 10};
-                    /* Don't get too many data points for long chart periods because
-                     * it takes too long and is unnecessary. These increments mean
-                     * that for chartPrices for periods greater than 1 day, the list
-                     * will either be empty (not enough data), or have a constant
-                     * size. The non-empty sizes are: [5 year]=140, [1 year]=126,
-                     * [3 month]=63, [1 month]=21, [2 weeks]=10. */
-                    final int[] INCREMENTS = {9, 2, 1, 1, 1};
+                    /* This is the number of data points - if incrementing by
+                     * 1 - needed for each period. The stock market is only open
+                     * on weekdays, and there are 9 holidays that the stock
+                     * market closes for. So the stock market is open for ~252
+                     * days a year. Use this value to approximate the number of
+                     * data points that should be in each period. */
+                    final int[] nonAdjustedSizes = {1260, 252, 63, 21, 10};
+
+                    /* Don't get too many data points for long chart periods
+                     * because it is unnecessary and looks bad. These are the
+                     * increments that should be used to iterate through (and
+                     * add) data points for each period. */
+                    final int[] increments = {9, 2, 1, 1, 1};
+
+                    /* adjustedSizes[i] = nonAdjustedSizes[i] / increments[i].
+                     * This is the actual number of data points that each chart
+                     * will have. These values are constant, which implies that
+                     * the size of each chart is constant, regardless of other
+                     * factors, such as NUM_DATA_PTS. */
+                    final int[] adjustedSizes = {140, 126, 63, 21, 10};
+
+                    for (i = 0; i < pricesList.size(); i++) {
+                        pricesList.get(i).ensureCapacity(adjustedSizes[i]);
+                        datesList.get(i).ensureCapacity(adjustedSizes[i]);
+                    }
 
                     final Elements rowElmnts = fiveYearDoc.select(
                             ":root > body > div > div#historical_data_table > " +
                                     "div > table > tbody > tr");
-                    final int NUM_DATA_POINTS = rowElmnts.size() <= 1260 ? rowElmnts.size() : 1260;
-                    final double[] allChartPrices = new double[NUM_DATA_POINTS];
-                    final String[] allChartDates = new String[NUM_DATA_POINTS];
+                    /* This is the number of data points that actually exist for
+                     * the Stock represented in this Activity. This number is
+                     * capped at 1260, which is the unadjusted number of data
+                     * points for the 5 year chart. */
+                    final int numActualPts = rowElmnts.size() <= 1260 ? rowElmnts.size() : 1260;
 
-                    /* The most recent prices are at the top of the WSJ page (top of
-                     * the HTML table), and the oldest prices are at the bottom.
-                     * Fill allChartPrices starting with the last price elements so
-                     * that the oldest prices are the front of allPrices and the
-                     * recent prices are at the end. Do the same for allChartTimes. */
-                    for (i = 0, reverseNdx = NUM_DATA_POINTS - 1; reverseNdx >= 0; i++, reverseNdx--) {
-                        /* Charts use the closing price of each day. The closing
-                         * price is the 5th column in each row. The date is the 1st
-                         * column in each row. */
-                        allChartPrices[i] = parseDouble(rowElmnts.get(reverseNdx).selectFirst(
+                    final double[] allPrices = new double[numActualPts];
+                    final String[] allDates = new String[numActualPts];
+                    /* The most recent prices are at the top of the WSJ page
+                     * (top of the HTML table), and the oldest prices are at the
+                     * bottom. Fill allPrices starting with the last price
+                     * elements so that the oldest prices are the front of
+                     * allPrices and the recent prices are at the end. Do the
+                     * same for allDates. */
+                    for (i = 0, reverseNdx = numActualPts - 1; reverseNdx >= 0; i++, reverseNdx--) {
+                        /* Charts use the closing price of each day. The closing price is the 5th
+                         * column in each row. The date is the 1st column in each row. */
+                        allPrices[i] = parseDouble(rowElmnts.get(reverseNdx).selectFirst(
                                 ":root > :eq(4)").ownText());
-                        allChartDates[i] = rowElmnts.get(reverseNdx).selectFirst(
+                        allDates[i] = rowElmnts.get(reverseNdx).selectFirst(
                                 ":root > :eq(0)").ownText();
                     }
 
-                    /* Fill chartPrices and chartDates for each period. If there is
-                     * not enough data to represent a full period, then leave that
-                     * period's chartPrices and chartDates empty. */
-                    List<Double> curChartPrices;
-                    List<String> curChartDates;
-                    for (periodNdx = 0; periodNdx < chartPricesList.size(); periodNdx++) {
-                        if (SIZES[periodNdx] <= NUM_DATA_POINTS) {
-                            // If there are enough data points to fill this period
+                    if (allPrices.length != 0) {
+                        final double IPO_PRICE = allPrices[0];
+                        /* Fill chartPrices and chartDates for each period. If
+                         * there is not enough data to represent a full period,
+                         * add padding values to the front of the data. Pad the
+                         * chart with price being the first price of all the
+                         * prices available, and date being "Before IPO". */
+                        List<Double> curChartPrices;
+                        List<String> curChartDates;
+                        for (int periodNdx = 0; periodNdx < pricesList.size(); periodNdx++) {
+                            curChartPrices = pricesList.get(periodNdx);
+                            curChartDates = datesList.get(periodNdx);
 
-                            curChartPrices = chartPricesList.get(periodNdx);
-                            curChartDates = chartDatesList.get(periodNdx);
-                            for (reverseNdx = NUM_DATA_POINTS - SIZES[periodNdx];
-                                 reverseNdx < NUM_DATA_POINTS;
-                                 reverseNdx += INCREMENTS[periodNdx]) {
-                                curChartPrices.add(allChartPrices[reverseNdx]);
-                                curChartDates.add(allChartDates[reverseNdx]);
+                            if (nonAdjustedSizes[periodNdx] <= numActualPts) {
+                                // If there are enough data points to fill this period
+
+                                i = numActualPts - nonAdjustedSizes[periodNdx];
+                                /* Let n = INCREMENTS[periodNdx]. If n > 1, all the data in
+                                 * allPrices and allDates is divided into sections of n,
+                                 * and from each section, one data point is taken. Initialize i to
+                                 * be the last index of the first section. For example, if n equals
+                                 * 9, initialize i to be 8. The purpose of this is that after
+                                 * iterating through the sections, the last data point will always
+                                 * be the most recent data point available. */
+                                if (increments[periodNdx] > 1) {
+                                    i += increments[periodNdx] - 1;
+                                }
+                                for (count = 1;
+                                     count <= adjustedSizes[periodNdx];
+                                     count++, i += increments[periodNdx]) {
+                                    curChartPrices.add(allPrices[i]);
+                                    curChartDates.add(allDates[i]);
+                                }
+                            } else {
+                                // There are not enough data points to fill this period
+
+                                /* If numAdjActualPts < increments[periodNdx], numAdjActualPts = 0.
+                                 * This means that there will be no actual data in this chart. All
+                                 * the data in the chart will be the padding data. */
+                                final int numAdjActualPts = numActualPts / increments[periodNdx];
+                                final int numAdjMissingPts = adjustedSizes[periodNdx] - numAdjActualPts;
+
+                                // Pad the front of the data to fill the missing data points
+                                for (count = 1; count <= numAdjMissingPts; count++) {
+                                    curChartPrices.add(IPO_PRICE);
+                                    curChartDates.add("Before IPO");
+                                }
+
+                                /* Initialize i so that after iterating through allPrices and
+                                 * allDates (using the increment of the current period), the last
+                                 * price and date will always be the most recent data point
+                                 * available. */
+                                i = numActualPts - ((numAdjActualPts - 1) * increments[periodNdx]) - 1;
+                                // Add the actual data points
+                                for (count = 1; count <= numAdjActualPts; count++, i += increments[periodNdx]) {
+                                    curChartPrices.add(allPrices[i]);
+                                    curChartDates.add(allDates[i]);
+                                }
                             }
-                        } else {
-                            missingChartPeriods.add(BIG_CHART_PERIODS[periodNdx]);
                         }
-                    }
 
-                    // Update stock's charts for the "big" ChartPeriods
-                    stock.setPrices_2weeks(chartPrices_2weeks);
-                    stock.setPrices_1month(chartPrices_1month);
-                    stock.setPrices_3months(chartPrices_3months);
-                    stock.setPrices_1year(chartPrices_1year);
-                    stock.setPrices_5years(chartPrices_5years);
-                    stock.setDates_2weeks(chartDates_2weeks);
-                    stock.setDates_1month(chartDates_1month);
-                    stock.setDates_3months(chartDates_3months);
-                    stock.setDates_1year(chartDates_1year);
-                    stock.setDates_5years(chartDates_5years);
+                        // Update stock's charts for the "big" ChartPeriods
+                        stock.setPrices_2weeks(prices_2weeks);
+                        stock.setPrices_1month(prices_1month);
+                        stock.setPrices_3months(prices_3months);
+                        stock.setPrices_1year(prices_1year);
+                        stock.setPrices_5years(prices_5years);
+                        stock.setDates_2weeks(dates_2weeks);
+                        stock.setDates_1month(dates_1month);
+                        stock.setDates_3months(dates_3months);
+                        stock.setDates_1year(dates_1year);
+                        stock.setDates_5years(dates_5years);
+                    } else {
+                        missingChartPeriods.addAll(Arrays.asList(BIG_CHART_PERIODS));
+                    }
                 }
             }
 

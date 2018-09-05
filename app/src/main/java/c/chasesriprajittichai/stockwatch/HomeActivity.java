@@ -669,14 +669,12 @@ public final class HomeActivity
                 final boolean isValidTicker = ticker.matches("[0-9A-Z.]{1,6}");
 
                 if (isValidTicker) {
+                    /* Prevent spamming of submit button. This collapses the
+                     * keyboard. This works better than setSubmitButtonEnabled. */
+                    searchView.clearFocus();
+
                     FindStockTask task = new FindStockTask(ticker, HomeActivity.this);
                     task.execute();
-
-                    /* Prevent spamming of submit button. This also prevents
-                     * multiple FindStockTasks from being executed at the same
-                     * time. Similar effect as disabling the SearchView submit
-                     * button. */
-                    searchView.clearFocus();
                 } else {
                     Toast.makeText(HomeActivity.this,
                             ticker + " is an invalid symbol", Toast.LENGTH_SHORT).show();
