@@ -4,6 +4,13 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!--Restrict app to phones only-->
+    <supports-screens
+        android:largeScreens="false"
+        android:normalScreens="true"
+        android:smallScreens="true"
+        android:xlargeScreens="false" />
+
     <!--
     Allowing clear text traffic applies to what links can be opened in
     WebViewActivity.

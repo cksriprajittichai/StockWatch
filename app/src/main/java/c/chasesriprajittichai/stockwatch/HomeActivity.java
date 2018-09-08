@@ -605,10 +605,14 @@ public final class HomeActivity
      *                      of 10 that contains the updated Stocks
      */
     @Override
-    public void onResponse(final ConcreteStockWithEhValsList updatedStocks) {
+    public synchronized void onResponse(final ConcreteStockWithEhValsList updatedStocks) {
         for (final Stock s : updatedStocks) {
-            if (!rvAdapter.isSwipingOrDragging() && tickerToIndexMap.containsKey(s.getTicker())) {
-                rvAdapter.notifyItemChanged(tickerToIndexMap.get(s.getTicker()));
+            if (!rvAdapter.isSwipingOrDragging()) {
+                if (tickerToIndexMap.containsKey(s.getTicker())) {
+                    rvAdapter.notifyItemChanged(tickerToIndexMap.get(s.getTicker()));
+                } else {
+                    updateTickerToIndexMap();
+                }
             }
         }
     }
