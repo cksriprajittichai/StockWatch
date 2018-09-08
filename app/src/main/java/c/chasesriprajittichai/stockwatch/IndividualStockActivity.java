@@ -63,12 +63,12 @@ import c.chasesriprajittichai.stockwatch.recyclerviews.NewsRecyclerDivider;
 import c.chasesriprajittichai.stockwatch.stocks.AdvancedStock;
 import c.chasesriprajittichai.stockwatch.stocks.AdvancedStock.ChartPeriod;
 import c.chasesriprajittichai.stockwatch.stocks.ConcreteAdvancedStock;
-import c.chasesriprajittichai.stockwatch.stocks.ConcreteAdvancedStockWithAhVals;
+import c.chasesriprajittichai.stockwatch.stocks.ConcreteAdvancedStockWithEhVals;
 import c.chasesriprajittichai.stockwatch.stocks.ConcreteStock;
-import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhVals;
+import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithEhVals;
 import c.chasesriprajittichai.stockwatch.stocks.Stock;
 import c.chasesriprajittichai.stockwatch.stocks.StockInHomeActivity;
-import c.chasesriprajittichai.stockwatch.stocks.StockWithAhVals;
+import c.chasesriprajittichai.stockwatch.stocks.StockWithEhVals;
 
 import static c.chasesriprajittichai.stockwatch.stocks.AdvancedStock.Stat;
 import static c.chasesriprajittichai.stockwatch.stocks.Stock.State.AFTER_HOURS;
@@ -96,10 +96,10 @@ public final class IndividualStockActivity
     @BindView(R.id.textView_topChangePoint_individual) TextView top_changePoint;
     @BindView(R.id.textView_topChangePercent_individual) TextView top_changePercent;
     @BindView(R.id.textView_topTime_individual) TextView top_time;
-    @BindView(R.id.linearLayout_topAfterHoursData_individual) LinearLayout ah_linearLayout;
-    @BindView(R.id.textView_topAfterHoursChangePoint_individual) TextView top_ah_changePoint;
-    @BindView(R.id.textView_topAfterHoursChangePercent_individual) TextView top_ah_changePercent;
-    @BindView(R.id.textView_topAfterHoursTime_individual) TextView top_ah_time;
+    @BindView(R.id.linearLayout_topExtraHoursData_individual) LinearLayout top_eh_linearLayout;
+    @BindView(R.id.textView_topExtraHoursChangePoint_individual) TextView top_eh_changePoint;
+    @BindView(R.id.textView_topExtraHoursChangePercent_individual) TextView top_eh_changePercent;
+    @BindView(R.id.textView_topExtraHoursTime_individual) TextView top_eh_time;
     @BindView(R.id.progressBar_loadingCharts) ProgressBar loadingChartsProgressBar;
     @BindView(R.id.textView_chartsStatus) TextView chartsStatus;
     @BindView(R.id.sparkView) CustomSparkView sparkView;
@@ -527,37 +527,41 @@ public final class IndividualStockActivity
             changePoint = stock.getChangePoint();
             changePercent = stock.getChangePercent();
 
-            /* Init TextViews for after hours data in ah_linearLayout and init
-             * their visibility. */
-            if (stock instanceof StockWithAhVals) {
-                top_ah_time.setText(getString(R.string.afterHours));
+            /* Init TextViews for extra hours data in top_eh_linearLayout and
+             * init their visibility. */
+            if (stock instanceof StockWithEhVals) {
+                if (stock.getState() == AFTER_HOURS) {
+                    top_eh_time.setText(getString(R.string.afterHours));
+                } else {
+                    top_eh_time.setText(getString(R.string.premarket));
+                }
 
                 if (stock.getLiveChangePoint() < 0) {
                     // '-' is already part of the number
-                    top_ah_changePoint.setText(getString(
+                    top_eh_changePoint.setText(getString(
                             R.string.double2dec,
                             stock.getLiveChangePoint()));
-                    top_ah_changePercent.setText(getString(
+                    top_eh_changePercent.setText(getString(
                             R.string.openParen_double2dec_percent_closeParen,
                             stock.getLiveChangePercent()));
                 } else {
-                    top_ah_changePoint.setText(getString(
+                    top_eh_changePoint.setText(getString(
                             R.string.plus_double2dec,
                             stock.getLiveChangePoint()));
-                    top_ah_changePercent.setText(getString(
+                    top_eh_changePercent.setText(getString(
                             R.string.openParen_plus_double2dec_percent_closeParen,
                             stock.getLiveChangePercent()));
                 }
-                ah_linearLayout.setVisibility(View.VISIBLE);
+                top_eh_linearLayout.setVisibility(View.VISIBLE);
             } else {
-                ah_linearLayout.setVisibility(View.INVISIBLE);
+                top_eh_linearLayout.setVisibility(View.INVISIBLE);
             }
         } else {
-            ah_linearLayout.setVisibility(View.INVISIBLE);
+            top_eh_linearLayout.setVisibility(View.INVISIBLE);
 
             final double firstPriceOfPeriod = sparkViewAdapter.getPrice(0);
 
-            /* If stock instanceof StockWithAhVals, change values are
+            /* If stock instanceof StockWithEhVals, change values are
              * comparisons between live values and the first price of the
              * current ChartPeriod. */
             changePoint = stock.getLivePrice() - firstPriceOfPeriod;
@@ -587,14 +591,14 @@ public final class IndividualStockActivity
      * If the selected ChartPeriod is {@link ChartPeriod#ONE_DAY}, this method
      * calculates the time of day that corresponds to the scrubbing index, and
      * displays it in {@link #top_time}. If the top time value is 4:00pm or
-     * later, {@link #ah_linearLayout} is set to {@link View#VISIBLE}, and the
-     * top after hours Views display {@link #stock}'s after hours values.
+     * later, {@link #top_eh_linearLayout} is set to {@link View#VISIBLE}, and
+     * the top extra hours Views display {@link #stock}'s extra hours values.
      * Additionally, if the scrubbing index represents a time value of 4:00pm or
      * later, the shown change values reset to be relative to stock's price at
      * close. This differs from if the scrubbing index does not represent an
-     * after hours time, and the change values are relative to the stock's price
+     * extra hours time, and the change values are relative to the stock's price
      * at open. This functionality is unique for when the selected ChartPeriod
-     * is ONE_DAY. This is the only ChartPeriod where ah_linearLayout is used
+     * is ONE_DAY. This is the only ChartPeriod where top_eh_linearLayout is used
      * and VISIBLE, and the only ChartPeriod where the change values can be
      * relative to different prices depending on the scrubbing index.
      * <p>
@@ -626,19 +630,19 @@ public final class IndividualStockActivity
              * range of the chart, the change values should change so that they
              * are relative to the price at close. */
             if (index >= 78) {
-                /* Because stock instanceof StockWithAhVals,
+                /* Because stock instanceof StockWithEhVals,
                  * stock.getPrice() returns the price at close. */
                 firstPriceOfSection = stock.getPrice();
 
-                // "Hide" after hours change data, only show "After-Hours"
-                top_ah_changePoint.setText("");
-                top_ah_changePercent.setText("");
-                top_ah_time.setText(getString(R.string.afterHours));
-                ah_linearLayout.setVisibility(View.VISIBLE);
+                // "Hide" extra hours change data, only show "After-Hours"
+                top_eh_changePoint.setText("");
+                top_eh_changePercent.setText("");
+                top_eh_time.setText(getString(R.string.afterHours));
+                top_eh_linearLayout.setVisibility(View.VISIBLE);
             } else {
                 firstPriceOfSection = sparkViewAdapter.getPrice(0);
 
-                ah_linearLayout.setVisibility(View.INVISIBLE);
+                top_eh_linearLayout.setVisibility(View.INVISIBLE);
             }
 
             /* There are 78 data points representing the open hours data
@@ -735,9 +739,9 @@ public final class IndividualStockActivity
      * <ul>
      * <li>{@link ConcreteStock} is represented:
      * ticker, name, state, price, change point, and change percent are passed
-     * <li>{@link ConcreteStockWithAhVals} is represented:
-     * ticker, name, state, price, change point, change percent, after hours
-     * price, after hours change point, and after hours change percent are
+     * <li>{@link ConcreteStockWithEhVals} is represented:
+     * ticker, name, state, price, change point, change percent, extra hours
+     * price, extra hours change point, and extra hours change percent are
      * passed
      * </ul>
      */
@@ -758,14 +762,14 @@ public final class IndividualStockActivity
         changePercent = parseDouble(data[3]);
 
         if (state == AFTER_HOURS || state == PREMARKET) {
-            final double ahPrice, ahChangePoint, ahChangePercent;
-            ahPrice = parseDouble(data[4]);
-            ahChangePoint = parseDouble(data[5]);
-            ahChangePercent = parseDouble(data[6]);
+            final double ehPrice, ehChangePoint, ehChangePercent;
+            ehPrice = parseDouble(data[4]);
+            ehChangePoint = parseDouble(data[5]);
+            ehChangePercent = parseDouble(data[6]);
 
-            stock = new ConcreteAdvancedStockWithAhVals(state, ticker, name,
+            stock = new ConcreteAdvancedStockWithEhVals(state, ticker, name,
                     price, changePoint, changePercent,
-                    ahPrice, ahChangePoint, ahChangePercent);
+                    ehPrice, ehChangePoint, ehChangePercent);
         } else {
             stock = new ConcreteAdvancedStock(state, ticker, name,
                     price, changePoint, changePercent);
@@ -958,8 +962,8 @@ public final class IndividualStockActivity
                 prefs.edit().putString("Stock Added Ticker", stock.getTicker()).apply();
                 prefs.edit().putString("Stock Added Name", stock.getName()).apply();
                 final String dataStr;
-                if (stock instanceof StockWithAhVals) {
-                    dataStr = TextUtils.join("\t", new ConcreteStockWithAhVals(stock)
+                if (stock instanceof StockWithEhVals) {
+                    dataStr = TextUtils.join("\t", new ConcreteStockWithEhVals(stock)
                             .getDataAsArray());
                 } else {
                     dataStr = TextUtils.join("\t", new ConcreteStock(stock)
@@ -1046,11 +1050,11 @@ public final class IndividualStockActivity
      * Adds values from {@link #stock} to preferences: adds stock's ticker to
      * Tickers TSV, stock's name to Names TSV, and stock's data to Data TSV.
      * There are seven data values added in this order: state, price, change
-     * point, change percent, after hours price, after hours change point, and
-     * after hours change percent. These seven data values are added to Data TSV
-     * regardless of whether or not stock has after hours values. If stock does
-     * not have after hours values (is not instanceof {@link StockWithAhVals}),
-     * then 0s are added in place of the three after hours values. stock's
+     * point, change percent, extra hours price, extra hours change point, and
+     * extra hours change percent. These seven data values are added to Data TSV
+     * regardless of whether or not stock has extra hours values. If stock does
+     * not have extra hours values (is not instanceof {@link StockWithEhVals}),
+     * then 0s are added in place of the three extra hours values. stock's
      * ticker, name, and data values are added to the front of each preference
      * string, meaning that the stock is inserted at the top of the list of
      * stocks that are represented in prefs. This method does not check if
@@ -1068,16 +1072,16 @@ public final class IndividualStockActivity
         final String dataTSV = prefs.getString("Data TSV", "");
 
         final String dataStr;
-        if (stock instanceof StockWithAhVals) {
-            final StockWithAhVals ahStock = (StockWithAhVals) stock;
+        if (stock instanceof StockWithEhVals) {
+            final StockWithEhVals ehStock = (StockWithEhVals) stock;
             dataStr = String.format(Locale.US, "%s\t%f\t%f\t%f\t%f\t%f\t%f",
-                    ahStock.getState().toString(),
-                    ahStock.getPrice(),
-                    ahStock.getChangePoint(),
-                    ahStock.getChangePercent(),
-                    ahStock.getAfterHoursPrice(),
-                    ahStock.getAfterHoursChangePoint(),
-                    ahStock.getAfterHoursChangePercent());
+                    ehStock.getState().toString(),
+                    ehStock.getPrice(),
+                    ehStock.getChangePoint(),
+                    ehStock.getChangePercent(),
+                    ehStock.getExtraHoursPrice(),
+                    ehStock.getExtraHoursChangePoint(),
+                    ehStock.getExtraHoursChangePercent());
         } else {
             dataStr = String.format(Locale.US, "%s\t%f\t%f\t%f\t%d\t%d\t%d",
                     stock.getState().toString(),
@@ -1213,13 +1217,30 @@ public final class IndividualStockActivity
     /**
      * This method sets {@link #top_time} to show the display name of the passed
      * in {@link ChartPeriod}.
+     * <p>
+     * The ChartPeriod, {@link ChartPeriod#ONE_DAY}, has multiple display names
+     * corresponding to the selected chart (value of {@link
+     * SparkViewAdapter#getChartPeriod()} for {@link #sparkViewAdapter}).
      *
      * @param chartPeriod The ChartPeriod whose display name should be shown
      */
     private void setScrubTime(@NonNull final ChartPeriod chartPeriod) {
         switch (chartPeriod) {
             case ONE_DAY:
-                top_time.setText(getString(R.string.today));
+                int strId = 0;
+                switch (stock.getState()) {
+                    case PREMARKET:
+                        strId = R.string.prevClose;
+                        break;
+                    case OPEN:
+                        strId = R.string.today;
+                        break;
+                    case AFTER_HOURS:
+                    case CLOSED:
+                        strId = R.string.atClose;
+                        break;
+                }
+                top_time.setText(getString(strId));
                 break;
             case TWO_WEEKS:
                 top_time.setText(getString(R.string.pastTwoWeeks));
@@ -1238,7 +1259,6 @@ public final class IndividualStockActivity
                 break;
         }
     }
-
 
     /**
      * An AsyncTask that updates {@link AdvancedStock} through setter methods
@@ -1779,34 +1799,34 @@ public final class IndividualStockActivity
 
 
                 final Element subData = mainData.nextElementSibling();
-                boolean stockHasAhVals = subData.className().endsWith("info_sub");
+                final boolean stockHasExtraVals = subData.className().endsWith("info_sub");
 
                 final Stock.State state;
                 final String stateStr;
-                if (stockHasAhVals) {
+                if (stockHasExtraVals) {
                     // Ensure stock is the correct type
-                    if (!(stock instanceof StockWithAhVals)) {
-                        stock = new ConcreteAdvancedStockWithAhVals(stock);
+                    if (!(stock instanceof StockWithEhVals)) {
+                        stock = new ConcreteAdvancedStockWithEhVals(stock);
                     }
 
-                    final double ahPrice, ahChangePoint, ahChangePercent;
+                    final double ehPrice, ehChangePoint, ehChangePercent;
                     // Remove ',' or '%' that could be in strings
-                    ahPrice = parseDouble(subData.selectFirst(
+                    ehPrice = parseDouble(subData.selectFirst(
                             "span#ms_quote_val").ownText().replaceAll("[^0-9.]+", ""));
-                    final Elements ah_diffs = subData.select(
+                    final Elements eh_diffs = subData.select(
                             "span[id] > span");
-                    ahChangePoint = parseDouble(ah_diffs.get(0).ownText().replaceAll("[^0-9.-]+", ""));
-                    ahChangePercent = parseDouble(ah_diffs.get(1).ownText().replaceAll("[^0-9.-]+", ""));
-                    final StockWithAhVals ahStock = (StockWithAhVals) stock;
-                    ahStock.setAfterHoursPrice(ahPrice);
-                    ahStock.setAfterHoursChangePoint(ahChangePoint);
-                    ahStock.setAfterHoursChangePercent(ahChangePercent);
+                    ehChangePoint = parseDouble(eh_diffs.get(0).ownText().replaceAll("[^0-9.-]+", ""));
+                    ehChangePercent = parseDouble(eh_diffs.get(1).ownText().replaceAll("[^0-9.-]+", ""));
+                    final StockWithEhVals ehStock = (StockWithEhVals) stock;
+                    ehStock.setExtraHoursPrice(ehPrice);
+                    ehStock.setExtraHoursChangePoint(ehChangePoint);
+                    ehStock.setExtraHoursChangePercent(ehChangePercent);
 
                     stateStr = subData.selectFirst("span").ownText();
                     state = stateStr.equals("AFTER HOURS") ? AFTER_HOURS : PREMARKET;
                 } else {
                     // Ensure stock is the correct type
-                    if (stock instanceof StockWithAhVals) {
+                    if (stock instanceof StockWithEhVals) {
                         stock = new ConcreteAdvancedStock(stock);
                     }
 

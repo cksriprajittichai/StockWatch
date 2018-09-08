@@ -6,9 +6,9 @@ import java.util.List;
 import c.chasesriprajittichai.stockwatch.IndividualStockActivity;
 
 
-public final class ConcreteAdvancedStockWithAhVals
-        extends ConcreteStockWithAhVals
-        implements AdvancedStock, StockWithAhVals {
+public final class ConcreteAdvancedStockWithEhVals
+        extends ConcreteStockWithEhVals
+        implements AdvancedStock, StockWithEhVals {
 
     private double prevClose;
     private double open;
@@ -36,25 +36,25 @@ public final class ConcreteAdvancedStockWithAhVals
     private List<String> dates_5years;
 
 
-    public ConcreteAdvancedStockWithAhVals(final State state, final String ticker,
+    public ConcreteAdvancedStockWithEhVals(final State state, final String ticker,
                                            final String name, final double price,
                                            final double changePoint,
                                            final double changePercent,
-                                           final double afterHoursPrice,
-                                           final double afterHoursChangePoint,
-                                           final double afterHoursChangePercent) {
+                                           final double extraHoursPrice,
+                                           final double extraHoursChangePoint,
+                                           final double extraHoursChangePercent) {
         super(state, ticker, name, price, changePoint, changePercent,
-                afterHoursPrice, afterHoursChangePoint, afterHoursChangePercent);
+                extraHoursPrice, extraHoursChangePoint, extraHoursChangePercent);
     }
 
     /**
      * Copy constructor. Used in {@link IndividualStockActivity} to convert
      * {@link IndividualStockActivity#stock} - which was a {@link
-     * ConcreteAdvancedStock} - into a ConcreteAdvancedStockWithAhVals.
+     * ConcreteAdvancedStock} - into a ConcreteAdvancedStockWithEhVals.
      *
      * @param stock The AdvancedStock to copy
      */
-    public ConcreteAdvancedStockWithAhVals(final AdvancedStock stock) {
+    public ConcreteAdvancedStockWithEhVals(final AdvancedStock stock) {
         super(stock);
         prevClose = stock.getPrevClose();
         open = stock.getOpen();

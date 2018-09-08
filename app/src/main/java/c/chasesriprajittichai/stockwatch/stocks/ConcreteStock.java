@@ -5,7 +5,7 @@ import c.chasesriprajittichai.stockwatch.HomeActivity;
 
 /**
  * Information about why this class is not used in {@link HomeActivity#rv} can
- * be found at {@link ConcreteStockWithAhVals}.
+ * be found at {@link ConcreteStockWithEhVals}.
  */
 public class ConcreteStock implements Stock, StockInHomeActivity {
 
@@ -66,7 +66,13 @@ public class ConcreteStock implements Stock, StockInHomeActivity {
     }
 
     /**
-     * @return The change percent during the open trading hours
+     * @return The sum of the change percent from the premarket hours, the open
+     * hours, and the after hours of the live or most recent trading day.
+     * <p>
+     * This class only represents Stocks that are not instanceof {@link
+     * StockWithEhVals}, so the sum of the change percent from the premarket
+     * hours, the open hours, and the after hours is equal to the change
+     * percent from the open hours.
      */
     @Override
     public double getNetChangePercent() {

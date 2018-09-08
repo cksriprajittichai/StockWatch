@@ -14,8 +14,8 @@ import java.util.Locale;
 
 import c.chasesriprajittichai.stockwatch.HomeActivity;
 import c.chasesriprajittichai.stockwatch.R;
-import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhVals;
-import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhValsList;
+import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithEhVals;
+import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithEhValsList;
 import c.chasesriprajittichai.stockwatch.stocks.Stock;
 
 
@@ -24,10 +24,10 @@ public final class StockRecyclerAdapter extends RecyclerView.Adapter<StockRecycl
 
     /**
      * A {@link RecyclerView.ViewHolder} that will represent the information of
-     * a {@link ConcreteStockWithAhVals}.
+     * a {@link ConcreteStockWithEhVals}.
      * <p>
-     * To understand why only ConcreteStockWithAhVals are shown, look at {@link
-     * ConcreteStockWithAhVals}.
+     * To understand why only ConcreteStockWithEhVals are shown, look at {@link
+     * ConcreteStockWithEhVals}.
      */
     class StockViewHolder extends RecyclerView.ViewHolder {
 
@@ -45,7 +45,7 @@ public final class StockRecyclerAdapter extends RecyclerView.Adapter<StockRecycl
             changePercent = v.findViewById(R.id.textView_changePercent_stockRecyclerItem);
         }
 
-        void bind(final ConcreteStockWithAhVals stock, final OnItemClickListener listener) {
+        void bind(final ConcreteStockWithEhVals stock, final OnItemClickListener listener) {
             if (stock.getState() == Stock.State.AFTER_HOURS) {
                 // After hours state is the only state with an unwanted character in the enum name
                 state.setText(String.format(Locale.US, "%s", "AFTER HOURS"));
@@ -73,13 +73,13 @@ public final class StockRecyclerAdapter extends RecyclerView.Adapter<StockRecycl
 
 
     /**
-     * The list of {@link ConcreteStockWithAhVals} to be shown in {@link
+     * The list of {@link ConcreteStockWithEhVals} to be shown in {@link
      * HomeActivity#rv}
      * <p>
-     * To understand why only ConcreteStockWithAhVals are shown, look at {@link
-     * ConcreteStockWithAhVals}.
+     * To understand why only ConcreteStockWithEhVals are shown, look at {@link
+     * ConcreteStockWithEhVals}.
      */
-    private final ConcreteStockWithAhValsList stocks;
+    private final ConcreteStockWithEhValsList stocks;
 
     private final OnItemClickListener onItemClickListener;
 
@@ -91,11 +91,11 @@ public final class StockRecyclerAdapter extends RecyclerView.Adapter<StockRecycl
      * their finger off the screen). HomeActivity avoids this by checking if a
      * cell is swiping or dragging before updating rv.
      *
-     * @see HomeActivity#onResponse(ConcreteStockWithAhValsList)
+     * @see HomeActivity#onResponse(ConcreteStockWithEhValsList)
      */
     private boolean isSwipingOrDragging;
 
-    public StockRecyclerAdapter(final ConcreteStockWithAhValsList stocks, final OnItemClickListener listener) {
+    public StockRecyclerAdapter(final ConcreteStockWithEhValsList stocks, final OnItemClickListener listener) {
         this.stocks = stocks;
         onItemClickListener = listener;
         isSwipingOrDragging = false;
@@ -201,7 +201,7 @@ public final class StockRecyclerAdapter extends RecyclerView.Adapter<StockRecycl
 
     public interface OnItemClickListener {
 
-        void onItemClick(final ConcreteStockWithAhVals stock);
+        void onItemClick(final ConcreteStockWithEhVals stock);
 
     }
 

@@ -13,9 +13,9 @@ import org.jsoup.select.Elements;
 
 import java.util.Locale;
 
-import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhValsList;
+import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithEhValsList;
+import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithEhVals;
 import c.chasesriprajittichai.stockwatch.stocks.Stock;
-import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhVals;
 
 import static c.chasesriprajittichai.stockwatch.stocks.Stock.State.AFTER_HOURS;
 import static c.chasesriprajittichai.stockwatch.stocks.Stock.State.CLOSED;
@@ -27,7 +27,7 @@ import static java.lang.Double.parseDouble;
 /**
  * Modeled after {@link com.android.volley.toolbox.StringRequest}.
  */
-public final class MultiStockRequest extends Request<ConcreteStockWithAhValsList> {
+public final class MultiStockRequest extends Request<ConcreteStockWithEhValsList> {
 
     /**
      * Lock to guard {@link #responseListener} as it is cleared on {@link
@@ -38,59 +38,54 @@ public final class MultiStockRequest extends Request<ConcreteStockWithAhValsList
     /**
      * Guarded by {@link #lock}.
      */
-    private Response.Listener<ConcreteStockWithAhValsList> responseListener;
+    private Response.Listener<ConcreteStockWithEhValsList> responseListener;
 
     /**
-     * This MultiStockRequest's ConcreteStockWithAhVals with a maximum size of
-     * 10. This reference contains the same ConcreteStockWithAhVals that are in
+     * This MultiStockRequest's ConcreteStockWithEhVals with a maximum size of
+     * 10. This reference contains the same ConcreteStockWithEhVals that are in
      * {@link HomeActivity#stocks}. This way, we can update the
-     * ConcreteStockWithAhVals in HomeActivity.
+     * ConcreteStockWithEhVals in HomeActivity.
      */
-    private final ConcreteStockWithAhValsList stocks;
+    private final ConcreteStockWithEhValsList stocks;
 
     /**
      * @param url              The URL of the MarketWatch multiple-stock site to
      *                         get data from
      * @param stocks           The stocks that should be updated
      * @param responseListener Listener to receive the
-     *                         ConcreteStockWithAhValsList response
+     *                         ConcreteStockWithEhValsList response
      * @param errorListener    Error responseListener, or null to ignore errors
      */
-    MultiStockRequest(final String url, final ConcreteStockWithAhValsList stocks,
-                      final Response.Listener<ConcreteStockWithAhValsList> responseListener,
+    MultiStockRequest(final String url, final ConcreteStockWithEhValsList stocks,
+                      final Response.Listener<ConcreteStockWithEhValsList> responseListener,
                       final Response.ErrorListener errorListener) {
         super(Method.GET, url, errorListener);
         this.responseListener = responseListener;
-        this.stocks = new ConcreteStockWithAhValsList(stocks);
+        this.stocks = new ConcreteStockWithEhValsList(stocks);
     }
 
     /**
      * This method parses the HTML response of the MarketWatch multiple-stock
      * website that displays up to 10 stocks. From the response, the fields
      * defined in {@link Stock} are retrieved for each of the stocks represented
-     * in the website/response. Each {@link ConcreteStockWithAhVals} in
+     * in the website/response. Each {@link ConcreteStockWithEhVals} in
      * {@link #stocks} is then updated with the parsed information.
      * <p>
      * This method will be called from a worker thread.
      *
      * @param response Response from the network
-     * @return The parsed {@code Response<ConcreteStockWithAhValsList>}, or null
+     * @return The parsed {@code Response<ConcreteStockWithEhValsList>}, or null
      * in the case of an error
      */
     @Override
-    protected Response<ConcreteStockWithAhValsList> parseNetworkResponse(final NetworkResponse response) {
-        ConcreteStockWithAhVals curStock;
+    protected Response<ConcreteStockWithEhValsList> parseNetworkResponse(final NetworkResponse response) {
+        ConcreteStockWithEhVals curStock;
         Stock.State curState;
         double curPrice, curChangePoint, curChangePercent,
-                curAhPrice, curAhChangePoint, curAhChangePercent;
+                curEhPrice, curEhChangePoint, curEhChangePercent;
         final Elements quoteRoots, live_valueRoots, tickers, states, live_prices,
                 live_changeRoots, live_changePoints, live_changePercents, close_valueRoots,
                 close_prices, close_changeRoots, close_changePoints, close_changePercents;
-
-        /* Prices and changes gathered now are the current values. For example,
-         * if a stock is in the AFTER_HOURS state, then it's price, change
-         * point, and change percent will be the stock's current price, after
-         * hours change point, and after hours change percent. */
 
         final Document doc = Jsoup.parse(new String(response.data));
         quoteRoots = doc.select(
@@ -163,11 +158,11 @@ public final class MultiStockRequest extends Request<ConcreteStockWithAhValsList
                 curChangePercent = parseDouble(
                         close_changePercents.get(i).ownText().replaceAll("[^0-9.-]+", ""));
 
-                curAhPrice = parseDouble(
+                curEhPrice = parseDouble(
                         live_prices.get(i).ownText().replaceAll("[^0-9.]+", ""));
-                curAhChangePoint = parseDouble(
+                curEhChangePoint = parseDouble(
                         live_changePoints.get(i).ownText().replaceAll("[^0-9.-]+", ""));
-                curAhChangePercent = parseDouble(
+                curEhChangePercent = parseDouble(
                         live_changePercents.get(i).ownText().replaceAll("[^0-9.-]+", ""));
             } else {
                 curPrice = parseDouble(
@@ -177,18 +172,18 @@ public final class MultiStockRequest extends Request<ConcreteStockWithAhValsList
                 curChangePercent = parseDouble(
                         live_changePercents.get(i).ownText().replaceAll("[^0-9.-]+", ""));
 
-                // Ensure that after hours values are 0
-                curAhPrice = 0;
-                curAhChangePoint = 0;
-                curAhChangePercent = 0;
+                // Ensure that extra hours values are 0
+                curEhPrice = 0;
+                curEhChangePoint = 0;
+                curEhChangePercent = 0;
             }
 
             curStock.setPrice(curPrice);
             curStock.setChangePoint(curChangePoint);
             curStock.setChangePercent(curChangePercent);
-            curStock.setAfterHoursPrice(curAhPrice);
-            curStock.setAfterHoursChangePoint(curAhChangePoint);
-            curStock.setAfterHoursChangePercent(curAhChangePercent);
+            curStock.setExtraHoursPrice(curEhPrice);
+            curStock.setExtraHoursChangePoint(curEhChangePoint);
+            curStock.setExtraHoursChangePercent(curEhChangePercent);
         }
 
         return Response.success(stocks, HttpHeaderParser.parseCacheHeaders(response));
@@ -198,12 +193,12 @@ public final class MultiStockRequest extends Request<ConcreteStockWithAhValsList
      * Callback method to {@link #responseListener}. Pass the update {@link
      * #stocks} to the responseListener as a parameter.
      *
-     * @param responseStocks The ConcreteStockWithAhValsList to pass to
+     * @param responseStocks The ConcreteStockWithEhValsList to pass to
      *                       responseListener; same as {@link #stocks}
      */
     @Override
-    protected void deliverResponse(final ConcreteStockWithAhValsList responseStocks) {
-        final Response.Listener<ConcreteStockWithAhValsList> listener;
+    protected void deliverResponse(final ConcreteStockWithEhValsList responseStocks) {
+        final Response.Listener<ConcreteStockWithEhValsList> listener;
         synchronized (lock) {
             listener = this.responseListener;
         }

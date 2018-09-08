@@ -4,21 +4,20 @@ import android.text.TextUtils;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.List;
 
 
 /**
- * Information about why this class contains only ConcreteStockWithAhVals can
- * be found at {@link ConcreteStockWithAhVals}.
+ * Information about why this class contains only ConcreteStockWithEhVals can
+ * be found at {@link ConcreteStockWithEhVals}.
  */
-public final class ConcreteStockWithAhValsList extends ArrayList<ConcreteStockWithAhVals> {
+public final class ConcreteStockWithEhValsList extends ArrayList<ConcreteStockWithEhVals> {
 
-    public ConcreteStockWithAhValsList() {
+    public ConcreteStockWithEhValsList() {
         super();
     }
 
-    public ConcreteStockWithAhValsList(final Collection<ConcreteStockWithAhVals> c) {
+    public ConcreteStockWithEhValsList(final Collection<ConcreteStockWithEhVals> c) {
         super(c);
     }
 
@@ -38,22 +37,22 @@ public final class ConcreteStockWithAhValsList extends ArrayList<ConcreteStockWi
 
     /**
      * Returns a list containing the data of the Stocks in this list. Stock data
-     * includes the Stock's state, price, change point, change percent, after
-     * hours price, after hours change point, and after hours change percent. If
-     * a Stock should not have after hours values, the after hours values of
+     * includes the Stock's state, price, change point, change percent, extra
+     * hours price, extra hours change point, and extra hours change percent. If
+     * a Stock should not have extra hours values, the extra hours values of
      * that Stock should be 0.
      *
      * @return A TSV String of the data of the stocks in mstocks
-     * @see ConcreteStockWithAhVals#ConcreteStockWithAhVals(Stock)
+     * @see ConcreteStockWithEhVals#ConcreteStockWithEhVals(Stock)
      */
     public String getStockDataAsTSV() {
         final List<Stock.State> states = getStockStates();
         final List<Double> prices = getStockPrices();
         final List<Double> changePoints = getStockChangePoints();
         final List<Double> changePercents = getStockChangePercents();
-        final List<Double> ahPrices = getStockAfterHoursPrices();
-        final List<Double> ahChangePoints = getStockAfterHoursChangePoints();
-        final List<Double> ahChangePercents = getStockAfterHoursChangePercents();
+        final List<Double> ehPrices = getStockExtraHoursPrices();
+        final List<Double> ehChangePoints = getStockExtraHoursChangePoints();
+        final List<Double> ehChangePercents = getStockExtraHoursChangePercents();
 
         final List<String> data = new ArrayList<>(size());
         for (int i = 0; i < size(); i++) {
@@ -61,9 +60,9 @@ public final class ConcreteStockWithAhValsList extends ArrayList<ConcreteStockWi
                     prices.get(i) + '\t' +
                     changePoints.get(i) + '\t' +
                     changePercents.get(i) + '\t' +
-                    ahPrices.get(i) + '\t' +
-                    ahChangePoints.get(i) + '\t' +
-                    ahChangePercents.get(i)
+                    ehPrices.get(i) + '\t' +
+                    ehChangePoints.get(i) + '\t' +
+                    ehChangePercents.get(i)
             );
         }
 
@@ -118,26 +117,26 @@ public final class ConcreteStockWithAhValsList extends ArrayList<ConcreteStockWi
         return changePercents;
     }
 
-    private List<Double> getStockAfterHoursPrices() {
+    private List<Double> getStockExtraHoursPrices() {
         final List<Double> prices = new ArrayList<>(size());
-        for (final ConcreteStockWithAhVals s : this) {
-            prices.add(s.getAfterHoursPrice());
+        for (final ConcreteStockWithEhVals s : this) {
+            prices.add(s.getExtraHoursPrice());
         }
         return prices;
     }
 
-    private List<Double> getStockAfterHoursChangePoints() {
+    private List<Double> getStockExtraHoursChangePoints() {
         final List<Double> changePoints = new ArrayList<>(size());
-        for (final ConcreteStockWithAhVals s : this) {
-            changePoints.add(s.getAfterHoursChangePoint());
+        for (final ConcreteStockWithEhVals s : this) {
+            changePoints.add(s.getExtraHoursChangePoint());
         }
         return changePoints;
     }
 
-    private List<Double> getStockAfterHoursChangePercents() {
+    private List<Double> getStockExtraHoursChangePercents() {
         final List<Double> changePercents = new ArrayList<>(size());
-        for (final ConcreteStockWithAhVals s : this) {
-            changePercents.add(s.getAfterHoursChangePercent());
+        for (final ConcreteStockWithEhVals s : this) {
+            changePercents.add(s.getExtraHoursChangePercent());
         }
         return changePercents;
     }

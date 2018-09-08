@@ -45,8 +45,8 @@ import c.chasesriprajittichai.stockwatch.recyclerviews.StockRecyclerAdapter;
 import c.chasesriprajittichai.stockwatch.recyclerviews.StockRecyclerDivider;
 import c.chasesriprajittichai.stockwatch.recyclerviews.StockSwipeAndDragCallback;
 import c.chasesriprajittichai.stockwatch.stocks.ConcreteStock;
-import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhVals;
-import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithAhValsList;
+import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithEhVals;
+import c.chasesriprajittichai.stockwatch.stocks.ConcreteStockWithEhValsList;
 import c.chasesriprajittichai.stockwatch.stocks.Stock;
 import c.chasesriprajittichai.stockwatch.stocks.StockInHomeActivity;
 
@@ -61,7 +61,7 @@ import static java.lang.Double.parseDouble;
 public final class HomeActivity
         extends AppCompatActivity
         implements FindStockTaskListener,
-        Response.Listener<ConcreteStockWithAhValsList>,
+        Response.Listener<ConcreteStockWithEhValsList>,
         Response.ErrorListener {
 
     @BindView(R.id.recyclerView_stockRecycler) RecyclerView rv;
@@ -107,7 +107,7 @@ public final class HomeActivity
             };
 
     /**
-     * The list of ConcreteStockWithAhVals that are shown in this Activity.
+     * The list of ConcreteStockWithEhVals that are shown in this Activity.
      * {@link #rvAdapter} has a reference to this and performs operations on
      * this, including removing a Stock from this whenever a Stock is
      * swipe-deleted from {@link #rv}.
@@ -115,7 +115,7 @@ public final class HomeActivity
      * @see #tickerToIndexMap
      * @see StockSwipeAndDragCallback#onSwiped(RecyclerView.ViewHolder, int)
      */
-    private ConcreteStockWithAhValsList stocks;
+    private ConcreteStockWithEhValsList stocks;
 
     /**
      * Maps tickers to indexes in {@link #stocks}. This is used as a O(1) way
@@ -220,7 +220,7 @@ public final class HomeActivity
         setTitle("Stock Watch");
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
         requestQueue = Volley.newRequestQueue(this);
-        stocks = new ConcreteStockWithAhValsList();
+        stocks = new ConcreteStockWithEhValsList();
 //        fillPreferencesWithRandomStocks(0); // Starter kit
 
         /* onCreate is only called if the app was just opened. These preferences
@@ -251,11 +251,11 @@ public final class HomeActivity
          * tickers with the previous saved data. */
         if (!tickerArr[0].isEmpty()) {
             stocks.ensureCapacity(tickerArr.length);
-            ConcreteStockWithAhVals curStock;
+            ConcreteStockWithEhVals curStock;
             String curTicker, curName;
             Stock.State curState;
             double curPrice, curChangePoint, curChangePercent,
-                    curAhPrice, curAhChangePoint, curAhChangePercent;
+                    curEhPrice, curEhChangePoint, curEhChangePercent;
             for (int tickerNdx = 0, dataNdx = 0; tickerNdx < tickerArr.length; tickerNdx++, dataNdx += 7) {
                 // nameNdx is the same as tickerNdx (1 ticker for 1 name, unlike Data TSV)
                 curTicker = tickerArr[tickerNdx];
@@ -273,14 +273,14 @@ public final class HomeActivity
                 curPrice = parseDouble(dataArr[dataNdx + 1]);
                 curChangePoint = parseDouble(dataArr[dataNdx + 2]);
                 curChangePercent = parseDouble(dataArr[dataNdx + 3]);
-                curAhPrice = parseDouble(dataArr[dataNdx + 4]);
-                curAhChangePoint = parseDouble(dataArr[dataNdx + 5]);
-                curAhChangePercent = parseDouble(dataArr[dataNdx + 6]);
+                curEhPrice = parseDouble(dataArr[dataNdx + 4]);
+                curEhChangePoint = parseDouble(dataArr[dataNdx + 5]);
+                curEhChangePercent = parseDouble(dataArr[dataNdx + 6]);
 
-                curStock = new ConcreteStockWithAhVals(
+                curStock = new ConcreteStockWithEhVals(
                         curState, curTicker, curName,
                         curPrice, curChangePoint, curChangePercent,
-                        curAhPrice, curAhChangePoint, curAhChangePercent);
+                        curEhPrice, curEhChangePoint, curEhChangePercent);
 
                 // Fill stocks and tickerToIndexMap
                 stocks.add(curStock);
@@ -300,7 +300,7 @@ public final class HomeActivity
     private void initRecyclerView() {
         rv.setLayoutManager(new LinearLayoutManager(this));
         rv.addItemDecoration(new StockRecyclerDivider(this));
-        rvAdapter = new StockRecyclerAdapter(stocks, (ConcreteStockWithAhVals stock) -> {
+        rvAdapter = new StockRecyclerAdapter(stocks, (ConcreteStockWithEhVals stock) -> {
             // Go to individual stock activity
             final Intent intent = new Intent(this, IndividualStockActivity.class);
             intent.putExtra("Ticker", stock.getTicker());
@@ -414,22 +414,22 @@ public final class HomeActivity
         final double price = parseDouble(dataArr[1]);
         final double changePoint = parseDouble(dataArr[2]);
         final double changePercent = parseDouble(dataArr[3]);
-        final double ahPrice, ahChangePoint, ahChangePercent;
+        final double ehPrice, ehChangePoint, ehChangePercent;
         if (state == AFTER_HOURS || state == PREMARKET) {
-            ahPrice = parseDouble(dataArr[4]);
-            ahChangePoint = parseDouble(dataArr[5]);
-            ahChangePercent = parseDouble(dataArr[6]);
+            ehPrice = parseDouble(dataArr[4]);
+            ehChangePoint = parseDouble(dataArr[5]);
+            ehChangePercent = parseDouble(dataArr[6]);
         } else {
             // dataArr.length() equals 4, not 7
-            ahPrice = 0;
-            ahChangePoint = 0;
-            ahChangePercent = 0;
+            ehPrice = 0;
+            ehChangePoint = 0;
+            ehChangePercent = 0;
         }
 
-        final ConcreteStockWithAhVals added = new ConcreteStockWithAhVals(
+        final ConcreteStockWithEhVals added = new ConcreteStockWithEhVals(
                 state, ticker, name,
                 price, changePoint, changePercent,
-                ahPrice, ahChangePoint, ahChangePercent);
+                ehPrice, ehChangePoint, ehChangePercent);
 
         // Insert the added stock at the top of stocks
         stocks.add(0, added);
@@ -536,7 +536,7 @@ public final class HomeActivity
          * that have been removed from stocks. HomeActivity.onResponse() handles
          * this by ensuring that stocks contains a stock before updating the
          * UI. */
-        final ConcreteStockWithAhValsList stocksToUpdate = new ConcreteStockWithAhValsList(stocks);
+        final ConcreteStockWithEhValsList stocksToUpdate = new ConcreteStockWithEhValsList(stocks);
         final int numStocksTotal = stocksToUpdate.size();
         int numStocksUpdated = 0;
 
@@ -548,7 +548,7 @@ public final class HomeActivity
          * first 10 tickers will be shown. */
         final StringBuilder tickersPartUrl = new StringBuilder(50); // Approximate size
 
-        ConcreteStockWithAhValsList stocksToUpdateThisIteration;
+        ConcreteStockWithEhValsList stocksToUpdateThisIteration;
         int numStocksToUpdateThisIteration;
         while (numStocksUpdated < numStocksTotal) {
             // Ex: if we've already updated 30 / 37 stocks, finish only 7 on the last iteration
@@ -558,7 +558,7 @@ public final class HomeActivity
                 numStocksToUpdateThisIteration = numStocksTotal - numStocksUpdated;
             }
 
-            stocksToUpdateThisIteration = new ConcreteStockWithAhValsList(
+            stocksToUpdateThisIteration = new ConcreteStockWithEhValsList(
                     stocksToUpdate.subList(
                             numStocksUpdated,
                             numStocksUpdated + numStocksToUpdateThisIteration));
@@ -601,11 +601,11 @@ public final class HomeActivity
      * user could have possible swipe-deleted the current Stock from stocks in
      * the time that the MultiStockRequest was executing.
      *
-     * @param updatedStocks The ConcreteStockWithAhValsList with a maximum size
+     * @param updatedStocks The ConcreteStockWithEhValsList with a maximum size
      *                      of 10 that contains the updated Stocks
      */
     @Override
-    public void onResponse(final ConcreteStockWithAhValsList updatedStocks) {
+    public void onResponse(final ConcreteStockWithEhValsList updatedStocks) {
         for (final Stock s : updatedStocks) {
             if (!rvAdapter.isSwipingOrDragging() && tickerToIndexMap.containsKey(s.getTicker())) {
                 rvAdapter.notifyItemChanged(tickerToIndexMap.get(s.getTicker()));
@@ -1081,21 +1081,21 @@ public final class HomeActivity
                     final Stock.State state;
                     final String stateStr;
                     if (stockHasAhVals) {
-                        final double ahPrice, ahChangePoint, ahChangePercent;
+                        final double ehPrice, ehChangePoint, ehChangePercent;
                         // Remove ',' or '%' that could be in strings
-                        ahPrice = parseDouble(subData.selectFirst(
+                        ehPrice = parseDouble(subData.selectFirst(
                                 "span#ms_quote_val").ownText().replaceAll("[^0-9.]+", ""));
                         final Elements ah_diffs = subData.select(
                                 "span[id] > span");
-                        ahChangePoint = parseDouble(ah_diffs.get(0).ownText().replaceAll("[^0-9.-]+", ""));
-                        ahChangePercent = parseDouble(ah_diffs.get(1).ownText().replaceAll("[^0-9.-]+", ""));
+                        ehChangePoint = parseDouble(ah_diffs.get(0).ownText().replaceAll("[^0-9.-]+", ""));
+                        ehChangePercent = parseDouble(ah_diffs.get(1).ownText().replaceAll("[^0-9.-]+", ""));
 
                         stateStr = subData.selectFirst("span").ownText();
                         state = stateStr.equals("AFTER HOURS") ? AFTER_HOURS : PREMARKET;
 
-                        stock = new ConcreteStockWithAhVals(state, searchTicker, name,
+                        stock = new ConcreteStockWithEhVals(state, searchTicker, name,
                                 price, changePoint, changePercent,
-                                ahPrice, ahChangePoint, ahChangePercent);
+                                ehPrice, ehChangePoint, ehChangePercent);
                     } else {
                         stateStr = mainData.selectFirst("span.timestamp_label").ownText();
                         state = stateStr.equals("REAL TIME") ? OPEN : CLOSED;

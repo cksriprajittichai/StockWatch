@@ -42,7 +42,7 @@ public final class ConcreteAdvancedStock extends ConcreteStock implements Advanc
     /**
      * Copy constructor. Used in {@link IndividualStockActivity} to convert
      * {@link IndividualStockActivity#stock} - which was a {@link
-     * ConcreteAdvancedStockWithAhVals} - into a ConcreteAdvancedStock.
+     * ConcreteAdvancedStockWithEhVals} - into a ConcreteAdvancedStock.
      *
      * @param stock The AdvancedStock to copy
      */

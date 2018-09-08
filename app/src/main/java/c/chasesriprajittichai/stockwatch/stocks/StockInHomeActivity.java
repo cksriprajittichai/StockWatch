@@ -3,15 +3,14 @@ package c.chasesriprajittichai.stockwatch.stocks;
 public interface StockInHomeActivity extends Stock {
 
     /**
-     * @return The sum of the change percent during the open trading hours and
-     * after hours trading
+     * @return The sum of the change percent from the premarket hours, the open
+     * hours, and the after hours of the live or most recent trading day.
      */
     double getNetChangePercent();
 
     /**
-     * @return A four element string array containing the {@link
-     * StockInHomeActivity}'s {@link Stock.State}, price, change point, and
-     * change percent.
+     * @return A string array containing the values of the {@link
+     * StockInHomeActivity}.
      */
     String[] getDataAsArray();
 

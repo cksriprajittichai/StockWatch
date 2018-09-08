@@ -95,21 +95,21 @@
                 </LinearLayout>
 
                 <LinearLayout
-                    android:id="@+id/linearLayout_topAfterHoursData_individual"
+                    android:id="@+id/linearLayout_topExtraHoursData_individual"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
                     android:orientation="horizontal">
 
                     <TextView
-                        android:id="@+id/textView_topAfterHoursChangePoint_individual"
+                        android:id="@+id/textView_topExtraHoursChangePoint_individual"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textAppearance="?android:textAppearanceSmall"
                         android:textColor="@android:color/white" />
 
                     <TextView
-                        android:id="@+id/textView_topAfterHoursChangePercent_individual"
+                        android:id="@+id/textView_topExtraHoursChangePercent_individual"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="4dp"
@@ -117,7 +117,7 @@
                         android:textColor="@android:color/white" />
 
                     <TextView
-                        android:id="@+id/textView_topAfterHoursTime_individual"
+                        android:id="@+id/textView_topExtraHoursTime_individual"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="4dp"
@@ -264,7 +264,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
                             android:includeFontPadding="false"
-                            android:text="@string/previousClose"
+                            android:text="@string/prevClose"
                             android:textAppearance="?android:textAppearanceSmall"
                             android:textColor="@android:color/darker_gray" />
 

@@ -22,6 +22,8 @@
     <string name="news">News</string>
 
     <string name="today">Today</string>
+    <string name="premarket">Pre-Market</string>
+    <string name="atClose">At Close</string>
     <string name="afterHours">After-Hours</string>
     <string name="pastTwoWeeks">Past 2W</string>
     <string name="pastMonth">Past Month</string>
@@ -37,7 +39,7 @@
     <string name="fiftyTwoWeekLow">52 Week Low</string>
     <string name="fiftyTwoWeekHigh">52 Week High</string>
     <string name="marketCap">Market Cap</string>
-    <string name="previousClose">Previous Close</string>
+    <string name="prevClose">Prev Close</string>
     <string name="open">Open</string>
     <string name="peRatio">P/E Ratio</string>
     <string name="eps">EPS</string>
