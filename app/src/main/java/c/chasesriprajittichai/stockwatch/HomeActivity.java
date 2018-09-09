@@ -217,7 +217,7 @@ public final class HomeActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_home);
         ButterKnife.bind(this);
-        setTitle("Stock Watch");
+        setTitle(getString(R.string.app_name));
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
         requestQueue = Volley.newRequestQueue(this);
         stocks = new ConcreteStockWithEhValsList();

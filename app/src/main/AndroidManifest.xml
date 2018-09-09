@@ -29,7 +29,8 @@
 
         <activity
             android:name=".HomeActivity"
-            android:icon="@mipmap/ic_launcher"
+            android:icon="@mipmap/main_icon"
+            android:label="@string/icon_name"
             android:screenOrientation="portrait"
             android:theme="@style/AppTheme">
 
