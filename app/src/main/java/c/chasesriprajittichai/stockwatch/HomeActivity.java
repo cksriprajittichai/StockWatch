@@ -10,7 +10,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -221,7 +220,6 @@ public final class HomeActivity
         prefs = PreferenceManager.getDefaultSharedPreferences(this);
         requestQueue = Volley.newRequestQueue(this);
         stocks = new ConcreteStockWithEhValsList();
-//        fillPreferencesWithRandomStocks(0); // Starter kit
 
         /* onCreate is only called if the app was just opened. These preferences
          * should only be true if a stock was added from an activity outside of
@@ -921,55 +919,6 @@ public final class HomeActivity
     }
 
     /**
-     * Fills Tickers TSV with tickers from the NASDAQ, sets all of Data TSV's
-     * numeric values to -1, and sets Data TSV's {@link Stock.State} values to
-     * {@link Stock.State#CLOSED}. Fills Names TSV with "[ticker] name", because
-     * we don't know the names of the Stocks, only their tickers. The largest
-     * number of Stocks that can be added is the number of companies in the
-     * NASDAQ.
-     *
-     * @param size The number of Stocks to put in preferences
-     */
-    private void fillPreferencesWithRandomStocks(int size) {
-        final String tickersStr = getString(R.string.nasdaqTickers);
-
-        final String[] tickerArr = tickersStr.split(",");
-        final String[] nameArr = new String[tickerArr.length];
-        for (int i = 0; i < nameArr.length; i++) {
-            nameArr[i] = tickerArr[i] + " name";
-        }
-        boolean usingMaxSize = false;
-        if (size >= tickerArr.length) {
-            size = tickerArr.length;
-            usingMaxSize = true;
-        }
-
-        if (usingMaxSize) {
-            prefs.edit().putString("Tickers TSV", TextUtils.join("\t", tickerArr)).apply();
-            prefs.edit().putString("Names TSV", TextUtils.join("\t", nameArr)).apply();
-        } else {
-            final String[] subTickerArr = new String[size];
-            System.arraycopy(tickerArr, 0, subTickerArr, 0, size);
-            prefs.edit().putString("Tickers TSV", TextUtils.join("\t", subTickerArr)).apply();
-            final String[] subNameArr = new String[size];
-            System.arraycopy(nameArr, 0, subNameArr, 0, size);
-            prefs.edit().putString("Names TSV", TextUtils.join("\t", subNameArr)).apply();
-        }
-
-        final String[] dataArr = new String[7 * size];
-        for (int i = 0; i < size * 7; i += 7) {
-            dataArr[i] = Stock.State.CLOSED.toString();
-            dataArr[i + 1] = "-1";
-            dataArr[i + 2] = "-1";
-            dataArr[i + 3] = "-1";
-            dataArr[i + 4] = "-1";
-            dataArr[i + 5] = "-1";
-            dataArr[i + 6] = "-1";
-        }
-        prefs.edit().putString("Data TSV", TextUtils.join("\t", dataArr)).apply();
-    }
-
-    /**
      * Override to call {@link #unregisterManagers()}, which is required for
      * use of HockeyApp.
      */
@@ -983,7 +932,7 @@ public final class HomeActivity
      * Required for use of HockeyApp.
      */
     private void checkForCrashes() {
-        CrashManager.register(this);
+        CrashManager.register(this, getString(R.string.hockeyAppID), new CustomCrashManagerListener());
     }
 
     /**
