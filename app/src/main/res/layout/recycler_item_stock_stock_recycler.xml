@@ -5,37 +5,37 @@
     android:layout_height="wrap_content"
     android:background="@drawable/recycler_item_ripple_stock">
 
-    <!--Don't constrain to price TextView or change percent TextView so that values will be in a column-->
+    <!--
+    Don't constrain to price TextView or change percent TextView so that values
+    will be in a column.
+    -->
     <TextView
         android:id="@+id/textView_ticker_stockRecyclerItem"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
         android:layout_marginEnd="0dp"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="10dp"
         android:textAppearance="@style/TextAppearance.AppCompat.Title"
         android:textColor="@android:color/white"
         android:textSize="32sp"
         android:textStyle="bold"
         android:typeface="monospace"
-        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <!--Constrain to top left corner of parent-->
+    <!--Constrain to bottom right corner of parent-->
     <TextView
-        android:id="@+id/textView_state_stockRecyclerItem"
+        android:id="@+id/textView_name_stockRecyclerItem"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="2dp"
         android:textAppearance="@style/TextAppearance.AppCompat.Small"
         android:textColor="@android:color/darker_gray"
         android:textSize="12sp"
-        android:typeface="monospace"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
     <!--Don't constrain to tickerTextView so that values will be in a column-->
     <TextView
@@ -44,7 +44,7 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="2dp"
         android:layout_marginEnd="16dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="4dp"
         android:textAppearance="@style/TextAppearance.AppCompat.Display1"
         android:textColor="@android:color/white"
         android:textSize="24sp"
@@ -58,7 +58,7 @@
         android:id="@+id/textView_changePercent_stockRecyclerItem"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
+        android:layout_marginBottom="4dp"
         android:layout_marginEnd="16dp"
         android:layout_marginTop="2dp"
         android:textAppearance="@style/TextAppearance.AppCompat.Display1"

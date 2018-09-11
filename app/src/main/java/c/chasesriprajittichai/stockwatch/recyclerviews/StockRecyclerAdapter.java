@@ -31,28 +31,23 @@ public final class StockRecyclerAdapter extends RecyclerView.Adapter<StockRecycl
      */
     class StockViewHolder extends RecyclerView.ViewHolder {
 
-        private final TextView state;
         private final TextView ticker;
+        private final TextView name;
         private final TextView price;
         private final TextView changePercent;
 
         StockViewHolder(final View v) {
             super(v);
 
-            state = v.findViewById(R.id.textView_state_stockRecyclerItem);
             ticker = v.findViewById(R.id.textView_ticker_stockRecyclerItem);
+            name = v.findViewById(R.id.textView_name_stockRecyclerItem);
             price = v.findViewById(R.id.textView_price_stockRecyclerItem);
             changePercent = v.findViewById(R.id.textView_changePercent_stockRecyclerItem);
         }
 
         void bind(final ConcreteStockWithEhVals stock, final OnItemClickListener listener) {
-            if (stock.getState() == Stock.State.AFTER_HOURS) {
-                // After hours state is the only state with an unwanted character in the enum name
-                state.setText(String.format(Locale.US, "%s", "AFTER HOURS"));
-            } else {
-                state.setText(stock.getState().toString());
-            }
             ticker.setText(stock.getTicker());
+            name.setText(stock.getName());
             price.setText(String.format(Locale.US, "%.2f", stock.getLivePrice()));
 
             if (stock.getNetChangePercent() < 0) {

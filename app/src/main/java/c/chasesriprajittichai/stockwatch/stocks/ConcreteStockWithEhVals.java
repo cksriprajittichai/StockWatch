@@ -121,10 +121,10 @@ public class ConcreteStockWithEhVals
      */
     @Override
     public final double getNetChangePercent() {
-        if (getState() == State.AFTER_HOURS) {
-            return getChangePercent() + ehChangePercent;
-        } else if (getState() == State.PREMARKET) {
+        if (getState() == State.PREMARKET) {
             return ehChangePercent;
+        } else if (getState() == State.AFTER_HOURS) {
+            return getChangePercent() + ehChangePercent;
         } else {
             return getChangePercent();
         }
@@ -138,7 +138,7 @@ public class ConcreteStockWithEhVals
      */
     @Override
     public String[] getDataAsArray() {
-        String[] data = new String[7];
+        final String[] data = new String[7];
         data[0] = getState().toString();
         data[1] = String.valueOf(getPrice());
         data[2] = String.valueOf(getChangePoint());

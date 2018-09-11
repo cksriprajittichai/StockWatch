@@ -12,9 +12,10 @@
     <string name="price_menuItemTitle">Price</string>
     <string name="price_asc_menuItemTitle">Price \u2191</string>
     <string name="price_desc_menuItemTitle">Price \u2193</string>
-    <string name="changePercent_menuItemTitle">% Change</string>
-    <string name="changePercent_asc_menuItemTitle">% Change \u2191</string>
-    <string name="changePercent_desc_menuItemTitle">% Change \u2193</string>
+    <!--"%%" alone (not next to number?) produces "%%"-->
+    <string name="changePercent_menuItemTitle">\% Change</string>
+    <string name="changePercent_asc_menuItemTitle">\% Change \u2191</string>
+    <string name="changePercent_desc_menuItemTitle">\% Change \u2193</string>
 
     <!--Strings in IndividualStockActivity-->
     <string name="star_menuItemTitle">Star</string>
