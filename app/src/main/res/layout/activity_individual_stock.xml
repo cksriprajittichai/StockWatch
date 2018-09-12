@@ -171,7 +171,7 @@
                         android:visibility="gone" />
 
                     <!--Init as GONE-->
-                    <c.chasesriprajittichai.stockwatch.CustomSparkView
+                    <com.sienga.stockwatch.CustomSparkView
                         android:id="@+id/sparkView"
                         android:layout_width="match_parent"
                         android:layout_height="220dp"
@@ -225,7 +225,6 @@
                     android:background="@color/colorCharcoal" />
 
                 <TextView
-                    android:id="@+id/textView_keyStatisticsHeader"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
