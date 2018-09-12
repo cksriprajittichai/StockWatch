@@ -1,21 +1,18 @@
 package com.sienga.stockwatch;
 
-import android.util.Log;
-
 import com.android.volley.NetworkResponse;
 import com.android.volley.Request;
 import com.android.volley.Response;
 import com.android.volley.toolbox.HttpHeaderParser;
+import com.sienga.stockwatch.stocks.ConcreteStockWithEhVals;
+import com.sienga.stockwatch.stocks.ConcreteStockWithEhValsList;
+import com.sienga.stockwatch.stocks.Stock;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 
 import java.util.Locale;
-
-import com.sienga.stockwatch.stocks.ConcreteStockWithEhValsList;
-import com.sienga.stockwatch.stocks.ConcreteStockWithEhVals;
-import com.sienga.stockwatch.stocks.Stock;
 
 import static com.sienga.stockwatch.stocks.Stock.State.AFTER_HOURS;
 import static com.sienga.stockwatch.stocks.Stock.State.CLOSED;
@@ -138,10 +135,6 @@ public final class MultiStockRequest extends Request<ConcreteStockWithEhValsList
                     curState = CLOSED;
                     break;
                 default:
-                    Log.e("UnrecognizedMarketWatchState", String.format(
-                            "Unrecognized state string from Market Watch multiple stock page.%n" +
-                                    "Unrecognized state string: %s%n" +
-                                    "Ticker: %s", states.get(i).ownText(), tickers.get(i).ownText()));
                     // Do not add this error stock to the list that will be returned
                     continue;
             }

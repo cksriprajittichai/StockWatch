@@ -16,6 +16,7 @@
     WebViewActivity.
     -->
     <application
+        android:icon="@mipmap/main_icon"
         android:name="com.sienga.stockwatch.StockWatch"
         android:allowBackup="true"
         android:label="@string/app_name"

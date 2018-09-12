@@ -10,7 +10,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.SearchView;
@@ -20,6 +19,15 @@ import com.android.volley.RequestQueue;
 import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.Volley;
+import com.sienga.stockwatch.listeners.FindStockTaskListener;
+import com.sienga.stockwatch.recyclerviews.StockRecyclerAdapter;
+import com.sienga.stockwatch.recyclerviews.StockRecyclerDivider;
+import com.sienga.stockwatch.recyclerviews.StockSwipeAndDragCallback;
+import com.sienga.stockwatch.stocks.ConcreteStock;
+import com.sienga.stockwatch.stocks.ConcreteStockWithEhVals;
+import com.sienga.stockwatch.stocks.ConcreteStockWithEhValsList;
+import com.sienga.stockwatch.stocks.Stock;
+import com.sienga.stockwatch.stocks.StockInHomeActivity;
 
 import net.hockeyapp.android.CrashManager;
 import net.hockeyapp.android.UpdateManager;
@@ -39,16 +47,6 @@ import java.util.TimerTask;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-
-import com.sienga.stockwatch.listeners.FindStockTaskListener;
-import com.sienga.stockwatch.recyclerviews.StockRecyclerAdapter;
-import com.sienga.stockwatch.recyclerviews.StockRecyclerDivider;
-import com.sienga.stockwatch.recyclerviews.StockSwipeAndDragCallback;
-import com.sienga.stockwatch.stocks.ConcreteStock;
-import com.sienga.stockwatch.stocks.ConcreteStockWithEhVals;
-import com.sienga.stockwatch.stocks.ConcreteStockWithEhValsList;
-import com.sienga.stockwatch.stocks.Stock;
-import com.sienga.stockwatch.stocks.StockInHomeActivity;
 
 import static com.sienga.stockwatch.stocks.Stock.State.AFTER_HOURS;
 import static com.sienga.stockwatch.stocks.Stock.State.CLOSED;
@@ -262,9 +260,6 @@ public final class HomeActivity
 
                 curState = Util.stringToStateMap.get(dataArr[dataNdx]);
                 if (curState == ERROR) {
-                    Log.e("ErrorStateInHomeActivity", String.format(
-                            "Stock with state equal to ERROR in HomeActivity.%n" +
-                                    "Ticker: %s", curTicker));
                     // Do not add this error stock to stocks or to tickerToIndexMap
                     continue;
                 }
@@ -588,7 +583,7 @@ public final class HomeActivity
      * <p>
      * If rv is updated while a cell is swiping or dragging, the action will be
      * stopped (as if the user lifted their finger off the screen). This method
-     * avoids this by using {@link StockRecyclerAdapter#isSwipingOrDragging()}
+     * avoids this by using {@link StockRecyclerAdapter#isNotSwipingOrDragging()}
      * to see if the user is currently swiping or dragging. If the user is
      * swiping or dragging, updating the current Stock is skipped. If the user
      * is not swiping or dragging, rvAdapter is notified that the current Stock
@@ -606,7 +601,7 @@ public final class HomeActivity
     @Override
     public synchronized void onResponse(final ConcreteStockWithEhValsList updatedStocks) {
         for (final Stock s : updatedStocks) {
-            if (!rvAdapter.isSwipingOrDragging()) {
+            if (rvAdapter.isNotSwipingOrDragging()) {
                 if (tickerToIndexMap.containsKey(s.getTicker())) {
                     rvAdapter.notifyItemChanged(tickerToIndexMap.get(s.getTicker()));
                 } else {
@@ -621,12 +616,7 @@ public final class HomeActivity
      */
     @Override
     public void onErrorResponse(final VolleyError error) {
-        if (error.getLocalizedMessage() != null && !error.getLocalizedMessage().isEmpty()) {
-            Log.e("VolleyError", error.getLocalizedMessage());
-        } else {
-            Log.e("VolleyError",
-                    "VolleyError thrown in HomeActivity.onErrorResponse, but error is null.");
-        }
+        // Do nothing
     }
 
     /**
@@ -994,7 +984,6 @@ public final class HomeActivity
                         .timeout(20000)
                         .get();
             } catch (final IOException ioe) {
-                Log.e("IOException", ioe.getLocalizedMessage());
                 doc = null;
                 status = Status.IO_EXCEPTION;
             }
