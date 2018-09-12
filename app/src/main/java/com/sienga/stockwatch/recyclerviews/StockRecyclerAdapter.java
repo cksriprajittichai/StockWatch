@@ -177,15 +177,15 @@ public final class StockRecyclerAdapter extends RecyclerView.Adapter<StockRecycl
     }
 
     /**
-     * @return Value of isSwipingOrDragging
+     * @return Inverted value of isNotSwipingOrDragging
      * @see #isSwipingOrDragging
      */
-    public boolean isSwipingOrDragging() {
-        return isSwipingOrDragging;
+    public boolean isNotSwipingOrDragging() {
+        return !isSwipingOrDragging;
     }
 
     /**
-     * @param swipingOrDragging Value to set isSwipingOrDragging to
+     * @param swipingOrDragging Value to set isNotSwipingOrDragging to
      * @see #isSwipingOrDragging
      */
     public void setSwipingOrDragging(boolean swipingOrDragging) {

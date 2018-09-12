@@ -11,7 +11,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
-import android.util.Log;
 import android.util.SparseArray;
 import android.view.Gravity;
 import android.view.Menu;
@@ -27,6 +26,20 @@ import android.widget.TextView;
 import android.widget.ViewFlipper;
 
 import com.jakewharton.threetenabp.AndroidThreeTen;
+import com.sienga.stockwatch.listeners.DownloadChartsTaskListener;
+import com.sienga.stockwatch.listeners.DownloadNewsTaskListener;
+import com.sienga.stockwatch.listeners.DownloadStatsTaskListener;
+import com.sienga.stockwatch.recyclerviews.NewsRecyclerAdapter;
+import com.sienga.stockwatch.recyclerviews.NewsRecyclerDivider;
+import com.sienga.stockwatch.stocks.AdvancedStock;
+import com.sienga.stockwatch.stocks.AdvancedStock.ChartPeriod;
+import com.sienga.stockwatch.stocks.ConcreteAdvancedStock;
+import com.sienga.stockwatch.stocks.ConcreteAdvancedStockWithEhVals;
+import com.sienga.stockwatch.stocks.ConcreteStock;
+import com.sienga.stockwatch.stocks.ConcreteStockWithEhVals;
+import com.sienga.stockwatch.stocks.Stock;
+import com.sienga.stockwatch.stocks.StockInHomeActivity;
+import com.sienga.stockwatch.stocks.StockWithEhVals;
 import com.wefika.horizontalpicker.HorizontalPicker;
 
 import org.apache.commons.lang3.StringUtils;
@@ -55,21 +68,6 @@ import java.util.TimerTask;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-
-import com.sienga.stockwatch.listeners.DownloadChartsTaskListener;
-import com.sienga.stockwatch.listeners.DownloadNewsTaskListener;
-import com.sienga.stockwatch.listeners.DownloadStatsTaskListener;
-import com.sienga.stockwatch.recyclerviews.NewsRecyclerAdapter;
-import com.sienga.stockwatch.recyclerviews.NewsRecyclerDivider;
-import com.sienga.stockwatch.stocks.AdvancedStock;
-import com.sienga.stockwatch.stocks.AdvancedStock.ChartPeriod;
-import com.sienga.stockwatch.stocks.ConcreteAdvancedStock;
-import com.sienga.stockwatch.stocks.ConcreteAdvancedStockWithEhVals;
-import com.sienga.stockwatch.stocks.ConcreteStock;
-import com.sienga.stockwatch.stocks.ConcreteStockWithEhVals;
-import com.sienga.stockwatch.stocks.Stock;
-import com.sienga.stockwatch.stocks.StockInHomeActivity;
-import com.sienga.stockwatch.stocks.StockWithEhVals;
 
 import static com.sienga.stockwatch.stocks.AdvancedStock.Stat;
 import static com.sienga.stockwatch.stocks.Stock.State.AFTER_HOURS;
@@ -1322,7 +1320,6 @@ public final class IndividualStockActivity
                         .timeout(20000)
                         .get();
             } catch (final IOException ioe) {
-                Log.e("IOException", ioe.getLocalizedMessage());
                 multiDoc = null;
                 missingChartPeriods.add(ChartPeriod.ONE_DAY);
                 status = Status.IO_EXCEPTION_FOR_MW_ONLY;
@@ -1433,7 +1430,6 @@ public final class IndividualStockActivity
                             stock.setPrices_1day(prices_1day);
                         }
                     } catch (final JSONException jsone) {
-                        Log.e("JSONException", jsone.getLocalizedMessage());
                         missingChartPeriods.add(ChartPeriod.ONE_DAY);
                     }
                 } else {
@@ -1450,7 +1446,6 @@ public final class IndividualStockActivity
                         .timeout(20000)
                         .get();
             } catch (final IOException ioe) {
-                Log.e("IOException", ioe.getLocalizedMessage());
                 individualDoc = null;
                 missingChartPeriods.addAll(Arrays.asList(BIG_CHART_PERIODS));
                 status = status == Status.GOOD ?
@@ -1510,7 +1505,6 @@ public final class IndividualStockActivity
                             .timeout(20000)
                             .get();
                 } catch (final IOException ioe) {
-                    Log.e("IOException", ioe.getLocalizedMessage());
                     fiveYearDoc = null;
                     missingChartPeriods.addAll(Arrays.asList(BIG_CHART_PERIODS));
                     status = status == Status.GOOD ?
@@ -1745,7 +1739,6 @@ public final class IndividualStockActivity
                         .timeout(8000)
                         .get();
             } catch (final IOException ioe) {
-                Log.e("IOException", ioe.getLocalizedMessage());
                 individualDoc = null;
                 status = Status.IO_EXCEPTION;
             }
