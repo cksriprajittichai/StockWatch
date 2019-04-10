@@ -1,5 +1,5 @@
 # Source: https://github.com/github/gitignore/blob/master/Android.gitignore
-# The only difference from the source is to include keystore.properties
+# The only difference from the source is to include (ignore) keystore.properties
 
 # Built application files
 *.apk
@@ -45,6 +45,9 @@ captures/
 .idea/dictionaries
 .idea/libraries
 .idea/caches
+# Android Studio 3 in .gitignore file.
+.idea/caches/build_file_checksums.ser
+.idea/modules.xml
 
 # Keystore files
 # Uncomment the following lines if you do not want to check your keystore files in.
@@ -56,7 +59,7 @@ keystore.properties
 .externalNativeBuild
 
 # Google Services (e.g. APIs or Firebase)
-google-services.json
+# google-services.json
 
 # Freeline
 freeline.py
@@ -69,3 +72,13 @@ fastlane/Preview.html
 fastlane/screenshots
 fastlane/test_output
 fastlane/readme.md
+
+# Version control
+vcs.xml
+
+# lint
+lint/intermediates/
+lint/generated/
+lint/outputs/
+lint/tmp/
+# lint/reports/
